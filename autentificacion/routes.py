@@ -19,3 +19,7 @@ def login():
         else:
             flash('Usuario o contraseña incorrectos', 'danger')
     return render_template("autentificacion/login.html", form=form)
+
+@autentificacion.route("/usuarios", methods=['GET','POST'])
+def usuarios():
+	return render_template("autentificacion/usuarios.html")
