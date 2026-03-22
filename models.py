@@ -219,3 +219,76 @@ class DetalleMerma(db.Model):
     
     merma = db.relationship('Mermas', back_populates='detalle_mermas')
     materia_prima = db.relationship('MateriasPrimas', back_populates='detalle_mermas')
+
+class BitacoraAccesos(db.Model):
+    __tablename__ = "bitacora_accesos"
+    id = db.Column(db.Integer, primary_key=True)
+    usuarioId = db.Column(db.Integer, db.ForeignKey('usuarios.idUsuario'), nullable=True)
+    nombreUsuario = db.Column(db.String(100))
+    evento = db.Column(db.String(100))
+    fecha = db.Column(db.DateTime, default=datetime.datetime.now)
+    ip = db.Column(db.String(45))
+    navegador = db.Column(db.String(255))
+    resultado = db.Column(db.String(50))
+    
+    usuario = db.relationship('Usuarios', backref='bitacora_accesos')
+
+
+class BitacoraEventos(db.Model):
+    __tablename__ = "bitacora_eventos"
+    id = db.Column(db.Integer, primary_key=True)
+    usuarioId = db.Column(db.Integer, db.ForeignKey('usuarios.idUsuario'), nullable=True)
+    nombreUsuario = db.Column(db.String(100))
+    modulo = db.Column(db.String(100))
+    accion = db.Column(db.String(100))
+    referencial = db.Column(db.String(100))
+    referencia = db.Column(db.String(255))
+    fecha = db.Column(db.DateTime, default=datetime.datetime.now)
+    ip = db.Column(db.String(45))
+    
+    usuario = db.relationship('Usuarios', backref='bitacora_eventos')
+
+
+class BitacoraSistema(db.Model):
+    __tablename__ = "bitacora_sistema"
+    id = db.Column(db.Integer, primary_key=True)
+    nivel = db.Column(db.String(20))
+    modulo = db.Column(db.String(100))
+    mensaje = db.Column(db.Text)
+    detalles = db.Column(db.Text, nullable=True)
+    fecha = db.Column(db.DateTime, default=datetime.datetime.now)
+    ip = db.Column(db.String(45))
+    usuarioId = db.Column(db.Integer, db.ForeignKey('usuarios.idUsuario'), nullable=True)
+    
+    usuario = db.relationship('Usuarios', backref='bitacora_sistema')
+
+class TicketVenta(db.Model):
+    __tablename__ = "ticket_venta"
+    id = db.Column(db.Integer, primary_key=True)
+    idVenta = db.Column(db.Integer, db.ForeignKey('ventas.idVenta'), nullable=False)
+    fecha = db.Column(db.DateTime, default=datetime.datetime.now)
+    tipoVenta = db.Column(db.String(50))
+    usuarioId = db.Column(db.Integer, db.ForeignKey('usuarios.idUsuario'), nullable=False)
+    nombreCliente = db.Column(db.String(100))
+    total = db.Column(db.Numeric(10, 2))
+    estado = db.Column(db.String(50))
+    numeroTicket = db.Column(db.String(50), unique=True)
+    pdfGenerado = db.Column(db.Boolean, default=False)
+    fechaGeneracion = db.Column(db.DateTime, nullable=True)
+    
+    venta = db.relationship('Ventas', backref='tickets')
+    usuario = db.relationship('Usuarios', backref='tickets_generados')
+
+
+class DetalleTicketVenta(db.Model):
+    __tablename__ = "detalle_ticket_venta"
+    idDetalleTicket = db.Column(db.Integer, primary_key=True)
+    idTicket = db.Column(db.Integer, db.ForeignKey('ticket_venta.id'), nullable=False)
+    idProducto = db.Column(db.Integer, db.ForeignKey('productos.idProducto'), nullable=False)
+    nombreProducto = db.Column(db.String(100))
+    cantidad = db.Column(db.Integer)
+    precioUnitario = db.Column(db.Numeric(10, 2))
+    subtotal = db.Column(db.Numeric(10, 2))
+    
+    ticket = db.relationship('TicketVenta', backref='detalles')
+    producto = db.relationship('Productos', backref='tickets_detalle')
