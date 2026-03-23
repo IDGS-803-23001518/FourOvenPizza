@@ -15,7 +15,7 @@ class RolForm(Form):
 
 class UsuarioForm(Form):
     idUsuario = IntegerField('idUsuario')
-    idRol = SelectField('Rol', 
+    idRol = SelectField('Rol',
         choices=[],
         coerce=int,
         validators=[DataRequired(message='Seleccione un rol')]
@@ -27,6 +27,11 @@ class UsuarioForm(Form):
     usuario = StringField('Nombre de Usuario', [
         validators.DataRequired(message='El campo es requerido'),
         validators.length(min=4, max=50, message='El usuario debe tener entre 4 y 50 caracteres')
+    ])
+    email = EmailField('Correo Electrónico', [          # ← NUEVO
+        validators.DataRequired(message='El campo es requerido'),
+        validators.Email(message='Ingrese un correo válido'),
+        validators.length(max=150)
     ])
     contrasenia = PasswordField('Contraseña', [
         validators.DataRequired(message='El campo es requerido'),
