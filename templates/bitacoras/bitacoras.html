@@ -1,0 +1,385 @@
+{% extends layout %}
+
+{% block title %}Bitácoras{% endblock %}
+
+{% block container %}
+<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
+    style="border-bottom: 3px solid #f29f05;">
+    <div class="container flex flex-wrap items-center justify-between mx-auto">
+        <div class="flex-1 flex justify-center">
+            <div class="flex items-center space-x-2 sm:space-x-3 bg-opacity-20 px-3 sm:px-6 py-2 rounded-full">
+                <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Bitácoras del</span>
+                <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap"
+                    style="color: #f29f05;">Sistema</span>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container mx-auto px-4 sm:px-6 max-w-7xl">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for category, message in messages %}
+    <div class="mb-4 p-4 rounded-lg {% if category == 'success' %}bg-green-100 text-green-700{% elif category == 'danger' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}{% endif %}
+    {% endwith %}
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-0">
+        <a href="{{ url_for('bitacoras.index', tab='accesos') }}"
+            class="px-5 py-2.5 rounded-t-xl text-sm font-semibold transition-all duration-200
+                   {% if tab == 'accesos' %}text-white{% else %}bg-white text-gray-500 hover:text-gray-700{% endif %}"
+            style="{% if tab == 'accesos' %}background-color: #38230f;{% endif %}">
+            Accesos
+        </a>
+        <a href="{{ url_for('bitacoras.index', tab='eventos') }}"
+            class="px-5 py-2.5 rounded-t-xl text-sm font-semibold transition-all duration-200
+                   {% if tab == 'eventos' %}text-white{% else %}bg-white text-gray-500 hover:text-gray-700{% endif %}"
+            style="{% if tab == 'eventos' %}background-color: #38230f;{% endif %}">
+            Eventos
+        </a>
+        <a href="{{ url_for('bitacoras.index', tab='sistema') }}"
+            class="px-5 py-2.5 rounded-t-xl text-sm font-semibold transition-all duration-200
+                   {% if tab == 'sistema' %}text-white{% else %}bg-white text-gray-500 hover:text-gray-700{% endif %}"
+            style="{% if tab == 'sistema' %}background-color: #38230f;{% endif %}">
+            Sistema
+        </a>
+    </div>
+
+    <div class="bg-white rounded-b-2xl rounded-tr-2xl shadow-md overflow-hidden">
+
+        <form method="GET" action="{{ url_for('bitacoras.index') }}">
+            <input type="hidden" name="tab" value="{{ tab }}">
+
+            <div class="px-5 py-4 border-b border-gray-100" style="background-color: #f9f5f0;">
+                <div class="flex flex-wrap gap-3 items-end">
+
+                    <div class="flex flex-col min-w-[140px]">
+                        <label class="text-xs font-semibold text-gray-600 mb-1">Desde</label>
+                        <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}"
+                            class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                    </div>
+                    <div class="flex flex-col min-w-[140px]">
+                        <label class="text-xs font-semibold text-gray-600 mb-1">Hasta</label>
+                        <input type="date" name="fecha_fin" value="{{ fecha_fin }}"
+                            class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                    </div>
+
+                    {% if tab == 'accesos' %}
+                    <div class="flex flex-col min-w-[150px]">
+                        <label class="text-xs font-semibold text-gray-600 mb-1">Usuario</label>
+                        <input type="text" name="usuario_acc" value="{{ filtro_usuario_acc }}"
+                            placeholder="Buscar usuario..."
+                            class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                    </div>
+                    <div class="flex flex-col min-w-[140px]">
+                        <label class="text-xs font-semibold text-gray-600 mb-1">Evento</label>
+                        <select name="evento"
+                            class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                            <option value="">Todos</option>
+                            {% for op in eventos_opciones %}
+                            <option value="{{ op }}" {% if filtro_evento == op %}selected{% endif %}>{{ op }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="flex flex-col min-w-[160px]">
+                        <label class="text-xs font-semibold text-gray-600 mb-1">Resultado</label>
+                        <select name="resultado"
+                            class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                            <option value="">Todos</option>
+                            {% for op in resultado_opciones %}
+                            <option value="{{ op }}" {% if filtro_resultado == op %}selected{% endif %}>{{ op }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    {% if tab == 'eventos' %}
+                    <div class="flex flex-col min-w-[150px]">
+                        <label class="text-xs font-semibold text-gray-600 mb-1">Usuario</label>
+                        <input type="text" name="usuario_ev" value="{{ filtro_usuario_ev }}"
+                            placeholder="Buscar usuario..."
+                            class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                    </div>
+                    <div class="flex flex-col min-w-[130px]">
+                        <label class="text-xs font-semibold text-gray-600 mb-1">Módulo</label>
+                        <select name="modulo"
+                            class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                            <option value="">Todos</option>
+                            {% for op in modulos_opciones %}
+                            <option value="{{ op }}" {% if filtro_modulo == op %}selected{% endif %}>{{ op }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="flex flex-col min-w-[150px]">
+                        <label class="text-xs font-semibold text-gray-600 mb-1">Acción</label>
+                        <select name="accion"
+                            class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                            <option value="">Todas</option>
+                            {% for op in acciones_opciones %}
+                            <option value="{{ op }}" {% if filtro_accion == op %}selected{% endif %}>{{ op }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    {% if tab == 'sistema' %}
+                    <div class="flex flex-col min-w-[120px]">
+                        <label class="text-xs font-semibold text-gray-600 mb-1">Nivel</label>
+                        <select name="nivel"
+                            class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                            <option value="">Todos</option>
+                            {% for op in niveles_opciones %}
+                            <option value="{{ op }}" {% if filtro_nivel == op %}selected{% endif %}>{{ op }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="flex flex-col min-w-[130px]">
+                        <label class="text-xs font-semibold text-gray-600 mb-1">Módulo</label>
+                        <select name="modulo_sis"
+                            class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                            <option value="">Todos</option>
+                            {% for op in modulos_opciones %}
+                            <option value="{{ op }}" {% if filtro_modulo_sis == op %}selected{% endif %}>{{ op }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="flex flex-col min-w-[180px]">
+                        <label class="text-xs font-semibold text-gray-600 mb-1">Buscar en mensaje</label>
+                        <input type="text" name="busqueda" value="{{ filtro_busqueda }}"
+                            placeholder="Buscar..."
+                            class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                    </div>
+                    {% endif %}
+
+                    <div class="flex gap-2 items-end">
+                        <button type="submit"
+                            class="text-white font-semibold px-4 py-1.5 rounded-lg text-xs transition hover:brightness-110"
+                            style="background-color: #f29f05;">
+                            Filtrar
+                        </button>
+                        <a href="{{ url_for('bitacoras.index', tab=tab) }}"
+                            class="text-white font-semibold px-4 py-1.5 rounded-lg text-xs transition hover:brightness-110"
+                            style="background-color: #6b7280;">
+                            Limpiar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        {% if tab == 'accesos' %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead>
+                    <tr style="background-color: #38230f;">
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Fecha</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Usuario</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Evento</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Resultado</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">IP</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Navegador</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in accesos_pag.items %}
+                    <tr class="border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150">
+                        <td class="px-4 py-3 text-gray-600 text-xs whitespace-nowrap">
+                            {{ reg.fecha.strftime('%d/%m/%Y %H:%M:%S') if reg.fecha else '—' }}
+                        </td>
+                        <td class="px-4 py-3 font-semibold text-gray-800 text-xs">{{ reg.nombreUsuario }}</td>
+                        <td class="px-4 py-3 text-xs">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold
+                                {% if 'LOGIN' in reg.evento and 'BLOQUEADO' not in reg.evento %}bg-blue-100 text-blue-700
+                                {% elif 'LOGOUT' in reg.evento %}bg-gray-100 text-gray-600
+                                {% else %}bg-orange-100 text-orange-700{% endif %}">
+                                {{ reg.evento }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-xs">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold
+                                {% if reg.resultado == 'EXITOSO' %}bg-green-100 text-green-700
+                                {% elif reg.resultado == 'SESION_EXPIRADA' %}bg-yellow-100 text-yellow-700
+                                {% else %}bg-red-100 text-red-700{% endif %}">
+                                {{ reg.resultado }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-500 text-xs font-mono">{{ reg.ip }}</td>
+                        <td class="px-4 py-3 text-gray-400 text-xs max-w-[200px] truncate" title="{{ reg.navegador }}">
+                            {{ reg.navegador }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-10 text-center text-gray-400 text-sm">
+                            No hay registros de acceso con los filtros seleccionados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% set pag = accesos_pag %}
+
+        {% elif tab == 'eventos' %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead>
+                    <tr style="background-color: #38230f;">
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Fecha</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Usuario</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Módulo</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Acción</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Referencia</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in eventos_pag.items %}
+                    <tr class="border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150">
+                        <td class="px-4 py-3 text-gray-600 text-xs whitespace-nowrap">
+                            {{ reg.fecha.strftime('%d/%m/%Y %H:%M:%S') if reg.fecha else '—' }}
+                        </td>
+                        <td class="px-4 py-3 font-semibold text-gray-800 text-xs">{{ reg.nombreUsuario }}</td>
+                        <td class="px-4 py-3 text-xs">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                                {{ reg.modulo }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-xs">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold
+                                {% if reg.accion == 'CREAR' %}bg-green-100 text-green-700
+                                {% elif reg.accion == 'EDITAR' %}bg-blue-100 text-blue-700
+                                {% elif reg.accion == 'ACTIVAR' %}bg-teal-100 text-teal-700
+                                {% elif reg.accion == 'DESACTIVAR' %}bg-red-100 text-red-700
+                                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                {{ reg.accion }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-600 text-xs font-mono">{{ reg.referencia }}</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs font-mono">{{ reg.ip }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-10 text-center text-gray-400 text-sm">
+                            No hay eventos registrados con los filtros seleccionados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% set pag = eventos_pag %}
+
+        {% elif tab == 'sistema' %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead>
+                    <tr style="background-color: #38230f;">
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Fecha</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Nivel</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Módulo</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Mensaje</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Detalles</th>
+                        <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in sistema_pag.items %}
+                    <tr class="border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150">
+                        <td class="px-4 py-3 text-gray-600 text-xs whitespace-nowrap">
+                            {{ reg.fecha.strftime('%d/%m/%Y %H:%M:%S') if reg.fecha else '—' }}
+                        </td>
+                        <td class="px-4 py-3 text-xs">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold
+                                {% if reg.nivel == 'ERROR' %}bg-red-100 text-red-700
+                                {% elif reg.nivel == 'WARNING' %}bg-yellow-100 text-yellow-700
+                                {% else %}bg-blue-100 text-blue-700{% endif %}">
+                                {{ reg.nivel }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-xs">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                                {{ reg.modulo }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-700 text-xs max-w-[220px]">{{ reg.mensaje }}</td>
+                        <td class="px-4 py-3 text-gray-400 text-xs max-w-[200px] truncate"
+                            title="{{ reg.detalles }}">
+                            {{ reg.detalles or '—' }}
+                        </td>
+                        <td class="px-4 py-3 text-gray-500 text-xs font-mono">{{ reg.ip }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-10 text-center text-gray-400 text-sm">
+                            No hay registros del sistema con los filtros seleccionados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% set pag = sistema_pag %}
+        {% endif %}
+
+        {% if pag and pag.pages > 1 %}
+        <div class="flex items-center justify-between px-5 py-4 border-t border-gray-100">
+            <p class="text-xs text-gray-500">
+                Mostrando {{ ((pag.page - 1) * pag.per_page) + 1 }}–{{ [pag.page * pag.per_page, pag.total] | min }}
+                de {{ pag.total }} registros
+            </p>
+            <div class="flex items-center gap-1">
+                {% if pag.has_prev %}
+                <a href="{{ url_for('bitacoras.index', tab=tab, pagina=pag.prev_num,
+                           fecha_inicio=fecha_inicio, fecha_fin=fecha_fin,
+                           usuario_acc=filtro_usuario_acc, evento=filtro_evento, resultado=filtro_resultado,
+                           usuario_ev=filtro_usuario_ev, modulo=filtro_modulo, accion=filtro_accion,
+                           nivel=filtro_nivel, modulo_sis=filtro_modulo_sis, busqueda=filtro_busqueda) }}"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition hover:brightness-110"
+                    style="background-color: #38230f;">
+                    ← Anterior
+                </a>
+                {% endif %}
+
+                {% for num in pag.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if num %}
+                    <a href="{{ url_for('bitacoras.index', tab=tab, pagina=num,
+                               fecha_inicio=fecha_inicio, fecha_fin=fecha_fin,
+                               usuario_acc=filtro_usuario_acc, evento=filtro_evento, resultado=filtro_resultado,
+                               usuario_ev=filtro_usuario_ev, modulo=filtro_modulo, accion=filtro_accion,
+                               nivel=filtro_nivel, modulo_sis=filtro_modulo_sis, busqueda=filtro_busqueda) }}"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition
+                               {% if num == pag.page %}text-white{% else %}bg-white border border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}"
+                        style="{% if num == pag.page %}background-color: #f29f05;{% endif %}">
+                        {{ num }}
+                    </a>
+                    {% else %}
+                    <span class="px-2 py-1.5 text-xs text-gray-400">…</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if pag.has_next %}
+                <a href="{{ url_for('bitacoras.index', tab=tab, pagina=pag.next_num,
+                           fecha_inicio=fecha_inicio, fecha_fin=fecha_fin,
+                           usuario_acc=filtro_usuario_acc, evento=filtro_evento, resultado=filtro_resultado,
+                           usuario_ev=filtro_usuario_ev, modulo=filtro_modulo, accion=filtro_accion,
+                           nivel=filtro_nivel, modulo_sis=filtro_modulo_sis, busqueda=filtro_busqueda) }}"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition hover:brightness-110"
+                    style="background-color: #38230f;">
+                    Siguiente →
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% elif pag %}
+        <div class="px-5 py-3 border-t border-gray-100">
+            <p class="text-xs text-gray-400">{{ pag.total }} registro{{ 's' if pag.total != 1 }}</p>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

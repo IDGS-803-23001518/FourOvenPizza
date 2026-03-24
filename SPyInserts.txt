@@ -1,0 +1,221 @@
+USE FourOvenPizzaDB;
+
+INSERT INTO roles VALUES (1,'Administrador',1);
+INSERT INTO roles VALUES (2,'Cocinero',1);
+INSERT INTO roles VALUES (3,'Ventas',1);
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_usuarios$$
+CREATE PROCEDURE sp_gestion_usuarios(
+    IN p_accion      VARCHAR(20),
+    IN p_idUsuario   INT,
+    IN p_idRol       INT,
+    IN p_nombre      VARCHAR(100),
+    IN p_usuario     VARCHAR(50),
+    IN p_contrasenia VARCHAR(255),
+    IN p_estatus     TINYINT,
+    IN p_email       VARCHAR(150),
+    IN p_ip          VARCHAR(45),
+    IN p_ejecutadoPor INT,
+    OUT p_resultado  VARCHAR(255),
+    OUT p_idGenerado INT
+)
+BEGIN
+    DECLARE v_nombre_ejecutor VARCHAR(100) DEFAULT 'Sistema';
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado = 'ERROR: Ocurrió un error en la operación';
+        SET p_idGenerado = 0;
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES ('ERROR', 'Usuarios',
+                CONCAT('Error en sp_gestion_usuarios acción: ', p_accion),
+                CONCAT('Usuario afectado: ', IFNULL(p_usuario, ''), ' | Ejecutado por ID: ', IFNULL(p_ejecutadoPor, 0)),
+                NOW(), p_ip, p_ejecutadoPor);
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    START TRANSACTION;
+
+    IF p_accion = 'INSERT' THEN
+        IF EXISTS (SELECT 1 FROM usuarios WHERE usuario = p_usuario) THEN
+            SET p_resultado = 'ERROR: El nombre de usuario ya existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF EXISTS (SELECT 1 FROM usuarios WHERE email = p_email) THEN
+            SET p_resultado = 'ERROR: El correo ya está registrado';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF NOT EXISTS (SELECT 1 FROM roles WHERE idRol = p_idRol AND estatus = 1) THEN
+            SET p_resultado = 'ERROR: El rol seleccionado no existe o está inactivo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            INSERT INTO usuarios (idRol, nombre, usuario, email, contrasenia, estatus, fechaCreacion)
+            VALUES (p_idRol, p_nombre, p_usuario, p_email, p_contrasenia, 1, NOW());
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado = 'SUCCESS: Usuario registrado correctamente';
+
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Usuarios', 'CREAR',
+                    'usuario', CONCAT('ID:', p_idGenerado, ' | ', p_usuario), NOW(), p_ip);
+            COMMIT;
+        END IF;
+
+    ELSEIF p_accion = 'UPDATE' THEN
+        IF NOT EXISTS (SELECT 1 FROM usuarios WHERE idUsuario = p_idUsuario) THEN
+            SET p_resultado = 'ERROR: El usuario no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF EXISTS (SELECT 1 FROM usuarios WHERE usuario = p_usuario AND idUsuario != p_idUsuario) THEN
+            SET p_resultado = 'ERROR: El nombre de usuario ya está en uso';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF EXISTS (SELECT 1 FROM usuarios WHERE email = p_email AND idUsuario != p_idUsuario) THEN
+            SET p_resultado = 'ERROR: El correo ya está en uso por otro usuario';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF NOT EXISTS (SELECT 1 FROM roles WHERE idRol = p_idRol AND estatus = 1) THEN
+            SET p_resultado = 'ERROR: El rol no existe o está inactivo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            UPDATE usuarios
+            SET idRol=p_idRol, nombre=p_nombre, usuario=p_usuario,
+                email=p_email, estatus=p_estatus
+            WHERE idUsuario = p_idUsuario;
+
+            IF p_contrasenia IS NOT NULL AND p_contrasenia != '' THEN
+                UPDATE usuarios SET contrasenia=p_contrasenia WHERE idUsuario=p_idUsuario;
+            END IF;
+
+            SET p_idGenerado = p_idUsuario;
+            SET p_resultado = 'SUCCESS: Usuario actualizado correctamente';
+
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Usuarios', 'EDITAR',
+                    'usuario', CONCAT('ID:', p_idUsuario, ' | ', p_usuario), NOW(), p_ip);
+            COMMIT;
+        END IF;
+
+    ELSEIF p_accion = 'CHANGE_STATUS' THEN
+        IF NOT EXISTS (SELECT 1 FROM usuarios WHERE idUsuario = p_idUsuario) THEN
+            SET p_resultado = 'ERROR: El usuario no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            UPDATE usuarios SET estatus=p_estatus WHERE idUsuario=p_idUsuario;
+            SET p_idGenerado = p_idUsuario;
+            SET p_resultado = IF(p_estatus=1,
+                'SUCCESS: Usuario activado correctamente',
+                'SUCCESS: Usuario desactivado correctamente');
+
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Usuarios',
+                    IF(p_estatus=1, 'ACTIVAR', 'DESACTIVAR'),
+                    'usuario', CONCAT('ID:', p_idUsuario), NOW(), p_ip);
+            COMMIT;
+        END IF;
+
+    ELSE
+        SET p_resultado = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    END IF;
+END$$
+DELIMITER ;
+
+CALL sp_gestion_usuarios(
+    'INSERT', NULL, 1,
+    'Administrador Principal',
+    'AdminPrincipal',
+    'scrypt:32768:8:1$NrVZXUMYPV2o7SVi$9e0fff504c575e4f2e6364ed4e741bc724b09174a6f7ffd1f2cdf059db3848e6071dfb37eaf80e8f5d4ef491a3fae9b5269856c190c4057e5a6ed35dbb92ba8e', -- fourovenpizzas33
+    1, 'admin@fourovenpizza.com',
+    '127.0.0.1', NULL,   -- ← p_ip y p_ejecutadoPor
+    @p_resultado, @p_idGenerado
+);
+
+CALL sp_gestion_usuarios(
+    'INSERT', NULL, 2,
+    'Cocinero', 'Cocinero',
+    'scrypt:32768:8:1$NrVZXUMYPV2o7SVi$9e0fff504c575e4f2e6364ed4e741bc724b09174a6f7ffd1f2cdf059db3848e6071dfb37eaf80e8f5d4ef491a3fae9b5269856c190c4057e5a6ed35dbb92ba8e', -- fourovenpizzas33
+    1, 'cocinero@fourovenpizza.com',
+    '127.0.0.1', NULL,
+    @p_resultado, @p_idGenerado
+);
+
+CALL sp_gestion_usuarios(
+    'INSERT', NULL, 3,
+    'Ventas', 'Ventas',
+    'scrypt:32768:8:1$NrVZXUMYPV2o7SVi$9e0fff504c575e4f2e6364ed4e741bc724b09174a6f7ffd1f2cdf059db3848e6071dfb37eaf80e8f5d4ef491a3fae9b5269856c190c4057e5a6ed35dbb92ba8e', -- fourovenpizzas33
+    1, 'ventas@fourovenpizza.com',
+    '127.0.0.1', NULL,
+    @p_resultado, @p_idGenerado
+);
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_cambiar_estatus_rol$$
+CREATE PROCEDURE sp_cambiar_estatus_rol(
+    IN  p_idRol        INT,
+    IN  p_estatus      TINYINT,
+    IN  p_ejecutadoPor INT,
+    IN  p_ip           VARCHAR(45),
+    OUT p_resultado    VARCHAR(100)
+)
+BEGIN
+    DECLARE v_nombre_ejecutor VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_nombre_rol      VARCHAR(50)  DEFAULT '';
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM roles WHERE idRol = p_idRol) THEN
+        SET p_resultado = 'ERROR: Rol no encontrado';
+
+    ELSEIF p_estatus = 0 AND (SELECT COUNT(*) FROM roles WHERE estatus = 1) <= 1 THEN
+        SET p_resultado = 'ERROR: Debe existir al menos un rol activo en el sistema';
+
+    ELSE
+        SELECT nombre INTO v_nombre_rol FROM roles WHERE idRol = p_idRol;
+        UPDATE roles SET estatus = p_estatus WHERE idRol = p_idRol;
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Roles',
+                IF(p_estatus=1, 'ACTIVAR', 'DESACTIVAR'),
+                'rol', CONCAT('ID:', p_idRol, ' | ', v_nombre_rol), NOW(), p_ip);
+
+        SET p_resultado = 'OK';
+    END IF;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_cambiar_contrasenia$$
+CREATE PROCEDURE sp_cambiar_contrasenia(
+    IN  p_idUsuario   INT,
+    IN  p_contrasenia VARCHAR(255),
+    IN  p_ip          VARCHAR(45),
+    OUT p_resultado   VARCHAR(100)
+)
+BEGIN
+    DECLARE v_nombre VARCHAR(100) DEFAULT '';
+
+    IF NOT EXISTS (SELECT 1 FROM usuarios WHERE idUsuario = p_idUsuario) THEN
+        SET p_resultado = 'ERROR: Usuario no encontrado';
+    ELSE
+        SELECT nombre INTO v_nombre FROM usuarios WHERE idUsuario = p_idUsuario;
+        UPDATE usuarios SET contrasenia = p_contrasenia WHERE idUsuario = p_idUsuario;
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_idUsuario, v_nombre, 'Usuarios', 'CAMBIO_CONTRASENIA',
+                'usuario', CONCAT('ID:', p_idUsuario), NOW(), p_ip);
+
+        SET p_resultado = 'OK';
+    END IF;
+END$$
+DELIMITER ;
