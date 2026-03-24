@@ -1,16 +1,17 @@
-from flask import Flask, render_template, request, redirect, url_for
-from flask import flash
+from flask import Flask, flash, g, redirect, render_template, request, url_for
 from flask_wtf.csrf import CSRFProtect
-from flask import g
-from config import DevelopmentConfig
-from autentificacion.routes import autentificacion
+
 import forms
+from autentificacion.routes import autentificacion
+from config import DevelopmentConfig
+from materiasPrimas.routes import materiasPrimas
 from models import db
 
 app = Flask(__name__)
 csrf=CSRFProtect()
 app.config.from_object(DevelopmentConfig)
 app.register_blueprint(autentificacion)
+app.register_blueprint(materiasPrimas)
 db.init_app(app)
 
 @app.route("/")

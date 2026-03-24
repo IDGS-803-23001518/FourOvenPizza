@@ -1,0 +1,359 @@
+{%extends "layoutAdmin.html"%}
+{%block container%}
+
+<style>
+  :root {
+    --brown:  #3d1f0a;
+    --orange: rgb(244, 158, 18);
+    --amber:  #f59e0b;
+    --green:  #22c55e;
+    --white:  #ffffff;
+    --border: #c97b3a;
+  }
+
+  /* ── HEADER ─────────────────────────────── */
+  .page-header {
+    background: var(--brown);
+    padding: 18px 28px;
+    margin-bottom: 24px;
+    border-radius: 4px;
+  }
+  .page-header h1 {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 1.7rem;
+    color: var(--white);
+    margin: 0;
+    letter-spacing: .01em;
+    margin-left:60px;
+  }
+  .page-header h1 span {
+    color: var(--orange);
+  }
+
+  /* ── BOTÓN REGISTRAR ─────────────────────── */
+  .btn-register {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--orange);
+    color: var(--brown);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 0.9rem;
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(244,158,18,.4);
+    transition: background .2s, transform .15s;
+    text-decoration: none;
+  }
+  .btn-register:hover { background: rgb(220, 140, 10); transform: translateY(-2px); }
+
+  .top-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 18px;
+  }
+
+  /* ── PANEL DE FILTROS ────────────────────── */
+  .filter-panel {
+    background: var(--white);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.12);
+  }
+
+  .filter-title {
+    background: var(--brown);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 1rem;
+    color: var(--white);
+    letter-spacing: .08em;
+    padding: 12px 24px;
+  }
+
+  .filter-body {
+    padding: 18px 24px;
+  }
+
+  .filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .filter-group label {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--brown);
+  }
+
+  .filter-group input,
+  .filter-group select {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.82rem;
+    color: #333;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    width: 100%;
+  }
+  .filter-group input:focus,
+  .filter-group select:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(244,158,18,.15);
+  }
+
+  .btn-filter {
+    background: var(--orange);
+    color: var(--brown);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 0.88rem;
+    padding: 9px 26px;
+    border-radius: 9px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(244,158,18,.35);
+    transition: background .2s, transform .15s;
+    align-self: flex-end;
+    white-space: nowrap;
+  }
+  .btn-filter:hover { background: rgb(220, 140, 10); transform: translateY(-1px); }
+
+  /* ── GRID DE CARDS ───────────────────────── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+  }
+
+  /* ── CARD MATERIA PRIMA ──────────────────── */
+  .mp-card {
+    background: var(--white);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 18px rgba(0,0,0,.12);
+    transition: transform .2s, box-shadow .2s;
+    animation: fadeUp .35s ease both;
+    display: flex;
+    flex-direction: column;
+  }
+  .mp-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 28px rgba(0,0,0,.18);
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(14px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+
+  .card-header {
+    background: var(--brown);
+    padding: 10px 0;
+    text-align: center;
+  }
+  .card-header span {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 0.88rem;
+    color: var(--white);
+    letter-spacing: .12em;
+  }
+
+  .card-body {
+    padding: 16px 18px 10px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .card-row {
+    display: flex;
+    gap: 5px;
+    font-size: 0.84rem;
+    line-height: 1.4;
+    justify-content: center;
+  }
+  .card-row .lbl {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    color: var(--amber);
+  }
+.card-row .val {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 800;  /* cambia de 500 a 800 */
+    color: #1e1e1e;
+}
+
+  .badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: #1e1e1e;
+  }
+  .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    flex-shrink: 0;
+  }
+  .dot.inactive { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+
+  /* ── ACCIONES ────────────────────────────── */
+  .card-actions {
+    display: flex;
+    gap: 8px;
+    padding: 10px 18px 16px;
+    justify-content: center;
+  }
+
+  .action-btn {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: opacity .18s, transform .15s;
+    text-decoration: none;
+  }
+  .action-btn:hover  { opacity: .82; transform: scale(1.08); }
+  .action-btn:active { transform: scale(.95); }
+  .action-btn.edit   { background: #f59e0b; }
+  .action-btn.view   { background: #3b82f6; }
+  .action-btn.delete { background: #ef4444; }
+  .action-btn svg    { width: 16px; height: 16px; fill: white; }
+
+  .empty-msg {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #888;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    padding: 48px 0;
+  }
+
+  @media (max-width: 640px) {
+    .filter-row { flex-direction: column; }
+    .btn-filter { width: 100%; }
+    .page-header h1 { font-size: 1.3rem; }
+  }
+</style>
+
+<!-- Header -->
+<div class="page-header">
+  <h1>Gestión de <span>Materias Primas</span></h1>
+</div>
+
+<div style="padding: 24px 60px;">
+<!-- Botón registrar -->
+<div class="top-bar">
+  <a href="{{ request.referrer }}" class="btn-register">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px">
+      <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/>
+    </svg>
+    Registrar Materia Prima
+  </a>
+</div>
+
+<!-- Panel de filtros -->
+<div class="filter-panel">
+  <div class="filter-title">FILTROS DE BUSQUEDA</div>
+  <div class="filter-body">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Nombre</label>
+        <input type="text" name="nombre" placeholder="Ingresa el nombre...">
+      </div>
+      <div class="filter-group" style="max-width:130px">
+        <label>Tipo</label>
+        <select name="tipo">
+          <option value="">Todos</option>
+          <option value="Solido">Solido</option>
+          <option value="Liquido">Liquido</option>
+        </select>
+      </div>
+      <div class="filter-group" style="max-width:130px">
+        <label>Categoría</label>
+        <select name="categoria">
+          <option value="">Todas</option>
+          <option value="Verduras">Verduras</option>
+          <option value="Carnes">Carnes</option>
+          <option value="Lácteos">Lácteos</option>
+          <option value="Especias">Especias</option>
+          <option value="Aceites">Aceites</option>
+        </select>
+      </div>
+      <div class="filter-group" style="max-width:130px">
+        <label>Estatus</label>
+        <select name="estatus">
+          <option value="Activo">Activo</option>
+          <option value="Inactivo">Inactivo</option>
+        </select>
+      </div>
+      <button class="btn-filter" type="button">Filtrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Grid de cards con Jinja2 -->
+<div class="cards-grid">
+
+  {% for mp in materias %}
+  <div class="mp-card" style="animation-delay: {{ loop.index0 * 0.06 }}s">
+    <div class="card-header"><span>MATERIA PRIMA</span></div>
+    <div class="card-body">
+      <div class="card-row"><span class="lbl">Nombre:</span><span class="val">{{ mp.nombre }}</span></div>
+      <div class="card-row"><span class="lbl">Tipo:</span><span class="val">{{ mp.tipo }}</span></div>
+      <div class="card-row"><span class="lbl">Stock:</span><span class="val">{{ mp.stock }}</span></div>
+      <div class="card-row"><span class="lbl">Categoría:</span><span class="val">{{ mp.categoria }}</span></div>
+      <div class="badge-status">
+        <span class="dot {% if not mp.estatus %}inactive{% endif %}"></span>
+        {{ 'Activo' if mp.estatus else 'Inactivo' }}
+      </div>
+    </div>
+    <div class="card-actions">
+      <a href="{{ request.referrer}}" class="action-btn edit" title="Editar">
+        <svg viewBox="0 0 20 20"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z"/></svg>
+      </a>
+      <a href="{{ request.referrer }}" class="action-btn view" title="Ver">
+        <svg viewBox="0 0 20 20"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clip-rule="evenodd"/></svg>
+      </a>
+      <a href="{{ request.referrer }}" class="action-btn delete" title="Eliminar"
+         onclick="return confirm('¿Eliminar {{ mp.nombre }}?')">
+        <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd"/></svg>
+      </a>
+    </div>
+  </div>
+  {% else %}
+  <p class="empty-msg">No se encontraron materias primas.</p>
+  {% endfor %}
+
+</div>
+</div>
+{%endblock%}
