@@ -5,6 +5,7 @@ from config import DevelopmentConfig
 from autentificacion.routes import autentificacion
 from bitacoras import bitacoras
 from proveedores import proveedores
+from compras import compras
 from models import db
 from datetime import timedelta, datetime, timezone
 
@@ -13,9 +14,12 @@ app.config.from_object(DevelopmentConfig)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=10)
 csrf = CSRFProtect(app)
 mail = Mail(app)
+
 app.register_blueprint(autentificacion)
 app.register_blueprint(bitacoras)
-app.register_blueprint(proveedores) 
+app.register_blueprint(proveedores)
+app.register_blueprint(compras)
+
 db.init_app(app)
 
 
@@ -52,6 +56,7 @@ def verificar_sesion():
     session['ultima_actividad'] = ahora.isoformat()
     session.modified = True
 
+
 @app.route("/")
 def index():
     return redirect(url_for('autentificacion.login'))
@@ -62,6 +67,7 @@ def inicio():
     if not session.get('usuario_id'):
         return redirect(url_for('autentificacion.login'))
     return render_template("inicio.html")
+
 
 @app.context_processor
 def inject_layout():
