@@ -219,3 +219,181 @@ BEGIN
     END IF;
 END$$
 DELIMITER ;
+
+-- _______________________________________________
+-- SP PROVEEDORES
+-- _______________________________________________
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_gestion_proveedores$$
+
+CREATE PROCEDURE sp_gestion_proveedores(
+    IN p_accion        VARCHAR(20),
+    IN p_idProveedor   INT,
+    IN p_nombre        VARCHAR(100),
+    IN p_correo        VARCHAR(100),
+    IN p_telefono      VARCHAR(20),
+    IN p_direccion     VARCHAR(200),
+    IN p_estatus       TINYINT,
+    IN p_ip            VARCHAR(45),
+    IN p_ejecutadoPor  INT,
+    OUT p_resultado    VARCHAR(255),
+    OUT p_idGenerado   INT
+)
+BEGIN
+    DECLARE v_nombre_ejecutor VARCHAR(100) DEFAULT 'Sistema';
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado = 'ERROR: Ocurrió un error en la operación';
+        SET p_idGenerado = 0;
+
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES ('ERROR', 'Proveedores',
+                CONCAT('Error en sp_gestion_proveedores acción: ', p_accion),
+                CONCAT('Proveedor afectado: ', IFNULL(p_nombre, ''), 
+                       ' | Ejecutado por ID: ', IFNULL(p_ejecutadoPor, 0)),
+                NOW(), p_ip, p_ejecutadoPor);
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor 
+        FROM usuarios 
+        WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    START TRANSACTION;
+
+    IF p_accion = 'INSERT' THEN
+
+        IF EXISTS (SELECT 1 FROM proveedores WHERE nombre = p_nombre) THEN
+            SET p_resultado = 'ERROR: El nombre del proveedor ya existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF EXISTS (SELECT 1 FROM proveedores WHERE correo = p_correo) THEN
+            SET p_resultado = 'ERROR: El correo ya está registrado para otro proveedor';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+            INSERT INTO proveedores (nombre, correo, telefono, direccion, estatus)
+            VALUES (p_nombre, p_correo, p_telefono, p_direccion, p_estatus);
+
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado = 'SUCCESS: Proveedor registrado correctamente';
+
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Proveedores', 'CREAR',
+                    'proveedor', CONCAT('ID:', p_idGenerado, ' | ', p_nombre), NOW(), p_ip);
+
+            COMMIT;
+        END IF;
+
+    ELSEIF p_accion = 'UPDATE' THEN
+
+        IF NOT EXISTS (SELECT 1 FROM proveedores WHERE idProveedor = p_idProveedor) THEN
+            SET p_resultado = 'ERROR: El proveedor no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF EXISTS (SELECT 1 FROM proveedores 
+                       WHERE nombre = p_nombre AND idProveedor != p_idProveedor) THEN
+            SET p_resultado = 'ERROR: El nombre del proveedor ya está en uso';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF EXISTS (SELECT 1 FROM proveedores 
+                       WHERE correo = p_correo AND idProveedor != p_idProveedor) THEN
+            SET p_resultado = 'ERROR: El correo ya está en uso por otro proveedor';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+            UPDATE proveedores
+            SET nombre = p_nombre,
+                correo = p_correo,
+                telefono = p_telefono,
+                direccion = p_direccion,
+                estatus = p_estatus
+            WHERE idProveedor = p_idProveedor;
+
+            SET p_idGenerado = p_idProveedor;
+            SET p_resultado = 'SUCCESS: Proveedor actualizado correctamente';
+
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Proveedores', 'EDITAR',
+                    'proveedor', CONCAT('ID:', p_idProveedor, ' | ', p_nombre), NOW(), p_ip);
+
+            COMMIT;
+        END IF;
+
+    ELSEIF p_accion = 'CHANGE_STATUS' THEN
+
+        IF NOT EXISTS (SELECT 1 FROM proveedores WHERE idProveedor = p_idProveedor) THEN
+            SET p_resultado = 'ERROR: El proveedor no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+            UPDATE proveedores 
+            SET estatus = p_estatus 
+            WHERE idProveedor = p_idProveedor;
+
+            SET p_idGenerado = p_idProveedor;
+            SET p_resultado = IF(p_estatus=1,
+                'SUCCESS: Proveedor activado correctamente',
+                'SUCCESS: Proveedor desactivado correctamente');
+
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Proveedores',
+                    IF(p_estatus=1, 'ACTIVAR', 'DESACTIVAR'),
+                    'proveedor', CONCAT('ID:', p_idProveedor), NOW(), p_ip);
+
+            COMMIT;
+        END IF;
+
+    ELSE
+        SET p_resultado = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    END IF;
+
+END$$
+
+DELIMITER ;
+
+-- _______________________________________________
+-- INSERT DE PROVEEDORES
+-- _______________________________________________
+
+INSERT INTO proveedores (nombre, correo, telefono, direccion, estatus) VALUES
+
+-- HARINA
+('Molino Harinero La Esperanza', 'ventas@molinolaesperanza.com', '2201-1234', 'Calle a Tonacatepeque #45, San Salvador', 1),
+('Harinas Selectas S.A.', 'pedidos@harinasselectas.com', '2202-2345', 'Colonia Santa Cecilia, Pasaje #3, San Salvador', 1),
+
+-- LEVADURA
+('Levaduras y Mejorantes La Espiga', 'ventas@laespiga.com', '2234-5678', 'Km 12 Carretera a Santa Tecla, San Salvador', 1),
+
+-- LÁCTEOS 
+('Lácteos La Vaquita', 'pedidos@lavaquita.com', '2256-7890', 'Colonia San Benito, Calle Principal #123, San Salvador', 1),
+('Productos Lácteos La Granja', 'ventas@lagranja.com', '2203-3456', 'Carretera a Lourdes Km 12, Colón', 1),
+
+-- QUESO MONARCA
+('Quesos Monarca Centroamérica', 'ventas@monarca.com.sv', '2250-1111', 'Boulevard Los Próceres #500, San Salvador', 1),
+
+-- QUESO ASADERO
+('Quesería La Campiña', 'info@lacampina.com', '2312-3456', 'Carretera a Sonsonate Km 25, Colón', 1),
+
+-- QUESO MOZZARELLA
+('Quesería La Mozzarella', 'ventas@lamozzarella.com', '2270-1234', 'Colonia San Benito, Av. La Paz #234, San Salvador', 1),
+('Quesos Italianos La Bella Italia', 'pedidos@labellaitalia.com', '2270-5678', 'Santa Elena, Calle El Espino #89, Antiguo Cuscatlán', 1),
+
+-- VEGETALES 
+('Verduras y Frutas La Cosecha', 'pedidos@lacosecha.com', '2290-1234', 'Mercado Central, Local #78, San Salvador', 1),
+
+-- PEPPERONI
+('Carnes Mark S.A. de C.V.', 'ventas@carnesmark.com', '2278-9012', 'Boulevard Los Próceres #456, San Salvador', 1);

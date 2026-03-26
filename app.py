@@ -4,6 +4,7 @@ from flask_mail import Mail
 from config import DevelopmentConfig
 from autentificacion.routes import autentificacion
 from bitacoras import bitacoras
+from proveedores import proveedores
 from models import db
 from datetime import timedelta, datetime, timezone
 
@@ -14,6 +15,7 @@ csrf = CSRFProtect(app)
 mail = Mail(app)
 app.register_blueprint(autentificacion)
 app.register_blueprint(bitacoras)
+app.register_blueprint(proveedores) 
 db.init_app(app)
 
 

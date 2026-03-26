@@ -1,0 +1,620 @@
+{% extends layout %}
+
+{% block title %}Proveedores{% endblock %}
+
+{% block container %}
+<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
+    style="border-bottom: 3px solid #f29f05;">
+    <div class="container flex flex-wrap items-center justify-between mx-auto">
+        <div class="flex-1 flex justify-center">
+            <div class="flex items-center space-x-2 sm:space-x-3 bg-opacity-20 px-3 sm:px-6 py-2 rounded-full">
+                <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Gestion de</span>
+                <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap"
+                    style="color: #f29f05;">Proveedores</span>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container mx-auto px-4 sm:px-6 max-w-6xl">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div
+        class="mb-4 p-4 rounded-lg {% if category == 'success' %}bg-green-100 text-green-700{% elif category == 'danger' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="flex justify-end mb-4">
+        <button onclick="abrirModalRegistro()"
+            class="text-white font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-md transition-all duration-300 hover:brightness-110 hover:shadow-lg text-sm sm:text-base"
+            style="background-color: #f29f05;">
+            Registrar Proveedor
+        </button>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
+        <div class="px-4 sm:px-5 py-3 rounded-t-2xl" style="background-color: #38230f;">
+            <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">FILTROS DE BUSQUEDA</h2>
+        </div>
+        <div class="flex flex-wrap gap-3 sm:gap-4 items-end p-4 sm:p-5">
+            <div class="flex flex-col flex-1 min-w-[160px] sm:min-w-[180px]">
+                <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Nombre</label>
+                <input type="text" id="filtro-nombre" placeholder="Ingresa el nombre del proveedor..."
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition" />
+            </div>
+            <div class="flex flex-col flex-1 min-w-[160px] sm:min-w-[180px]">
+                <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Correo</label>
+                <input type="text" id="filtro-correo" placeholder="Ingresa el correo..."
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition" />
+            </div>
+            <div class="flex flex-col min-w-[120px] sm:min-w-[140px]">
+                <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Estatus</label>
+                <select id="filtro-estatus"
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                    <option value="">Todos</option>
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                </select>
+            </div>
+            <div class="flex flex-col justify-end">
+                <button onclick="filtrarProveedores()"
+                    class="text-white font-semibold px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg shadow transition-all duration-300 hover:brightness-110 text-xs sm:text-sm"
+                    style="background-color: #f29f05;">
+                    Filtrar
+                </button>
+            </div>
+            <div class="flex flex-col justify-end">
+                <button onclick="limpiarFiltros()"
+                    class="text-white font-semibold px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg shadow transition-all duration-300 hover:brightness-110 text-xs sm:text-sm"
+                    style="background-color: #6b7280;">
+                    Limpiar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="rounded-2xl overflow-hidden shadow-md">
+        <div class="overflow-x-auto" id="tabla-desktop">
+            <table class="w-full text-sm text-left">
+                <thead>
+                    <tr style="background-color: #38230f;">
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">NOMBRE</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">CORREO ELECTRÓNICO</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">TELÉFONO</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">DIRECCIÓN</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">ESTATUS</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-proveedores">
+                    {% for proveedor in proveedores %}
+                    <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150 proveedor-row"
+                        data-id="{{ proveedor.idProveedor }}" data-nombre="{{ proveedor.nombre }}"
+                        data-correo="{{ proveedor.correo }}" data-telefono="{{ proveedor.telefono }}"
+                        data-direccion="{{ proveedor.direccion }}"
+                        data-estatus="{% if proveedor.estatus == 1 %}Activo{% else %}Inactivo{% endif %}"
+                        data-estatus-valor="{{ proveedor.estatus }}">
+                        <td class="px-5 py-3 font-semibold text-gray-800">{{ proveedor.nombre }}</td>
+                        <td class="px-5 py-3 text-gray-700">{{ proveedor.correo }}</td>
+                        <td class="px-5 py-3 text-gray-700">{{ proveedor.telefono }}</td>
+                        <td class="px-5 py-3 text-gray-700">{{ proveedor.direccion }}</td>
+                        <td class="px-5 py-3">
+                            {% if proveedor.estatus == 1 %}
+                            <span class="flex items-center gap-1 font-semibold text-green-600">
+                                <span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>
+                                Activo
+                            </span>
+                            {% else %}
+                            <span class="flex items-center gap-1 font-semibold text-red-500">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                                Inactivo
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3">
+                            <div class="flex gap-2">
+                                <button onclick="abrirModalEdicion({{ proveedor.idProveedor }})"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+                                    style="background-color: #f29f05;" title="Editar">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                </button>
+                                <a href="#"
+                                    onclick="confirmarCambioEstatus(event, '/cambiar-estatus-proveedor/{{ proveedor.idProveedor }}/{% if proveedor.estatus == 1 %}0{% else %}1{% endif %}', {% if proveedor.estatus == 1 %}false{% else %}true{% endif %})"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+                                    style="background-color: {% if proveedor.estatus == 1 %}#e53e3e{% else %}#48bb78{% endif %};"
+                                    title="{% if proveedor.estatus == 1 %}Desactivar{% else %}Activar{% endif %}">
+                                    {% if proveedor.estatus == 1 %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6" />
+                                    </svg>
+                                    {% else %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5v14" />
+                                    </svg>
+                                    {% endif %}
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="cards-proveedores" class="md:hidden space-y-3 p-3">
+            {% for proveedor in proveedores %}
+            <div class="proveedor-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg"
+                data-id="{{ proveedor.idProveedor }}" data-nombre="{{ proveedor.nombre }}"
+                data-correo="{{ proveedor.correo }}" data-telefono="{{ proveedor.telefono }}"
+                data-direccion="{{ proveedor.direccion }}"
+                data-estatus="{% if proveedor.estatus == 1 %}Activo{% else %}Inactivo{% endif %}"
+                data-estatus-valor="{{ proveedor.estatus }}">
+
+                <div class="p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1">
+                            <h3 class="text-base font-bold text-gray-800 break-words">{{ proveedor.nombre }}</h3>
+                            <p class="text-xs text-gray-500 mt-1 break-words">{{ proveedor.correo }}</p>
+                        </div>
+                        {% if proveedor.estatus == 1 %}
+                        <span
+                            class="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full ml-2 whitespace-nowrap">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                            Activo
+                        </span>
+                        {% else %}
+                        <span
+                            class="flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-full ml-2 whitespace-nowrap">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                            Inactivo
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="border-t border-gray-100 my-2"></div>
+
+                    <div class="mb-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-600">Teléfono:</span>
+                            <span class="text-xs text-gray-800">{{ proveedor.telefono }}</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-600">Dirección:</span>
+                            <span class="text-xs text-gray-800 text-right">{{ proveedor.direccion }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="abrirModalEdicion({{ proveedor.idProveedor }})"
+                            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white transition-all duration-200 hover:scale-105 text-sm"
+                            style="background-color: #f29f05;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                            <span>Editar</span>
+                        </button>
+                        <a href="#"
+                            onclick="confirmarCambioEstatus(event, '/cambiar-estatus-proveedor/{{ proveedor.idProveedor }}/{% if proveedor.estatus == 1 %}0{% else %}1{% endif %}', {% if proveedor.estatus == 1 %}false{% else %}true{% endif %})"
+                            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white transition-all duration-200 hover:scale-105 text-sm"
+                            style="background-color: {% if proveedor.estatus == 1 %}#e53e3e{% else %}#48bb78{% endif %};">
+                            {% if proveedor.estatus == 1 %}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6" />
+                            </svg>
+                            <span>Desactivar</span>
+                            {% else %}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5v14" />
+                            </svg>
+                            <span>Activar</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div id="sin-resultados" class="hidden text-center py-10 bg-white text-gray-400 text-sm font-medium">
+            No se encontraron proveedores con los filtros seleccionados.
+        </div>
+    </div>
+</div>
+
+<div id="modal-registro" tabindex="-1"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+    style="background-color: rgba(0, 0, 0, 0.3);">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 my-8 overflow-hidden">
+        <div class="flex justify-between items-center px-6 py-4" style="background-color: #38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">REGISTRAR PROVEEDOR</h3>
+            <button onclick="cerrarModalRegistro()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <form id="form-registro" action="{{ url_for('proveedores.registrar_proveedor') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div id="error-registro" class="hidden mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm"></div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre del Proveedor *</label>
+                    <input type="text" name="nombre" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition"
+                        placeholder="Ingrese el nombre del proveedor">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Correo Electrónico *</label>
+                    <input type="email" name="correo" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition"
+                        placeholder="correo@proveedor.com">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Teléfono *</label>
+                    <input type="tel" name="telefono" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition"
+                        placeholder="Ej: 1234-5678 o +503 1234 5678">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Dirección *</label>
+                    <textarea name="direccion" required rows="3"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition"
+                        placeholder="Ingrese la dirección completa del proveedor"></textarea>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="button" onclick="cerrarModalRegistro()"
+                        class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 rounded-lg text-white font-semibold transition hover:brightness-110"
+                        style="background-color: #f29f05;">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="modal-edicion" tabindex="-1" class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+    style="background-color: rgba(0, 0, 0, 0.3);">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 my-8 overflow-hidden">
+        <div class="flex justify-between items-center px-6 py-4" style="background-color: #38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">EDITAR PROVEEDOR</h3>
+            <button onclick="cerrarModalEdicion()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <form id="form-edicion" action="" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div id="error-edicion" class="hidden mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm"></div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre del Proveedor *</label>
+                    <input type="text" id="edit-nombre" name="nombre" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition"
+                        placeholder="Ingrese el nombre del proveedor">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Correo Electrónico *</label>
+                    <input type="email" id="edit-correo" name="correo" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition"
+                        placeholder="correo@proveedor.com">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Teléfono *</label>
+                    <input type="tel" id="edit-telefono" name="telefono" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition"
+                        placeholder="Ej: 1234-5678 o +503 1234 5678">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Dirección *</label>
+                    <textarea id="edit-direccion" name="direccion" required rows="3"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition"
+                        placeholder="Ingrese la dirección completa del proveedor"></textarea>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="button" onclick="cerrarModalEdicion()"
+                        class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 rounded-lg text-white font-semibold transition hover:brightness-110"
+                        style="background-color: #f29f05;">
+                        Actualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="modal-confirm" class="hidden fixed inset-0 z-50 flex items-center justify-center"
+    style="background-color: rgba(0, 0, 0, 0.3);">
+    <div class="bg-white rounded-2xl shadow-xl p-5 w-72 text-center">
+        <div class="flex justify-center mb-3">
+            <div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+            </div>
+        </div>
+        <h3 class="text-base font-bold text-gray-800 mb-1">Confirmar acción</h3>
+        <p id="confirm-mensaje" class="text-sm text-gray-500 mb-5"></p>
+        <div class="flex gap-2">
+            <button onclick="document.getElementById('modal-confirm').classList.add('hidden')"
+                class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition">
+                Cancelar
+            </button>
+            <button id="confirm-btn"
+                class="flex-1 px-3 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
+                style="background-color: #f29f05;">
+                Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function abrirModalRegistro() {
+        document.getElementById('modal-registro').classList.remove('hidden');
+    }
+
+    function cerrarModalRegistro() {
+        document.getElementById('modal-registro').classList.add('hidden');
+        document.getElementById('error-registro').classList.add('hidden');
+        document.getElementById('form-registro').reset();
+    }
+
+    function abrirModalEdicion(id) {
+        let fila = document.querySelector(`.proveedor-row[data-id="${id}"]`);
+        if (!fila) {
+            fila = document.querySelector(`.proveedor-card[data-id="${id}"]`);
+        }
+
+        if (fila) {
+            document.getElementById('edit-nombre').value = fila.dataset.nombre;
+            document.getElementById('edit-correo').value = fila.dataset.correo;
+            document.getElementById('edit-telefono').value = fila.dataset.telefono;
+            document.getElementById('edit-direccion').value = fila.dataset.direccion;
+
+            document.getElementById('form-edicion').action = "{{ url_for('proveedores.editar_proveedor', id=0) }}".replace('0', id);
+            document.getElementById('modal-edicion').classList.remove('hidden');
+        }
+    }
+
+    function cerrarModalEdicion() {
+        document.getElementById('modal-edicion').classList.add('hidden');
+        document.getElementById('error-edicion').classList.add('hidden');
+    }
+
+    function filtrarProveedores() {
+        const nombre = document.getElementById('filtro-nombre').value.toLowerCase();
+        const correo = document.getElementById('filtro-correo').value.toLowerCase();
+        const estatus = document.getElementById('filtro-estatus').value;
+
+        const filas = document.querySelectorAll('.proveedor-row');
+        const cards = document.querySelectorAll('.proveedor-card');
+
+        let visibles = 0;
+
+        filas.forEach(fila => {
+            const fnombre = fila.dataset.nombre.toLowerCase();
+            const fcorreo = fila.dataset.correo.toLowerCase();
+            const festatus = fila.dataset.estatus;
+
+            const coincideNombre = !nombre || fnombre.includes(nombre);
+            const coincideCorreo = !correo || fcorreo.includes(correo);
+            const coincideEstatus = !estatus || festatus === estatus;
+
+            if (coincideNombre && coincideCorreo && coincideEstatus) {
+                fila.classList.remove('hidden');
+                visibles++;
+            } else {
+                fila.classList.add('hidden');
+            }
+        });
+
+        cards.forEach(card => {
+            const fnombre = card.dataset.nombre.toLowerCase();
+            const fcorreo = card.dataset.correo.toLowerCase();
+            const festatus = card.dataset.estatus;
+
+            const coincideNombre = !nombre || fnombre.includes(nombre);
+            const coincideCorreo = !correo || fcorreo.includes(correo);
+            const coincideEstatus = !estatus || festatus === estatus;
+
+            if (coincideNombre && coincideCorreo && coincideEstatus) {
+                card.classList.remove('hidden');
+                visibles++;
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('sin-resultados').classList.toggle('hidden', visibles > 0);
+    }
+
+    function handleResponsive() {
+        const tablaDesktop = document.getElementById('tabla-desktop');
+        const cardsMobile = document.getElementById('cards-proveedores');
+
+        if (window.innerWidth >= 768) {
+            if (tablaDesktop) tablaDesktop.style.display = 'block';
+            if (cardsMobile) cardsMobile.style.display = 'none';
+        } else {
+            if (tablaDesktop) tablaDesktop.style.display = 'none';
+            if (cardsMobile) cardsMobile.style.display = 'block';
+        }
+    }
+
+    function confirmarCambioEstatus(e, url, activar) {
+        e.preventDefault();
+        const accion = activar ? 'activar' : 'desactivar';
+        document.getElementById('confirm-mensaje').textContent =
+            `¿Estás seguro de que deseas ${accion} este proveedor?`;
+        document.getElementById('confirm-btn').onclick = () => window.location.href = url;
+        document.getElementById('modal-confirm').classList.remove('hidden');
+    }
+
+    document.getElementById('form-registro').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const errorDiv = document.getElementById('error-registro');
+        errorDiv.classList.add('hidden');
+
+        const nombre = this.querySelector('[name="nombre"]').value;
+        const correo = this.querySelector('[name="correo"]').value;
+        const telefono = this.querySelector('[name="telefono"]').value;
+        const direccion = this.querySelector('[name="direccion"]').value;
+
+        const error = validarFormProveedor(nombre, correo, telefono, direccion);
+        if (error) {
+            errorDiv.textContent = error;
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+
+        const formData = new FormData(this);
+        const response = await fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
+            },
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            cerrarModalRegistro();
+            mostrarFlash(data.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            errorDiv.textContent = data.message;
+            errorDiv.classList.remove('hidden');
+        }
+    });
+
+    document.getElementById('form-edicion').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const errorDiv = document.getElementById('error-edicion');
+        errorDiv.classList.add('hidden');
+
+        const nombre = this.querySelector('[name="nombre"]').value;
+        const correo = this.querySelector('[name="correo"]').value;
+        const telefono = this.querySelector('[name="telefono"]').value;
+        const direccion = this.querySelector('[name="direccion"]').value;
+
+        const error = validarFormProveedor(nombre, correo, telefono, direccion);
+        if (error) {
+            errorDiv.textContent = error;
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+
+        const formData = new FormData(this);
+        const response = await fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
+            },
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            cerrarModalEdicion();
+            mostrarFlash(data.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            errorDiv.textContent = data.message;
+            errorDiv.classList.remove('hidden');
+        }
+    });
+
+    function mostrarFlash(mensaje, tipo) {
+        const flash = document.createElement('div');
+        flash.className = `fixed top-5 right-5 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-semibold transition-all duration-300 ${tipo === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
+        flash.textContent = mensaje;
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 3000);
+    }
+
+    function validarFormProveedor(nombre, correo, telefono, direccion) {
+        if (!nombre.trim()) return 'El nombre del proveedor es requerido';
+        if (nombre.trim().length < 3) return 'El nombre debe tener al menos 3 caracteres';
+        if (nombre.trim().length > 100) return 'El nombre no puede superar los 100 caracteres';
+        if (!/^[a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s\.\-']+$/.test(nombre.trim()))
+            return 'El nombre solo puede contener letras, espacios, puntos, guiones y apóstrofes';
+
+        if (!correo.trim()) return 'El correo electrónico es requerido';
+        if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(correo.trim()))
+            return 'El formato del correo electrónico no es válido';
+
+        if (!telefono.trim()) return 'El teléfono es requerido';
+        if (!/^[0-9+\-\s()]+$/.test(telefono.trim()))
+            return 'El teléfono solo puede contener números, +, -, espacios y paréntesis';
+        if (telefono.trim().length < 8) return 'El teléfono debe tener al menos 8 caracteres';
+        if (telefono.trim().length > 20) return 'El teléfono no puede superar los 20 caracteres';
+
+        if (!direccion.trim()) return 'La dirección es requerida';
+        if (direccion.trim().length > 200) return 'La dirección no puede superar los 200 caracteres';
+
+        return null;
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filtro-nombre').value = '';
+        document.getElementById('filtro-correo').value = '';
+        document.getElementById('filtro-estatus').value = '';
+        filtrarProveedores();
+    }
+
+    document.getElementById('modal-confirm').addEventListener('click', function (e) {
+        if (e.target === this) this.classList.add('hidden');
+    });
+
+    document.getElementById('modal-registro').addEventListener('click', function (e) {
+        if (e.target === this) cerrarModalRegistro();
+    });
+
+    document.getElementById('modal-edicion').addEventListener('click', function (e) {
+        if (e.target === this) cerrarModalEdicion();
+    });
+
+    window.addEventListener('load', handleResponsive);
+    window.addEventListener('resize', handleResponsive);
+</script>
+
+{% endblock %}
