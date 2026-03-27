@@ -270,12 +270,12 @@ def login():
 
             if registro.intentos >= 3:
                 registro.bloqueado_hasta = (
-                    datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
+                    datetime.datetime.utcnow() + datetime.timedelta(minutes=1)
                 )
                 db.session.commit()
                 registrar_acceso(None, nombre_usuario, 'LOGIN', 'BLOQUEADO_POR_INTENTOS')
                 flash('Has superado el límite de intentos. '
-                      'Tu acceso queda bloqueado por 10 minutos.', 'danger')
+                      'Tu acceso queda bloqueado por 1 minuto.', 'danger')
             else:
                 restantes = 3 - registro.intentos
                 db.session.commit()
