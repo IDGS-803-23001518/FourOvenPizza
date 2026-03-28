@@ -1,12 +1,27 @@
 from decimal import Decimal, InvalidOperation
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import redirect, render_template, request, session, url_for
 from sqlalchemy import text
 
 from autentificacion.routes import rol_requerido
 from models import DetalleReceta, MateriasPrimas, Productos, Recetas, db
 
 from . import recetas
+
+
+def _guardar_error_formulario(seccion, mensaje, datos=None):
+    session["recetas_form_error"] = {
+        "seccion": seccion,
+        "mensaje": mensaje,
+        "datos": datos or {},
+    }
+
+
+def _guardar_mensaje_receta(mensaje, categoria):
+    session["recetas_mensaje"] = {
+        "mensaje": mensaje,
+        "categoria": categoria,
+    }
 
 
 def _parsear_cantidad(valor):
@@ -17,6 +32,9 @@ def _parsear_cantidad(valor):
 
     if cantidad <= 0:
         raise ValueError("La cantidad debe ser mayor a 0.")
+
+    if cantidad != cantidad.to_integral_value():
+        raise ValueError("La cantidad debe ser un numero entero.")
 
     return cantidad
 
@@ -33,6 +51,73 @@ def _texto_resultado(resultado):
 
     categoria = "success" if resultado.startswith("SUCCESS") else "danger"
     return mensaje, categoria
+
+
+def _validar_stock_materia_prima(id_materia_prima, cantidad):
+    materia_prima = MateriasPrimas.query.get(id_materia_prima)
+
+    if not materia_prima:
+        raise ValueError("La materia prima seleccionada no existe.")
+
+    stock_actual = Decimal(str(materia_prima.stock or 0))
+    cantidad_requerida = Decimal(str(cantidad))
+
+    if stock_actual < cantidad_requerida:
+        raise ValueError(
+            f"Stock insuficiente para {materia_prima.nombre}. "
+            f"Disponible: {stock_actual}. Requerido: {cantidad_requerida}."
+        )
+
+    return materia_prima
+
+
+def _obtener_alertas_stock_receta(id_receta):
+    registros = db.session.execute(
+        text(
+            """
+            SELECT
+                mp.nombre AS materia_prima,
+                mp.stock AS stock,
+                mp.stockMinimo AS stock_minimo,
+                dr.cantidad AS requerido
+            FROM detalleReceta dr
+            INNER JOIN materiasPrimas mp
+                ON mp.idMateriaP = dr.idMateriaP
+            WHERE dr.idReceta = :id_receta
+            ORDER BY mp.nombre ASC
+            """
+        ),
+        {"id_receta": id_receta},
+    ).mappings().all()
+
+    alertas = []
+    for registro in registros:
+        stock_actual = Decimal(str(registro["stock"] or 0))
+        stock_minimo = Decimal(str(registro["stock_minimo"] or 0))
+        cantidad_requerida = Decimal(str(registro["requerido"] or 0))
+
+        if stock_actual < cantidad_requerida:
+            alertas.append(
+                {
+                    "tipo": "insuficiente",
+                    "materia_prima": registro["materia_prima"],
+                    "stock": stock_actual,
+                    "requerido": cantidad_requerida,
+                    "stock_minimo": stock_minimo,
+                }
+            )
+        elif stock_minimo > 0 and stock_actual <= stock_minimo:
+            alertas.append(
+                {
+                    "tipo": "bajo",
+                    "materia_prima": registro["materia_prima"],
+                    "stock": stock_actual,
+                    "requerido": cantidad_requerida,
+                    "stock_minimo": stock_minimo,
+                }
+            )
+
+    return alertas
 
 
 def _obtener_tamano_producto(producto):
@@ -98,32 +183,6 @@ def _asegurar_receta_por_sp(id_producto, descripcion=""):
     return _obtener_receta_producto(id_producto)
 
 
-@recetas.route("/recetas")
-@rol_requerido("Administrador")
-def listado_recetas():
-    productos = Productos.query.order_by(Productos.nombre.asc()).all()
-    recetas_activas = {
-        fila.idProducto: fila.idReceta
-        for fila in Recetas.query.with_entities(Recetas.idProducto, Recetas.idReceta).all()
-    }
-
-    productos_recetas = []
-    for producto in productos:
-        productos_recetas.append(
-            {
-                "idProducto": producto.idProducto,
-                "nombre": producto.nombre,
-                "precio": producto.precio,
-                "stock": producto.stock,
-                "tamano": _obtener_tamano_producto(producto),
-                "estatus": producto.estatus,
-                "tiene_receta": producto.idProducto in recetas_activas,
-            }
-        )
-
-    return render_template("recetas/recetas.html", productos=productos_recetas)
-
-
 @recetas.route("/recetas/producto/<int:id_producto>")
 @rol_requerido("Administrador")
 def ver_receta_producto(id_producto):
@@ -142,6 +201,9 @@ def ver_receta_producto(id_producto):
         .order_by(MateriasPrimas.nombre.asc())
         .all()
     )
+    form_error = session.pop("recetas_form_error", None)
+    mensaje_receta = session.pop("recetas_mensaje", None)
+    alertas_stock = _obtener_alertas_stock_receta(receta.idReceta) if receta else []
 
     return render_template(
         "recetas/detalle.html",
@@ -150,6 +212,9 @@ def ver_receta_producto(id_producto):
         detalles_receta=detalles_receta,
         tamano_producto=_obtener_tamano_producto(producto),
         materias_primas=materias_primas,
+        form_error=form_error,
+        mensaje_receta=mensaje_receta,
+        alertas_stock=alertas_stock,
     )
 
 
@@ -191,10 +256,10 @@ def guardar_receta_producto(id_producto):
         resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
-        flash(mensaje, categoria)
+        _guardar_mensaje_receta(mensaje, categoria)
     except Exception as exc:
         db.session.rollback()
-        flash(str(exc), "danger")
+        _guardar_mensaje_receta(str(exc), "danger")
 
     return redirect(url_for("recetas.ver_receta_producto", id_producto=id_producto))
 
@@ -207,6 +272,11 @@ def agregar_detalle_receta(id_producto):
     try:
         id_materia_prima = int(request.form["idMateriaP"])
         cantidad = _parsear_cantidad(request.form["cantidad"])
+        datos_formulario = {
+            "idMateriaP": str(id_materia_prima),
+            "cantidad": str(int(cantidad)),
+        }
+        _validar_stock_materia_prima(id_materia_prima, cantidad)
         receta = _asegurar_receta_por_sp(id_producto)
         if receta.idReceta is None:
             raise ValueError("No fue posible preparar la receta para registrar el detalle.")
@@ -241,10 +311,17 @@ def agregar_detalle_receta(id_producto):
         resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
-        flash(mensaje, categoria)
+        if categoria == "danger":
+            _guardar_error_formulario("detalle", mensaje, datos_formulario)
+        else:
+            _guardar_mensaje_receta(mensaje, categoria)
     except Exception as exc:
         db.session.rollback()
-        flash(str(exc), "danger")
+        _guardar_error_formulario(
+            "detalle",
+            str(exc),
+            datos_formulario if "datos_formulario" in locals() else {},
+        )
 
     return redirect(url_for("recetas.ver_receta_producto", id_producto=id_producto))
 
@@ -257,6 +334,7 @@ def editar_detalle_receta(id_detalle):
 
     try:
         cantidad = _parsear_cantidad(request.form["cantidad"])
+        _validar_stock_materia_prima(detalle.idMateriaP, cantidad)
         db.session.execute(
             text(
                 """
@@ -287,10 +365,10 @@ def editar_detalle_receta(id_detalle):
         resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
-        flash(mensaje, categoria)
+        _guardar_mensaje_receta(mensaje, categoria)
     except Exception as exc:
         db.session.rollback()
-        flash(str(exc), "danger")
+        _guardar_mensaje_receta(str(exc), "danger")
 
     return redirect(url_for("recetas.ver_receta_producto", id_producto=receta.idProducto))
 
@@ -332,9 +410,9 @@ def eliminar_detalle_receta(id_detalle):
         resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
-        flash(mensaje, categoria)
+        _guardar_mensaje_receta(mensaje, categoria)
     except Exception as exc:
         db.session.rollback()
-        flash(str(exc), "danger")
+        _guardar_mensaje_receta(str(exc), "danger")
 
     return redirect(url_for("recetas.ver_receta_producto", id_producto=receta.idProducto))

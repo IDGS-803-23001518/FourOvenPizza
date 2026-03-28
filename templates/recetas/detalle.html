@@ -6,7 +6,7 @@
   .recipe-shell {
     max-width: 1180px;
     margin: 0 auto;
-    padding: 5.5rem 1rem 2rem;
+    padding: 3rem 1rem 2rem;
   }
 
   .recipe-hero {
@@ -104,6 +104,41 @@
     margin-top: 0.35rem;
   }
 
+  .inline-alert {
+    margin-bottom: 0.9rem;
+    padding: 0.85rem 1rem;
+    border-radius: 14px;
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+  }
+
+  .warning-panel {
+    margin-top: 1rem;
+    padding: 0.95rem 1rem;
+    border-radius: 16px;
+    border: 1px solid #fcd34d;
+    background: #fffbeb;
+    color: #92400e;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+  }
+
+  .warning-panel strong {
+    font-weight: 600;
+  }
+
+  .warning-list {
+    margin: 0.6rem 0 0;
+    padding-left: 1.2rem;
+  }
+
+  .warning-list li + li {
+    margin-top: 0.35rem;
+  }
+
   .btn-row {
     display: flex;
     gap: 0.75rem;
@@ -148,7 +183,8 @@
   .flash-item {
     border-radius: 16px;
     padding: 0.9rem 1rem;
-    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
   }
 
   .flash-item.success {
@@ -215,7 +251,6 @@
 <div class="recipe-shell">
   <section class="recipe-hero">
     <h1>Receta de {{ producto.nombre }}</h1>
-    <p>La receta se administra como modulo independiente y su detalle define las materias primas consumidas por unidad de producto.</p>
     <div class="recipe-meta">
       <span class="recipe-pill">Tamano: {{ tamano_producto or 'Sin definir' }}</span>
       <span class="recipe-pill">Precio: ${{ producto.precio }}</span>
@@ -223,29 +258,41 @@
     </div>
   </section>
 
-  {% with mensajes = get_flashed_messages(with_categories=true) %}
-    {% if mensajes %}
-    <div class="flash-stack">
-      {% for categoria, mensaje in mensajes %}
-      <div class="flash-item {{ categoria }}">{{ mensaje }}</div>
+  {% if mensaje_receta %}
+  <div class="flash-stack">
+    <div class="flash-item {{ mensaje_receta.categoria }}">{{ mensaje_receta.mensaje }}</div>
+  </div>
+  {% endif %}
+
+  {% if alertas_stock %}
+  <div class="warning-panel">
+    <strong>Advertencia de stock de materia prima</strong>
+    <ul class="warning-list">
+      {% for alerta in alertas_stock %}
+      <li>
+        {% if alerta.tipo == 'insuficiente' %}
+        {{ alerta.materia_prima }} esta por debajo del stock necesario para la receta: disponible {{ alerta.stock }}, requerido {{ alerta.requerido }}.
+        {% else %}
+        {{ alerta.materia_prima }} esta en bajo stock: disponible {{ alerta.stock }}, stock minimo {{ alerta.stock_minimo }}.
+        {% endif %}
+      </li>
       {% endfor %}
-    </div>
-    {% endif %}
-  {% endwith %}
+    </ul>
+  </div>
+  {% endif %}
 
   <div class="recipe-grid">
     <aside class="recipe-card">
-      <h2>Encabezado de Receta</h2>
+      <h2>Receta</h2>
       <form method="POST" action="{{ url_for('recetas.guardar_receta_producto', id_producto=producto.idProducto) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
           <label>Descripcion</label>
           <textarea name="descripcion" maxlength="200" placeholder="Describe la receta base del producto.">{{ receta.descripcion if receta else '' }}</textarea>
-          <div class="hint">Este campo corresponde al encabezado de la tabla `recetas`. Los insumos se registran en `detalleReceta`.</div>
         </div>
         <div class="btn-row">
           <button type="submit" class="btn-primary">Guardar receta</button>
-          <a href="{{ url_for('recetas.listado_recetas') }}" class="btn-secondary">Volver al modulo</a>
+          <a href="{{ url_for('productos.listado_productos') }}" class="btn-secondary">Volver a productos</a>
         </div>
       </form>
     </aside>
@@ -255,19 +302,27 @@
 
       <form method="POST" action="{{ url_for('recetas.agregar_detalle_receta', id_producto=producto.idProducto) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if form_error and form_error.seccion == 'detalle' %}
+        <div class="inline-alert">
+          {{ form_error.mensaje }}
+        </div>
+        {% endif %}
         <div class="field">
           <label>Materia prima</label>
           <select name="idMateriaP" required>
             <option value="">Selecciona una materia prima</option>
             {% for materia in materias_primas %}
-            <option value="{{ materia.idMateriaP }}">{{ materia.nombre }}{% if materia.tipo %} | {{ materia.tipo }}{% endif %}</option>
+            <option value="{{ materia.idMateriaP }}"
+              {% if form_error and form_error.seccion == 'detalle' and form_error.datos.idMateriaP == (materia.idMateriaP|string) %}selected{% endif %}>
+              {{ materia.nombre }}{% if materia.tipo %} | {{ materia.tipo }}{% endif %}
+            </option>
             {% endfor %}
           </select>
         </div>
         <div class="field">
           <label>Cantidad</label>
-          <input type="number" name="cantidad" step="0.01" min="0.01" required placeholder="0.00">
-          <div class="hint">Conforme al diagrama actual, `detalleReceta` guarda materia prima y cantidad. Si tus documentos piden unidad por renglon, habria que extender el modelo de datos.</div>
+          <input type="number" name="cantidad" step="1" min="1" required placeholder="0"
+            value="{{ form_error.datos.cantidad if form_error and form_error.seccion == 'detalle' else '' }}">
         </div>
         <div class="btn-row">
           <button type="submit" class="btn-primary">Agregar insumo</button>
@@ -293,7 +348,7 @@
               <td>
                 <form method="POST" class="inline-form" action="{{ url_for('recetas.editar_detalle_receta', id_detalle=detalle.idDetalleR) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="number" name="cantidad" step="0.01" min="0.01" value="{{ detalle.cantidad }}" required>
+                  <input type="number" name="cantidad" step="1" min="1" value="{{ detalle.cantidad }}" required>
                   <button type="submit" class="btn-secondary">Actualizar</button>
                 </form>
               </td>

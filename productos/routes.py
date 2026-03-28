@@ -1,12 +1,14 @@
 import glob
 import os
+import re
+from decimal import Decimal, InvalidOperation
 
 from flask import flash, redirect, render_template, request, session, url_for
 from sqlalchemy import text
 from werkzeug.utils import secure_filename
 
 from autentificacion.routes import rol_requerido
-from models import db
+from models import Productos, db
 
 from . import productos
 
@@ -14,6 +16,8 @@ from . import productos
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRODUCTOS_IMG_DIR = os.path.join(BASE_DIR, "static", "img", "productos")
 ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+TAMANOS_PRODUCTO = ("Chica", "Mediana", "Grande")
+PATRON_NOMBRE_CATALOGO = re.compile(r"^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$")
 
 
 def _texto_resultado(resultado):
@@ -28,6 +32,72 @@ def _texto_resultado(resultado):
 
     categoria = "success" if resultado.startswith("SUCCESS") else "danger"
     return mensaje, categoria
+
+
+def _guardar_error_formulario(modal, mensaje, datos=None):
+    session["productos_form_error"] = {
+        "modal": modal,
+        "mensaje": mensaje,
+        "datos": datos or {},
+    }
+
+
+def _normalizar_nombre_catalogo(valor):
+    valor = re.sub(r"\s+", " ", (valor or "").strip())
+    valor = re.sub(r"\s+\d+$", "", valor).strip()
+    return valor.lower()
+
+
+def _validar_nombre_catalogo(nombre, etiqueta):
+    nombre_limpio = re.sub(r"\s+", " ", (nombre or "").strip())
+
+    if not nombre_limpio:
+        raise ValueError(f"{etiqueta} es requerido.")
+
+    if len(nombre_limpio) < 3:
+        raise ValueError(f"{etiqueta} debe tener al menos 3 caracteres.")
+
+    if not PATRON_NOMBRE_CATALOGO.fullmatch(nombre_limpio):
+        raise ValueError(f"{etiqueta} solo puede contener letras, numeros y espacios.")
+
+    return nombre_limpio
+
+
+def _validar_tamano_producto(tamano):
+    tamano_limpio = re.sub(r"\s+", " ", (tamano or "").strip()).lower()
+    catalogo = {valor.lower(): valor for valor in TAMANOS_PRODUCTO}
+
+    if tamano_limpio not in catalogo:
+        raise ValueError("El tamano del producto debe ser Chica, Mediana o Grande.")
+
+    return catalogo[tamano_limpio]
+
+
+def _parsear_entero_positivo(valor, etiqueta):
+    try:
+        numero = Decimal(str(valor))
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValueError(f"{etiqueta} debe ser un numero valido.")
+
+    if numero <= 0:
+        raise ValueError(f"{etiqueta} debe ser mayor a 0.")
+
+    if numero != numero.to_integral_value():
+        raise ValueError(f"{etiqueta} debe ser un numero entero.")
+
+    return int(numero)
+
+
+def _parsear_decimal_positivo(valor, etiqueta):
+    try:
+        numero = Decimal(str(valor))
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValueError(f"{etiqueta} debe ser un numero valido.")
+
+    if numero <= 0:
+        raise ValueError(f"{etiqueta} debe ser mayor a 0.")
+
+    return numero
 
 
 def _asegurar_directorio_imagenes():
@@ -54,6 +124,16 @@ def _guardar_imagen_producto(archivo, id_producto):
     archivo.save(ruta_destino)
 
 
+def _obtener_tamano_producto_modelo(producto):
+    return (
+        getattr(producto, "tamano", None)
+        or getattr(producto, "tamaño", None)
+        or getattr(producto, "tamaÃ±o", None)
+        or getattr(producto, "tamaÃƒÂ±o", None)
+        or getattr(producto, "tamaÃƒÆ’Ã‚Â±o", None)
+    )
+
+
 def _obtener_imagen_producto(id_producto, nombre_producto):
     for ruta_existente in glob.glob(os.path.join(PRODUCTOS_IMG_DIR, f"producto_{id_producto}.*")):
         if os.path.isfile(ruta_existente):
@@ -69,6 +149,24 @@ def _resolver_columna_tamano():
             return candidata
 
     return "tamano"
+
+
+def _existe_producto_duplicado(nombre, tamano, id_producto=None):
+    nombre_normalizado = _normalizar_nombre_catalogo(nombre)
+    tamano_normalizado = re.sub(r"\s+", " ", (tamano or "").strip()).lower()
+
+    for producto in Productos.query.all():
+        if id_producto is not None and producto.idProducto == id_producto:
+            continue
+
+        tamano_producto = _obtener_tamano_producto_modelo(producto)
+        if (
+            _normalizar_nombre_catalogo(producto.nombre) == nombre_normalizado
+            and re.sub(r"\s+", " ", (tamano_producto or "").strip()).lower() == tamano_normalizado
+        ):
+            return True
+
+    return False
 
 
 @productos.route("/productos")
@@ -183,11 +281,14 @@ def listado_productos():
         "estatus_receta": estatus_receta,
         "estatus": estatus,
     }
+    form_error = session.pop("productos_form_error", None)
 
     return render_template(
         "productos/productos.html",
         productos=productos_final,
         filtros=filtros,
+        form_error=form_error,
+        tamanos_producto=TAMANOS_PRODUCTO,
     )
 
 
@@ -195,6 +296,21 @@ def listado_productos():
 @rol_requerido("Administrador")
 def registrar_producto():
     try:
+        nombre = _validar_nombre_catalogo(request.form["nombre"], "El nombre del producto")
+        tamano = _validar_tamano_producto(request.form["tamano"])
+        precio = _parsear_decimal_positivo(request.form["precio"], "El precio")
+        stock = _parsear_entero_positivo(request.form["stock"], "El stock")
+        datos_formulario = {
+            "nombre": nombre,
+            "precio": str(precio),
+            "tamano": tamano,
+            "stock": str(stock),
+        }
+
+        if _existe_producto_duplicado(nombre, tamano):
+            _guardar_error_formulario("registro", "El producto ya existe.", datos_formulario)
+            return redirect(url_for("productos.listado_productos"))
+
         db.session.execute(
             text(
                 """
@@ -216,10 +332,10 @@ def registrar_producto():
             {
                 "accion": "INSERT",
                 "idProducto": None,
-                "nombre": request.form["nombre"],
-                "precio": request.form["precio"],
-                "tamano": request.form["tamano"],
-                "stock": request.form["stock"],
+                "nombre": nombre,
+                "precio": precio,
+                "tamano": tamano,
+                "stock": stock,
                 "estatus": 1,
                 "ip": request.remote_addr,
                 "usuario": session["usuario_id"],
@@ -235,11 +351,14 @@ def registrar_producto():
 
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
-        flash(mensaje, categoria)
+        if categoria == "danger":
+            _guardar_error_formulario("registro", mensaje, datos_formulario)
+        else:
+            flash(mensaje, categoria)
 
     except Exception as e:
         db.session.rollback()
-        flash(str(e), "danger")
+        _guardar_error_formulario("registro", str(e), datos_formulario if 'datos_formulario' in locals() else {})
 
     return redirect(url_for("productos.listado_productos"))
 
@@ -248,6 +367,23 @@ def registrar_producto():
 @rol_requerido("Administrador")
 def editar_producto(id):
     try:
+        nombre = _validar_nombre_catalogo(request.form["nombre"], "El nombre del producto")
+        tamano = _validar_tamano_producto(request.form["tamano"])
+        precio = _parsear_decimal_positivo(request.form["precio"], "El precio")
+        stock = _parsear_entero_positivo(request.form["stock"], "El stock")
+        datos_formulario = {
+            "id": id,
+            "nombre": nombre,
+            "precio": str(precio),
+            "tamano": tamano,
+            "stock": str(stock),
+            "estatus": request.form["estatus"],
+        }
+
+        if _existe_producto_duplicado(nombre, tamano, id):
+            _guardar_error_formulario("edicion", "Ya existe otro producto con el mismo nombre y tamano.", datos_formulario)
+            return redirect(url_for("productos.listado_productos"))
+
         db.session.execute(
             text(
                 """
@@ -269,10 +405,10 @@ def editar_producto(id):
             {
                 "accion": "UPDATE",
                 "idProducto": id,
-                "nombre": request.form["nombre"],
-                "precio": request.form["precio"],
-                "tamano": request.form["tamano"],
-                "stock": request.form["stock"],
+                "nombre": nombre,
+                "precio": precio,
+                "tamano": tamano,
+                "stock": stock,
                 "estatus": request.form["estatus"],
                 "ip": request.remote_addr,
                 "usuario": session["usuario_id"],
@@ -287,11 +423,14 @@ def editar_producto(id):
 
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
-        flash(mensaje, categoria)
+        if categoria == "danger":
+            _guardar_error_formulario("edicion", mensaje, datos_formulario)
+        else:
+            flash(mensaje, categoria)
 
     except Exception as e:
         db.session.rollback()
-        flash(str(e), "danger")
+        _guardar_error_formulario("edicion", str(e), datos_formulario if 'datos_formulario' in locals() else {"id": id})
 
     return redirect(url_for("productos.listado_productos"))
 

@@ -653,11 +653,11 @@
       <div class="filter-row">
         <div class="filter-group">
           <label>Nombre</label>
-          <input type="text" name="nombre" placeholder="Ingresa el nombre...">
+          <input type="text" name="nombre" id="filtro-nombre-unidad" placeholder="Ingresa el nombre...">
         </div>
         <div class="filter-group" style="max-width: 150px">
           <label>Tipo</label>
-          <select name="tipo">
+          <select name="tipo" id="filtro-tipo-unidad">
             <option value="">Todos</option>
             <option value="Peso">Peso</option>
             <option value="Volumen">Volumen</option>
@@ -666,12 +666,12 @@
         </div>
         <div class="filter-group" style="max-width: 150px">
           <label>Estatus</label>
-          <select name="estatus">
+          <select name="estatus" id="filtro-estatus-unidad">
             <option value="Activo">Activo</option>
             <option value="Inactivo">Inactivo</option>
           </select>
         </div>
-        <button class="btn-filter" type="button">Filtrar</button>
+        <button class="btn-filter" type="button" id="btn-filtrar-unidades">Filtrar</button>
       </div>
     </div>
   </div>
@@ -751,11 +751,12 @@
 
       <form method="POST" action="/registrar-unidad">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div id="error-registro" class="{% if not form_error or form_error.modal != 'registro' %}hidden{% endif %}" style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">{{ form_error.mensaje if form_error and form_error.modal == 'registro' else '' }}</div>
         <div class="form-grid">
 
           <div class="field full">
             <label>Nombre</label>
-            <input name="nombre" required>
+            <input name="nombre" required pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+" title="Solo letras, numeros y espacios" value="{{ form_error.datos.nombre if form_error and form_error.modal == 'registro' else '' }}">
           </div>
 
           <div class="field">
@@ -769,7 +770,7 @@
 
           <div class="field">
             <label>Equivalente</label>
-            <input type="number" step="0.01" name="equivalente">
+            <input type="number" step="1" min="1" name="equivalente" value="{{ form_error.datos.equivalente if form_error and form_error.modal == 'registro' else '' }}">
           </div>
 
         </div>
@@ -809,11 +810,12 @@
 
       <form method="POST" id="formEditar">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div id="error-edicion" class="{% if not form_error or form_error.modal != 'edicion' %}hidden{% endif %}" style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">{{ form_error.mensaje if form_error and form_error.modal == 'edicion' else '' }}</div>
         <div class="form-grid">
 
           <div class="field full">
             <label>Nombre</label>
-            <input id="editNombre" name="nombre">
+            <input id="editNombre" name="nombre" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+" title="Solo letras, numeros y espacios">
           </div>
 
           <div class="field">
@@ -827,7 +829,7 @@
 
           <div class="field">
             <label>Equivalente</label>
-            <input id="editEquivalente" name="equivalente">
+            <input id="editEquivalente" name="equivalente" type="number" step="1" min="1">
           </div>
 
           <div class="field full">
@@ -952,6 +954,75 @@
       }
 
     })
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const filtroNombre = document.getElementById('filtro-nombre-unidad');
+    const filtroTipo = document.getElementById('filtro-tipo-unidad');
+    const filtroEstatus = document.getElementById('filtro-estatus-unidad');
+    const btnFiltrar = document.getElementById('btn-filtrar-unidades');
+    const filasUnidades = Array.from(document.querySelectorAll('tbody tr[data-id]'));
+    const filaVacia = document.querySelector('tr.empty-row');
+    let filtroTimer = null;
+
+    function aplicarFiltrosUnidades() {
+      const nombre = (filtroNombre?.value || '').toLowerCase().trim();
+      const tipo = filtroTipo?.value || '';
+      const estatus = filtroEstatus?.value || '';
+      let visibles = 0;
+
+      filasUnidades.forEach((fila) => {
+        const nombreFila = (fila.dataset.nombre || '').toLowerCase();
+        const tipoFila = fila.dataset.tipo || '';
+        const estatusFila = fila.dataset.estatus === '1' ? 'Activo' : 'Inactivo';
+        const mostrar =
+          (!nombre || nombreFila.includes(nombre)) &&
+          (!tipo || tipoFila === tipo) &&
+          (!estatus || estatusFila === estatus);
+
+        fila.style.display = mostrar ? '' : 'none';
+        if (mostrar) {
+          visibles += 1;
+        }
+      });
+
+      if (filaVacia) {
+        filaVacia.style.display = visibles === 0 ? '' : 'none';
+      }
+    }
+
+    if (btnFiltrar) {
+      btnFiltrar.addEventListener('click', aplicarFiltrosUnidades);
+    }
+
+    [filtroTipo, filtroEstatus].forEach((campo) => {
+      if (campo) {
+        campo.addEventListener('change', aplicarFiltrosUnidades);
+      }
+    });
+
+    if (filtroNombre) {
+      filtroNombre.addEventListener('input', function () {
+        clearTimeout(filtroTimer);
+        filtroTimer = setTimeout(aplicarFiltrosUnidades, 300);
+      });
+    }
+
+    {% if form_error and form_error.modal == 'registro' %}
+    const registro = {{ form_error.datos|tojson }};
+    document.querySelector('#modal form[action="/registrar-unidad"] [name="nombre"]').value = registro.nombre || '';
+    document.querySelector('#modal form[action="/registrar-unidad"] [name="tipo"]').value = registro.tipo || 'Peso';
+    document.querySelector('#modal form[action="/registrar-unidad"] [name="equivalente"]').value = registro.equivalente || '';
+    openModal();
+    {% elif form_error and form_error.modal == 'edicion' %}
+    const edicion = {{ form_error.datos|tojson }};
+    document.getElementById("editNombre").value = edicion.nombre || '';
+    document.getElementById("editTipo").value = edicion.tipo || 'Peso';
+    document.getElementById("editEquivalente").value = edicion.equivalente || '';
+    document.getElementById("editEstatus").value = edicion.estatus || '1';
+    document.getElementById("formEditar").action = `/editar-unidad/${edicion.id}`;
+    document.getElementById("modalEditar").classList.add("open");
+    {% endif %}
+  });
 
 </script>
 

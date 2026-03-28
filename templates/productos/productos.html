@@ -568,16 +568,6 @@
     <h1>Gestion de <span>Productos</span></h1>
   </div>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-  <div class="flash-stack">
-    {% for category, message in messages %}
-    <div class="flash-item {{ category }}">{{ message }}</div>
-    {% endfor %}
-  </div>
-  {% endif %}
-  {% endwith %}
-
   <div class="productos-board">
     <div class="toolbar">
       <button class="register-btn" onclick="abrirModal('modalRegistro')">
@@ -590,7 +580,7 @@
 
     <div class="filters">
       <div class="filters-title">Filtros de busqueda</div>
-      <form method="GET" action="{{ url_for('productos.listado_productos') }}">
+      <form method="GET" action="{{ url_for('productos.listado_productos') }}" id="productosFiltrosForm">
         <div>
           <label>Nombre</label>
           <input type="text" name="nombre" value="{{ filtros.nombre }}" placeholder="Ingresa el nombre...">
@@ -644,7 +634,8 @@
 
           <div class="producto-data">
             <div class="producto-line"><span class="label">Nombre:</span> {{ p.nombre }}</div>
-            <div class="producto-line"><span class="label">Precio:</span> {{ p.precio }}$</div>
+            <div class="producto-line"><span class="label">Precio:</span>$ {{ p.precio }}</div>
+            <div class="producto-line"><span class="label">Tamaño:</span> {{ p.tamano }}</div>
             <div class="producto-line"><span class="label">Stock:</span> {{ p.stock }}</div>
             <div class="estado-line">
               <span class="estado-dot {% if p.estatus != 1 %}inactive{% endif %}"></span>
@@ -698,22 +689,31 @@
     <div class="modal-body">
       <form method="POST" action="{{ url_for('productos.registrar_producto') }}" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div id="error-registro" class="{% if not form_error or form_error.modal != 'registro' %}hidden{% endif %} full"
+          style="margin-bottom:8px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">
+          {{ form_error.mensaje if form_error and form_error.modal == 'registro' else '' }}
+        </div>
         <div class="form-grid">
           <div class="field full">
             <label>Nombre <span class="req">*</span></label>
-            <input name="nombre" required maxlength="100" placeholder="Ej: Pizza Pepperoni">
+            <input name="nombre" required maxlength="100" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+" title="Solo letras, numeros y espacios" placeholder="Ej: Pizza Pepperoni" value="{{ form_error.datos.nombre if form_error and form_error.modal == 'registro' else '' }}">
           </div>
           <div class="field">
             <label>Precio <span class="req">*</span></label>
-            <input type="number" step="0.01" min="0" name="precio" required placeholder="0.00">
+            <input type="number" step="0.01" min="0.01" name="precio" required placeholder="0.00" value="{{ form_error.datos.precio if form_error and form_error.modal == 'registro' else '' }}">
           </div>
           <div class="field">
             <label>Tamano <span class="req">*</span></label>
-            <input name="tamano" required maxlength="50" placeholder="Ej: Grande, 30cm">
+            <select name="tamano" required>
+              <option value="">Selecciona un tamano</option>
+              {% for tamano_opcion in tamanos_producto %}
+              <option value="{{ tamano_opcion }}" {% if form_error and form_error.modal == 'registro' and form_error.datos.tamano == tamano_opcion %}selected{% endif %}>{{ tamano_opcion }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="field">
             <label>Stock <span class="req">*</span></label>
-            <input type="number" step="0.01" min="0" name="stock" required placeholder="0.00">
+            <input type="number" step="1" min="1" name="stock" required placeholder="0" value="{{ form_error.datos.stock if form_error and form_error.modal == 'registro' else '' }}">
           </div>
           <div class="field full">
             <label>Imagen</label>
@@ -739,22 +739,31 @@
     <div class="modal-body">
       <form method="POST" id="formEditar" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div id="error-edicion" class="{% if not form_error or form_error.modal != 'edicion' %}hidden{% endif %} full"
+          style="margin-bottom:8px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">
+          {{ form_error.mensaje if form_error and form_error.modal == 'edicion' else '' }}
+        </div>
         <div class="form-grid">
           <div class="field full">
             <label>Nombre <span class="req">*</span></label>
-            <input id="editNombre" name="nombre" required maxlength="100">
+            <input id="editNombre" name="nombre" required maxlength="100" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+" title="Solo letras, numeros y espacios">
           </div>
           <div class="field">
             <label>Precio <span class="req">*</span></label>
-            <input id="editPrecio" type="number" step="0.01" min="0" name="precio" required>
+            <input id="editPrecio" type="number" step="0.01" min="0.01" name="precio" required>
           </div>
           <div class="field">
             <label>Tamano <span class="req">*</span></label>
-            <input id="editTamano" name="tamano" required maxlength="50">
+            <select id="editTamano" name="tamano" required>
+              <option value="">Selecciona un tamano</option>
+              {% for tamano_opcion in tamanos_producto %}
+              <option value="{{ tamano_opcion }}">{{ tamano_opcion }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="field">
             <label>Stock <span class="req">*</span></label>
-            <input id="editStock" type="number" step="0.01" min="0" name="stock" required>
+            <input id="editStock" type="number" step="1" min="1" name="stock" required>
           </div>
           <div class="field">
             <label>Estatus</label>
@@ -889,5 +898,41 @@
     document.getElementById('confirmUrl').href = `/eliminar-producto/${card.dataset.id}`;
     abrirModal('modalConfirm');
   }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const filtrosForm = document.getElementById('productosFiltrosForm');
+    const filtrosAuto = filtrosForm ? filtrosForm.querySelectorAll('input[name], select[name]') : [];
+    let filtrosTimer = null;
+
+    function enviarFiltrosProductos() {
+      if (filtrosForm) {
+        filtrosForm.submit();
+      }
+    }
+
+    filtrosAuto.forEach((campo) => {
+      if (campo.type === 'text' || campo.type === 'number') {
+        campo.addEventListener('input', function () {
+          clearTimeout(filtrosTimer);
+          filtrosTimer = setTimeout(enviarFiltrosProductos, 350);
+        });
+      } else {
+        campo.addEventListener('change', enviarFiltrosProductos);
+      }
+    });
+
+    {% if form_error and form_error.modal == 'registro' %}
+    abrirModal('modalRegistro');
+    {% elif form_error and form_error.modal == 'edicion' %}
+    const data = {{ form_error.datos|tojson }};
+    document.getElementById('editNombre').value = data.nombre || '';
+    document.getElementById('editPrecio').value = data.precio || '';
+    document.getElementById('editTamano').value = data.tamano || '';
+    document.getElementById('editStock').value = data.stock || '';
+    document.getElementById('editEstatus').value = data.estatus || '1';
+    document.getElementById('formEditar').action = `/editar-producto/${data.id}`;
+    abrirModal('modalEditar');
+    {% endif %}
+  });
 </script>
 {% endblock %}
