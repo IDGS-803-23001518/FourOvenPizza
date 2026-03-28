@@ -219,3 +219,928 @@ BEGIN
     END IF;
 END$$
 DELIMITER ;
+
+
+--  Materias Primas
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_gestion_materiasprimas$$
+CREATE PROCEDURE sp_gestion_materiasprimas(
+    IN p_accion         VARCHAR(20),
+    IN p_idMateriaP     INT,
+    IN p_nombre         VARCHAR(100),
+    IN p_tipo           VARCHAR(50),
+    IN p_idCategoria    INT,
+    IN p_stock          DECIMAL(10,2),
+    IN p_stockMinimo    DECIMAL(10,2),
+    IN p_estatus        TINYINT,
+    IN p_ip             VARCHAR(45),
+    IN p_ejecutadoPor   INT,
+    OUT p_resultado     VARCHAR(255),
+    OUT p_idGenerado    INT
+)
+BEGIN
+
+    DECLARE v_nombre_ejecutor VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_nombre_mp VARCHAR(100) DEFAULT '';
+
+    -- Manejo de errores
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado = 'ERROR: Ocurrió un error en la operación';
+        SET p_idGenerado = 0;
+
+        INSERT INTO bitacora_sistema 
+        (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES (
+            'ERROR',
+            'MateriasPrimas',
+            CONCAT('Error en sp_gestion_materiasprimas acción: ', p_accion),
+            CONCAT('Materia: ', IFNULL(p_nombre,'')),
+            NOW(),
+            p_ip,
+            p_ejecutadoPor
+        );
+    END;
+
+    -- Obtener ejecutor
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor 
+        FROM usuarios 
+        WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    START TRANSACTION;
+
+    /* =========================================
+       INSERT
+    ========================================= */
+
+    IF p_accion = 'INSERT' THEN
+
+        IF EXISTS (SELECT 1 FROM materiasprimas WHERE nombre = p_nombre) THEN
+            SET p_resultado = 'ERROR: Ya existe una materia prima con ese nombre';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF NOT EXISTS (SELECT 1 FROM categorias 
+                           WHERE idCategoria = p_idCategoria 
+                           AND estatus = 1) THEN
+            SET p_resultado = 'ERROR: Categoría inválida';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF p_stock < 0 THEN
+            SET p_resultado = 'ERROR: Stock negativo no permitido';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+
+            INSERT INTO materiasprimas
+            (nombre, tipo, idCategoria, stock, stockMinimo, estatus)
+            VALUES
+            (p_nombre, p_tipo, p_idCategoria, p_stock, p_stockMinimo, 1);
+
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado = 'SUCCESS: Materia prima registrada correctamente';
+
+            INSERT INTO bitacora_eventos
+            (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES
+            (
+                p_ejecutadoPor,
+                v_nombre_ejecutor,
+                'MateriasPrimas',
+                'CREAR',
+                'materiaprima',
+                CONCAT('ID:', p_idGenerado,' | ',p_nombre),
+                NOW(),
+                p_ip
+            );
+
+            COMMIT;
+
+        END IF;
+
+
+    /* =========================================
+       UPDATE
+    ========================================= */
+
+    ELSEIF p_accion = 'UPDATE' THEN
+
+        IF NOT EXISTS (SELECT 1 FROM materiasprimas WHERE idMateriaP = p_idMateriaP) THEN
+            SET p_resultado = 'ERROR: Materia prima no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF EXISTS (
+            SELECT 1 
+            FROM materiasprimas 
+            WHERE nombre = p_nombre 
+            AND idMateriaP != p_idMateriaP
+        ) THEN
+
+            SET p_resultado = 'ERROR: Ya existe otra materia prima con ese nombre';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+
+            UPDATE materiasprimas
+            SET
+                nombre = p_nombre,
+                tipo = p_tipo,
+                idCategoria = p_idCategoria,
+                stock = p_stock,
+                stockMinimo = p_stockMinimo,
+                estatus = p_estatus
+            WHERE idMateriaP = p_idMateriaP;
+
+            SET p_idGenerado = p_idMateriaP;
+            SET p_resultado = 'SUCCESS: Materia prima actualizada correctamente';
+
+            INSERT INTO bitacora_eventos
+            (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES
+            (
+                p_ejecutadoPor,
+                v_nombre_ejecutor,
+                'MateriasPrimas',
+                'EDITAR',
+                'materiaprima',
+                CONCAT('ID:', p_idMateriaP,' | ',p_nombre),
+                NOW(),
+                p_ip
+            );
+
+            COMMIT;
+
+        END IF;
+
+
+    /* =========================================
+       CHANGE_STATUS
+    ========================================= */
+
+    ELSEIF p_accion = 'CHANGE_STATUS' THEN
+
+        IF NOT EXISTS (SELECT 1 FROM materiasprimas WHERE idMateriaP = p_idMateriaP) THEN
+            SET p_resultado = 'ERROR: Materia prima no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+
+            UPDATE materiasprimas
+            SET estatus = p_estatus
+            WHERE idMateriaP = p_idMateriaP;
+
+            SET p_idGenerado = p_idMateriaP;
+
+            SET p_resultado = IF(
+                p_estatus = 1,
+                'SUCCESS: Materia prima activada',
+                'SUCCESS: Materia prima desactivada'
+            );
+
+            INSERT INTO bitacora_eventos
+            (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES
+            (
+                p_ejecutadoPor,
+                v_nombre_ejecutor,
+                'MateriasPrimas',
+                IF(p_estatus=1,'ACTIVAR','DESACTIVAR'),
+                'materiaprima',
+                CONCAT('ID:',p_idMateriaP),
+                NOW(),
+                p_ip
+            );
+
+            COMMIT;
+
+        END IF;
+
+
+    /* =========================================
+       DELETE
+    ========================================= */
+
+    ELSEIF p_accion = 'DELETE' THEN
+
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM materiasprimas 
+        WHERE idMateriaP = p_idMateriaP
+    ) THEN
+
+        SET p_resultado = 'ERROR: Materia prima no existe';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+
+    ELSE
+
+        SELECT nombre 
+        INTO v_nombre_mp 
+        FROM materiasprimas 
+        WHERE idMateriaP = p_idMateriaP;
+
+        UPDATE materiasprimas 
+        SET estatus = 0
+        WHERE idMateriaP = p_idMateriaP;
+
+        SET p_idGenerado = p_idMateriaP;
+        SET p_resultado = 'SUCCESS: Materia prima desactivada correctamente';
+
+        INSERT INTO bitacora_eventos
+        (
+            usuarioId,
+            nombreUsuario,
+            modulo,
+            accion,
+            referencial,
+            referencia,
+            fecha,
+            ip
+        )
+        VALUES
+        (
+            p_ejecutadoPor,
+            v_nombre_ejecutor,
+            'MateriasPrimas',
+            'ELIMINAR',
+            'materiaprima',
+            CONCAT('ID:',p_idMateriaP,' | ',v_nombre_mp),
+            NOW(),
+            p_ip
+        );
+
+        COMMIT;
+    END IF;
+
+    ELSE
+
+        SET p_resultado = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+
+    END IF;
+
+END$$
+
+DELIMITER ;
+
+-- Unidades de medida
+DELIMITER $$
+
+CREATE PROCEDURE sp_gestion_unidadesmedida(
+    IN p_accion VARCHAR(10),
+    IN p_idUnidad INT,
+    IN p_nombre VARCHAR(50),
+    IN p_tipo VARCHAR(50),
+    IN p_equivalente DECIMAL(10,2),
+    IN p_estatus TINYINT,
+    IN p_ip VARCHAR(50),
+    IN p_usuario INT,
+    OUT p_resultado VARCHAR(255),
+    OUT p_idGenerado INT
+)
+
+BEGIN
+
+DECLARE v_nombre VARCHAR(50);
+
+START TRANSACTION;
+
+IF p_accion = 'INSERT' THEN
+
+    IF EXISTS (SELECT 1 FROM unidadesmedida WHERE nombre = p_nombre) THEN
+    
+        SET p_resultado = 'ERROR: La unidad ya existe';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+
+    ELSE
+    
+        INSERT INTO unidadesmedida
+        (nombre, tipo, equivalente, estatus)
+        VALUES
+        (p_nombre, p_tipo, p_equivalente, 1);
+
+        SET p_idGenerado = LAST_INSERT_ID();
+
+        SET p_resultado = 'SUCCESS: Unidad registrada correctamente';
+
+        INSERT INTO bitacora_eventos
+        (usuarioId, modulo, accion, referencia, fecha, ip)
+        VALUES
+        (p_usuario,'UnidadesMedida','INSERT',p_nombre,NOW(),p_ip);
+
+        COMMIT;
+
+    END IF;
+
+
+ELSEIF p_accion = 'UPDATE' THEN
+
+    IF NOT EXISTS (SELECT 1 FROM unidadesmedida WHERE idUnidadM = p_idUnidad) THEN
+    
+        SET p_resultado = 'ERROR: Unidad no existe';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+
+    ELSE
+
+        UPDATE unidadesmedida
+        SET
+        nombre = p_nombre,
+        tipo = p_tipo,
+        equivalente = p_equivalente,
+        estatus = p_estatus
+        WHERE idUnidadM = p_idUnidad;
+
+        SET p_resultado = 'SUCCESS: Unidad actualizada';
+        SET p_idGenerado = p_idUnidad;
+
+        INSERT INTO bitacora_eventos
+        (usuarioId, modulo, accion, referencia, fecha, ip)
+        VALUES
+        (p_usuario,'UnidadesMedida','UPDATE',p_nombre,NOW(),p_ip);
+
+        COMMIT;
+
+    END IF;
+
+
+ELSEIF p_accion = 'DELETE' THEN
+
+    IF NOT EXISTS (SELECT 1 FROM unidadesmedida WHERE idUnidadM = p_idUnidad) THEN
+
+        SET p_resultado = 'ERROR: Unidad no existe';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+
+    ELSE
+
+        UPDATE unidadesmedida
+        SET estatus = 0
+        WHERE idUnidadM = p_idUnidad;
+
+        SET p_resultado = 'SUCCESS: Unidad desactivada';
+        SET p_idGenerado = p_idUnidad;
+
+        INSERT INTO bitacora_eventos
+        (usuarioId, modulo, accion, referencia, fecha, ip)
+        VALUES
+        (p_usuario,'UnidadesMedida','DELETE',p_idUnidad,NOW(),p_ip);
+
+        COMMIT;
+
+    END IF;
+
+END IF;
+
+END$$
+
+DELIMITER ;
+
+-- Productos e indice para evitar nombre duplicados
+ALTER TABLE productos
+ADD UNIQUE KEY uk_nombre_tamano (nombre, `tamaño`);
+ 
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_productos$$
+CREATE PROCEDURE sp_gestion_productos(
+    IN  p_accion     VARCHAR(10),
+    IN  p_idProducto INT,
+    IN  p_nombre     VARCHAR(100),
+    IN  p_precio     DECIMAL(10,2),
+    IN  p_tamano     VARCHAR(50),       -- sin acento, se normaliza dentro
+    IN  p_stock      DECIMAL(10,2),
+    IN  p_estatus    TINYINT,
+    IN  p_ip         VARCHAR(50),
+    IN  p_usuario    INT,
+    OUT p_resultado  VARCHAR(255),
+    OUT p_idGenerado INT
+)
+BEGIN
+    DECLARE v_nombre_producto VARCHAR(100) DEFAULT '';
+ 
+    -- ── Variables normalizadas ────────────────────────
+    -- Se trabaja siempre con las mismas versiones limpias
+    DECLARE v_nombre VARCHAR(100);
+    DECLARE v_tamano VARCHAR(50);
+ 
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado = 'ERROR: Ocurrió un error en la operación';
+        SET p_idGenerado = 0;
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES ('ERROR', 'Productos',
+                CONCAT('Error en sp_gestion_productos acción: ', p_accion),
+                CONCAT('Producto: ', IFNULL(p_nombre,''), ' | ID: ', IFNULL(p_idProducto,0)),
+                NOW(), p_ip, p_usuario);
+    END;
+ 
+    -- Normalizar entradas: sin espacios extra, en minúsculas para comparar
+    SET v_nombre = LOWER(TRIM(p_nombre));
+    SET v_tamano = LOWER(TRIM(p_tamano));
+ 
+    START TRANSACTION;
+ 
+    /* ══════════════════════════════════════
+       INSERT
+    ══════════════════════════════════════ */
+    IF p_accion = 'INSERT' THEN
+ 
+        -- Validar nombre no vacío
+        IF v_nombre = '' THEN
+            SET p_resultado = 'ERROR: El nombre del producto no puede estar vacío';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        -- Validar tamaño no vacío
+        ELSEIF v_tamano = '' THEN
+            SET p_resultado = 'ERROR: El tamaño del producto no puede estar vacío';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        -- Validar precio
+        ELSEIF p_precio < 0 THEN
+            SET p_resultado = 'ERROR: El precio no puede ser negativo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        -- Validar stock
+        ELSEIF p_stock < 0 THEN
+            SET p_resultado = 'ERROR: El stock no puede ser negativo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        -- Validar duplicado: comparación exacta normalizada
+        ELSEIF EXISTS (
+            SELECT 1 FROM productos
+            WHERE LOWER(TRIM(nombre))   = v_nombre
+              AND LOWER(TRIM(`tamaño`)) = v_tamano
+        ) THEN
+            SET p_resultado = 'ERROR: Ya existe un producto con ese nombre y tamaño';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        ELSE
+            INSERT INTO productos (nombre, precio, `tamaño`, stock, estatus)
+            VALUES (TRIM(p_nombre), p_precio, TRIM(p_tamano), p_stock, 1);
+ 
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado  = 'SUCCESS: Producto registrado correctamente';
+ 
+            INSERT INTO bitacora_eventos
+                (usuarioId, modulo, accion, referencia, fecha, ip)
+            VALUES
+                (p_usuario, 'Productos', 'INSERT',
+                 CONCAT('ID:', p_idGenerado, ' | ', TRIM(p_nombre), ' | ', TRIM(p_tamano)),
+                 NOW(), p_ip);
+ 
+            COMMIT;
+        END IF;
+ 
+    /* ══════════════════════════════════════
+       UPDATE
+    ══════════════════════════════════════ */
+    ELSEIF p_accion = 'UPDATE' THEN
+ 
+        -- Validar que existe
+        IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = p_idProducto) THEN
+            SET p_resultado = 'ERROR: El producto no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        -- Validar nombre no vacío
+        ELSEIF v_nombre = '' THEN
+            SET p_resultado = 'ERROR: El nombre del producto no puede estar vacío';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        -- Validar tamaño no vacío
+        ELSEIF v_tamano = '' THEN
+            SET p_resultado = 'ERROR: El tamaño del producto no puede estar vacío';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        -- Validar precio
+        ELSEIF p_precio < 0 THEN
+            SET p_resultado = 'ERROR: El precio no puede ser negativo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        -- Validar stock
+        ELSEIF p_stock < 0 THEN
+            SET p_resultado = 'ERROR: El stock no puede ser negativo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        -- Validar duplicado en otro registro: comparación exacta normalizada
+        ELSEIF EXISTS (
+            SELECT 1 FROM productos
+            WHERE LOWER(TRIM(nombre))   = v_nombre
+              AND LOWER(TRIM(`tamaño`)) = v_tamano
+              AND idProducto           <> p_idProducto
+        ) THEN
+            SET p_resultado = 'ERROR: Ya existe otro producto con ese nombre y tamaño';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        ELSE
+            UPDATE productos
+            SET nombre   = TRIM(p_nombre),
+                precio   = p_precio,
+                `tamaño` = TRIM(p_tamano),
+                stock    = p_stock,
+                estatus  = p_estatus
+            WHERE idProducto = p_idProducto;
+ 
+            SET p_resultado  = 'SUCCESS: Producto actualizado correctamente';
+            SET p_idGenerado = p_idProducto;
+ 
+            INSERT INTO bitacora_eventos
+                (usuarioId, modulo, accion, referencia, fecha, ip)
+            VALUES
+                (p_usuario, 'Productos', 'UPDATE',
+                 CONCAT('ID:', p_idProducto, ' | ', TRIM(p_nombre), ' | ', TRIM(p_tamano)),
+                 NOW(), p_ip);
+ 
+            COMMIT;
+        END IF;
+ 
+    /* ══════════════════════════════════════
+       DELETE (desactivación lógica)
+    ══════════════════════════════════════ */
+    ELSEIF p_accion = 'DELETE' THEN
+ 
+        IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = p_idProducto) THEN
+            SET p_resultado = 'ERROR: El producto no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+ 
+        ELSE
+            SELECT nombre INTO v_nombre_producto
+            FROM productos WHERE idProducto = p_idProducto;
+ 
+            -- Desactivación lógica (no borrado físico)
+            UPDATE productos
+            SET estatus = 0
+            WHERE idProducto = p_idProducto;
+ 
+            SET p_resultado  = 'SUCCESS: Producto desactivado correctamente';
+            SET p_idGenerado = p_idProducto;
+ 
+            INSERT INTO bitacora_eventos
+                (usuarioId, modulo, accion, referencia, fecha, ip)
+            VALUES
+                (p_usuario, 'Productos', 'DELETE',
+                 CONCAT('ID:', p_idProducto, ' | ', v_nombre_producto),
+                 NOW(), p_ip);
+ 
+            COMMIT;
+        END IF;
+ 
+    /* ══════════════════════════════════════
+       ACCIÓN NO VÁLIDA
+    ══════════════════════════════════════ */
+    ELSE
+        SET p_resultado = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    END IF;
+ 
+END$$
+DELIMITER ;
+
+
+-- Insert de categorias
+INSERT INTO categorias (nombre, descripcion, estatus) VALUES
+('Harinas y masas',    'Ingredientes base para la elaboración de masas y rebozados',         1),
+('Carnes y embutidos', 'Proteínas cárnicas como pepperoni, jamón, tocino y carnes frescas',  1),
+('Lácteos',            'Quesos, cremas y derivados lácteos para pizzas y salsas',             1),
+('Salsas y bases',     'Salsas de tomate, pesto, crema blanca y otras bases para pizza',     1),
+('Verduras',           'Vegetales frescos y procesados usados como ingredientes o toppings', 1),
+('Aceites y grasas',   'Aceites de oliva, vegetal y mantequillas para cocción y acabados',   1),
+('Especias y hierbas', 'Condimentos secos como orégano, albahaca, ajo en polvo y pimienta',  1),
+('Bebidas',            'Refrescos, aguas y bebidas para la venta al cliente',                1);
+
+
+--  Recetas
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_gestion_recetas $$
+CREATE PROCEDURE sp_gestion_recetas(
+    IN p_accion VARCHAR(10),
+    IN p_idReceta INT,
+    IN p_idProducto INT,
+    IN p_descripcion VARCHAR(200),
+    IN p_ip VARCHAR(50),
+    IN p_usuario INT,
+    OUT p_resultado VARCHAR(255),
+    OUT p_idGenerado INT
+)
+BEGIN
+    START TRANSACTION;
+
+    IF p_accion = 'INSERT' THEN
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM productos
+            WHERE idProducto = p_idProducto
+        ) THEN
+
+            SET p_resultado = 'ERROR: El producto no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF EXISTS (
+            SELECT 1
+            FROM recetas
+            WHERE idProducto = p_idProducto
+        ) THEN
+
+            SET p_resultado = 'ERROR: El producto ya tiene una receta registrada';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+
+            INSERT INTO recetas (idProducto, descripcion)
+            VALUES (p_idProducto, p_descripcion);
+
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado = 'SUCCESS: Receta registrada correctamente';
+
+            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                'Recetas',
+                'INSERT',
+                CONCAT('Receta ID:', p_idGenerado, ' | Producto ID:', p_idProducto),
+                NOW(),
+                p_ip
+            );
+
+            COMMIT;
+
+        END IF;
+
+    ELSEIF p_accion = 'UPDATE' THEN
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM recetas
+            WHERE idReceta = p_idReceta
+        ) THEN
+
+            SET p_resultado = 'ERROR: La receta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+
+            UPDATE recetas
+            SET descripcion = p_descripcion
+            WHERE idReceta = p_idReceta;
+
+            SET p_resultado = 'SUCCESS: Receta actualizada correctamente';
+            SET p_idGenerado = p_idReceta;
+
+            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                'Recetas',
+                'UPDATE',
+                CONCAT('Receta ID:', p_idReceta),
+                NOW(),
+                p_ip
+            );
+
+            COMMIT;
+
+        END IF;
+
+    ELSEIF p_accion = 'DELETE' THEN
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM recetas
+            WHERE idReceta = p_idReceta
+        ) THEN
+
+            SET p_resultado = 'ERROR: La receta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+
+            DELETE FROM detalleReceta
+            WHERE idReceta = p_idReceta;
+
+            DELETE FROM recetas
+            WHERE idReceta = p_idReceta;
+
+            SET p_resultado = 'SUCCESS: Receta eliminada correctamente';
+            SET p_idGenerado = p_idReceta;
+
+            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                'Recetas',
+                'DELETE',
+                CONCAT('Receta ID:', p_idReceta),
+                NOW(),
+                p_ip
+            );
+
+            COMMIT;
+
+        END IF;
+
+    ELSE
+
+        SET p_resultado = 'ERROR: Accion no valida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+
+    END IF;
+
+END $$
+
+DELIMITER ;
+
+-- Detalle Receta
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_gestion_detalle_receta $$
+CREATE PROCEDURE sp_gestion_detalle_receta(
+    IN p_accion VARCHAR(10),
+    IN p_idDetalleR INT,
+    IN p_idReceta INT,
+    IN p_idMateriaP INT,
+    IN p_cantidad DECIMAL(10,2),
+    IN p_ip VARCHAR(50),
+    IN p_usuario INT,
+    OUT p_resultado VARCHAR(255),
+    OUT p_idGenerado INT
+)
+BEGIN
+    START TRANSACTION;
+
+    IF p_accion = 'INSERT' THEN
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM recetas
+            WHERE idReceta = p_idReceta
+        ) THEN
+
+            SET p_resultado = 'ERROR: La receta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF NOT EXISTS (
+            SELECT 1
+            FROM materiasPrimas
+            WHERE idMateriaP = p_idMateriaP
+        ) THEN
+
+            SET p_resultado = 'ERROR: La materia prima no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF p_cantidad <= 0 THEN
+
+            SET p_resultado = 'ERROR: La cantidad debe ser mayor a 0';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF EXISTS (
+            SELECT 1
+            FROM detalleReceta
+            WHERE idReceta = p_idReceta
+              AND idMateriaP = p_idMateriaP
+        ) THEN
+
+            SET p_resultado = 'ERROR: La materia prima ya esta registrada en la receta';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+
+            INSERT INTO detalleReceta (idReceta, idMateriaP, cantidad)
+            VALUES (p_idReceta, p_idMateriaP, p_cantidad);
+
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado = 'SUCCESS: Detalle de receta registrado correctamente';
+
+            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                'DetalleReceta',
+                'INSERT',
+                CONCAT('Detalle ID:', p_idGenerado, ' | Receta ID:', p_idReceta, ' | MateriaPrima ID:', p_idMateriaP),
+                NOW(),
+                p_ip
+            );
+
+            COMMIT;
+
+        END IF;
+
+    ELSEIF p_accion = 'UPDATE' THEN
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM detalleReceta
+            WHERE idDetalleR = p_idDetalleR
+        ) THEN
+
+            SET p_resultado = 'ERROR: El detalle de receta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF p_cantidad <= 0 THEN
+
+            SET p_resultado = 'ERROR: La cantidad debe ser mayor a 0';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+
+            UPDATE detalleReceta
+            SET cantidad = p_cantidad
+            WHERE idDetalleR = p_idDetalleR;
+
+            SET p_resultado = 'SUCCESS: Detalle de receta actualizado correctamente';
+            SET p_idGenerado = p_idDetalleR;
+
+            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                'DetalleReceta',
+                'UPDATE',
+                CONCAT('Detalle ID:', p_idDetalleR),
+                NOW(),
+                p_ip
+            );
+
+            COMMIT;
+
+        END IF;
+
+    ELSEIF p_accion = 'DELETE' THEN
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM detalleReceta
+            WHERE idDetalleR = p_idDetalleR
+        ) THEN
+
+            SET p_resultado = 'ERROR: El detalle de receta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+
+            DELETE FROM detalleReceta
+            WHERE idDetalleR = p_idDetalleR;
+
+            SET p_resultado = 'SUCCESS: Detalle de receta eliminado correctamente';
+            SET p_idGenerado = p_idDetalleR;
+
+            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                'DetalleReceta',
+                'DELETE',
+                CONCAT('Detalle ID:', p_idDetalleR),
+                NOW(),
+                p_ip
+            );
+
+            COMMIT;
+
+        END IF;
+
+    ELSE
+
+        SET p_resultado = 'ERROR: Accion no valida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+
+    END IF;
+
+END $$
+
+DELIMITER ;
