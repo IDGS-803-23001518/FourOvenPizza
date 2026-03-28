@@ -1,0 +1,319 @@
+{% extends "layoutAdmin.html" %}
+{% block title %}Detalle Receta{% endblock %}
+
+{% block container %}
+<style>
+  .recipe-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 5.5rem 1rem 2rem;
+  }
+
+  .recipe-hero {
+    background: linear-gradient(135deg, rgba(56, 35, 15, 0.95), rgba(110, 55, 20, 0.9));
+    color: #fff8ef;
+    border-radius: 28px;
+    padding: 1.6rem;
+    box-shadow: 0 24px 60px rgba(56, 35, 15, 0.25);
+  }
+
+  .recipe-hero h1 {
+    margin: 0;
+    font-size: clamp(1.8rem, 2.6vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: 0.03em;
+  }
+
+  .recipe-hero p {
+    margin: 0.4rem 0 0;
+    color: rgba(255, 248, 239, 0.85);
+    max-width: 760px;
+  }
+
+  .recipe-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .recipe-pill {
+    border: 1px solid rgba(255, 248, 239, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  .recipe-grid {
+    display: grid;
+    gap: 1.2rem;
+    grid-template-columns: 360px minmax(0, 1fr);
+    margin-top: 1.2rem;
+  }
+
+  .recipe-card {
+    background: rgba(255, 250, 244, 0.96);
+    border: 1px solid rgba(139, 69, 19, 0.12);
+    border-radius: 24px;
+    padding: 1.2rem;
+    box-shadow: 0 18px 40px rgba(139, 69, 19, 0.1);
+  }
+
+  .recipe-card h2 {
+    margin: 0 0 1rem;
+    color: #4a2d16;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+
+  .field {
+    margin-bottom: 0.9rem;
+  }
+
+  .field label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: #6b4423;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    border-radius: 16px;
+    border: 1px solid #dfc7ae;
+    background: #fff;
+    padding: 0.8rem 0.9rem;
+    color: #3c2512;
+    outline: none;
+  }
+
+  .field textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
+
+  .hint {
+    color: #8b6a4c;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    margin-top: 0.35rem;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    border: 0;
+    border-radius: 14px;
+    padding: 0.8rem 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-primary {
+    background: #d97706;
+    color: #fff;
+  }
+
+  .btn-secondary {
+    background: #efe2d1;
+    color: #5b3719;
+  }
+
+  .btn-danger {
+    background: #b91c1c;
+    color: #fff;
+  }
+
+  .flash-stack {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .flash-item {
+    border-radius: 16px;
+    padding: 0.9rem 1rem;
+    font-weight: 600;
+  }
+
+  .flash-item.success {
+    background: #ecfdf3;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+
+  .flash-item.danger {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+
+  .detail-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .detail-table th,
+  .detail-table td {
+    padding: 0.9rem 0.75rem;
+    border-bottom: 1px solid #efdfcf;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .detail-table th {
+    color: #7a4d28;
+    font-size: 0.84rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .inline-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .inline-form input {
+    max-width: 120px;
+    border-radius: 12px;
+    border: 1px solid #dfc7ae;
+    padding: 0.55rem 0.7rem;
+  }
+
+  .empty-box {
+    border: 1px dashed #d1b08f;
+    border-radius: 18px;
+    padding: 1.1rem;
+    color: #7a5a3b;
+    background: #fffaf5;
+  }
+
+  @media (max-width: 980px) {
+    .recipe-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="recipe-shell">
+  <section class="recipe-hero">
+    <h1>Receta de {{ producto.nombre }}</h1>
+    <p>La receta se administra como modulo independiente y su detalle define las materias primas consumidas por unidad de producto.</p>
+    <div class="recipe-meta">
+      <span class="recipe-pill">Tamano: {{ tamano_producto or 'Sin definir' }}</span>
+      <span class="recipe-pill">Precio: ${{ producto.precio }}</span>
+      <span class="recipe-pill">Ingredientes: {{ detalles_receta|length }}</span>
+    </div>
+  </section>
+
+  {% with mensajes = get_flashed_messages(with_categories=true) %}
+    {% if mensajes %}
+    <div class="flash-stack">
+      {% for categoria, mensaje in mensajes %}
+      <div class="flash-item {{ categoria }}">{{ mensaje }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="recipe-grid">
+    <aside class="recipe-card">
+      <h2>Encabezado de Receta</h2>
+      <form method="POST" action="{{ url_for('recetas.guardar_receta_producto', id_producto=producto.idProducto) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label>Descripcion</label>
+          <textarea name="descripcion" maxlength="200" placeholder="Describe la receta base del producto.">{{ receta.descripcion if receta else '' }}</textarea>
+          <div class="hint">Este campo corresponde al encabezado de la tabla `recetas`. Los insumos se registran en `detalleReceta`.</div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn-primary">Guardar receta</button>
+          <a href="{{ url_for('recetas.listado_recetas') }}" class="btn-secondary">Volver al modulo</a>
+        </div>
+      </form>
+    </aside>
+
+    <section class="recipe-card">
+      <h2>Detalle de Receta</h2>
+
+      <form method="POST" action="{{ url_for('recetas.agregar_detalle_receta', id_producto=producto.idProducto) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label>Materia prima</label>
+          <select name="idMateriaP" required>
+            <option value="">Selecciona una materia prima</option>
+            {% for materia in materias_primas %}
+            <option value="{{ materia.idMateriaP }}">{{ materia.nombre }}{% if materia.tipo %} | {{ materia.tipo }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>Cantidad</label>
+          <input type="number" name="cantidad" step="0.01" min="0.01" required placeholder="0.00">
+          <div class="hint">Conforme al diagrama actual, `detalleReceta` guarda materia prima y cantidad. Si tus documentos piden unidad por renglon, habria que extender el modelo de datos.</div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn-primary">Agregar insumo</button>
+        </div>
+      </form>
+
+      <div style="margin-top:1.2rem">
+        {% if detalles_receta %}
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th>Materia prima</th>
+              <th>Tipo</th>
+              <th>Cantidad</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for detalle in detalles_receta %}
+            <tr>
+              <td>{{ detalle.materia_prima.nombre }}</td>
+              <td>{{ detalle.materia_prima.tipo or 'Sin referencia' }}</td>
+              <td>
+                <form method="POST" class="inline-form" action="{{ url_for('recetas.editar_detalle_receta', id_detalle=detalle.idDetalleR) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="number" name="cantidad" step="0.01" min="0.01" value="{{ detalle.cantidad }}" required>
+                  <button type="submit" class="btn-secondary">Actualizar</button>
+                </form>
+              </td>
+              <td>
+                <form method="POST" action="{{ url_for('recetas.eliminar_detalle_receta', id_detalle=detalle.idDetalleR) }}" onsubmit="return confirm('Se eliminara este insumo del detalle de receta. Continuar?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn-danger">Eliminar</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-box">
+          Esta receta aun no tiene registros en `detalleReceta`. La estructura correcta segun el diagrama es: una receta pertenece a un producto y varios renglones de detalle pertenecen a esa receta.
+        </div>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

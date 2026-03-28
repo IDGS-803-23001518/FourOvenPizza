@@ -1,0 +1,893 @@
+{% extends "layoutAdmin.html" %}
+{% block container %}
+<style>
+  :root {
+    --brown: #4a2b12;
+    --brown2: #38230f;
+    --orange: #f3a515;
+    --orange2: #e79a07;
+    --white: #ffffff;
+    --border: #d7d7d7;
+    --green: #22c55e;
+    --red: #ef4444;
+  }
+
+  .productos-shell {
+    min-height: 100vh;
+    padding: 0 0 2rem;
+  }
+
+  .productos-header {
+    background: var(--brown);
+    border-bottom: 3px solid var(--orange);
+    box-shadow: 0 3px 14px rgba(74, 43, 18, .25);
+    padding: 0.85rem 1.5rem 0.85rem 5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .productos-header h1 {
+    color: var(--white);
+    font-family: 'Trebuchet MS', sans-serif;
+    font-size: clamp(1.4rem, 2vw, 2.1rem);
+    font-weight: 900;
+    letter-spacing: .04em;
+    margin: 0;
+  }
+
+  .productos-header h1 span {
+    color: var(--orange);
+  }
+
+  .flash-stack,
+  .productos-board {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+  }
+
+  .flash-stack {
+    margin-bottom: 1rem;
+  }
+
+  .flash-item {
+    border-radius: 14px;
+    padding: .85rem 1rem;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .08);
+    margin-bottom: .65rem;
+  }
+
+  .flash-item.success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+  }
+
+  .flash-item.danger {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+  }
+
+  .register-btn {
+    background: linear-gradient(180deg, #f7b21c, #e79a07);
+    color: var(--brown);
+    border: none;
+    border-radius: 999px;
+    padding: .75rem 1.4rem;
+    font-weight: 900;
+    font-family: 'Nunito', sans-serif;
+    font-size: .95rem;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(231, 154, 7, .35);
+    transition: filter .2s, transform .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .register-btn:hover {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+  }
+
+  .filters {
+    background: var(--white);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 10px 22px rgba(93, 56, 18, .12);
+    margin-bottom: 1.2rem;
+  }
+
+  .filters-title {
+    background: var(--brown);
+    color: var(--white);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: .95rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: .75rem 1.1rem;
+  }
+
+  .filters form {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: .85rem;
+    padding: .95rem 1rem 1rem;
+    align-items: end;
+  }
+
+  .filters label {
+    display: block;
+    color: var(--brown);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: .84rem;
+    margin-bottom: .3rem;
+  }
+
+  .filters input,
+  .filters select,
+  .field input,
+  .field select {
+    width: 100%;
+    border: 1.6px solid var(--border);
+    border-radius: 10px;
+    background: var(--white);
+    padding: .55rem .7rem;
+    font-size: .82rem;
+    color: #333;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+
+  .filters input:focus,
+  .filters select:focus,
+  .field input:focus,
+  .field select:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(243, 165, 21, .15);
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: .5rem;
+    align-items: flex-end;
+  }
+
+  .filter-btn,
+  .clear-btn,
+  .btn-cancel,
+  .btn-save,
+  .btn-delete-confirm {
+    border-radius: 999px;
+    font-weight: 800;
+    font-family: 'Nunito', sans-serif;
+    font-size: .85rem;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+  }
+
+  .filter-btn,
+  .clear-btn {
+    border: none;
+    padding: .6rem 1.1rem;
+  }
+
+  .filter-btn {
+    background: var(--orange);
+    color: var(--brown);
+  }
+
+  .clear-btn {
+    background: #ede7de;
+    color: #5b3a1e;
+  }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 1rem;
+  }
+
+  .producto-card {
+    background: var(--white);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 12px 24px rgba(93, 56, 18, .14);
+    transition: transform .2s, box-shadow .2s;
+    animation: fadeUp .35s ease both;
+  }
+
+  .producto-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 32px rgba(93, 56, 18, .2);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .producto-card-top {
+    background: var(--brown);
+    color: var(--white);
+    text-align: center;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: .85rem;
+    letter-spacing: .1em;
+    padding: .5rem 1rem;
+  }
+
+  .producto-card-body {
+    padding: 1rem 1rem .85rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .producto-image,
+  .producto-image-placeholder {
+    width: 96px;
+    height: 96px;
+    margin-bottom: .75rem;
+  }
+
+  .producto-image {
+    object-fit: contain;
+    filter: drop-shadow(0 8px 10px rgba(145, 78, 9, .2));
+  }
+
+  .producto-image-placeholder {
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f5e6d3, #edd9b8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--brown2);
+    font-weight: 900;
+  }
+
+  .producto-data {
+    text-align: left;
+    width: 100%;
+  }
+
+  .producto-line {
+    font-family: 'Nunito', sans-serif;
+    font-size: .95rem;
+    font-weight: 900;
+    color: var(--brown);
+    line-height: 1.4;
+  }
+
+  .producto-line .label {
+    color: var(--orange);
+  }
+
+  .estado-line {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-family: 'Nunito', sans-serif;
+    font-size: .92rem;
+    font-weight: 800;
+    color: var(--brown);
+    margin-top: .05rem;
+  }
+
+  .estado-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, .15);
+    flex-shrink: 0;
+  }
+
+  .estado-dot.inactive {
+    background: var(--red);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, .15);
+  }
+
+  .card-actions {
+    display: flex;
+    justify-content: center;
+    gap: .45rem;
+    margin-top: .9rem;
+  }
+
+  .card-action {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--white);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .14);
+    transition: transform .15s, filter .15s;
+    text-decoration: none;
+  }
+
+  .card-action:hover {
+    transform: scale(1.12);
+    filter: brightness(.9);
+  }
+
+  .card-action svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+  }
+
+  .action-edit { background: var(--orange); }
+  .action-view { background: #2563eb; }
+  .action-delete { background: var(--red); }
+  .action-stock { background: var(--brown); }
+
+  .empty-state {
+    background: rgba(255, 255, 255, .88);
+    border: 2px dashed #d9b693;
+    border-radius: 20px;
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #6e4a2f;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .52);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal,
+  .confirm-box {
+    background: var(--white);
+    border-radius: 18px;
+    overflow: hidden;
+    width: 100%;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .38);
+    transform: translateY(24px) scale(.97);
+    transition: transform .28s ease, opacity .25s ease;
+    opacity: 0;
+  }
+
+  .modal {
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .confirm-box {
+    max-width: 360px;
+  }
+
+  .modal-overlay.open .modal,
+  .modal-overlay.open .confirm-box {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  .modal-header {
+    background: var(--brown);
+    color: var(--white);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 1rem;
+    letter-spacing: .08em;
+    padding: 15px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255, 255, 255, .12);
+    color: var(--white);
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-body {
+    padding: 24px 26px 28px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 20px;
+  }
+
+  .full {
+    grid-column: 1 / -1;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .field label {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: .84rem;
+    color: var(--brown);
+  }
+
+  .field label .req {
+    color: var(--red);
+  }
+
+  .field-hint {
+    font-size: .71rem;
+    color: #9a7a5a;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1.5px solid #f5e6d3;
+  }
+
+  .btn-cancel,
+  .btn-save,
+  .btn-delete-confirm {
+    padding: 9px 20px;
+    border: none;
+  }
+
+  .btn-cancel {
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    color: var(--brown);
+  }
+
+  .btn-save {
+    background: var(--orange);
+    color: var(--brown);
+    box-shadow: 0 4px 12px rgba(243, 165, 21, .4);
+  }
+
+  .btn-delete-confirm {
+    background: var(--red);
+    color: var(--white);
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f5e6d3;
+    font-family: 'Poppins', sans-serif;
+    font-size: .84rem;
+  }
+
+  .detail-row:last-child {
+    border-bottom: none;
+  }
+
+  .detail-label {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    color: var(--orange);
+    min-width: 110px;
+  }
+
+  .detail-value {
+    color: #1e1e1e;
+    font-weight: 500;
+  }
+
+  .confirm-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #fee2e2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+  }
+
+  @media (max-width: 900px) {
+    .filters form {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .filters form,
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .full {
+      grid-column: 1;
+    }
+
+    .filter-actions,
+    .modal-actions {
+      flex-direction: column;
+    }
+
+    .filter-btn,
+    .clear-btn,
+    .btn-cancel,
+    .btn-save,
+    .btn-delete-confirm {
+      width: 100%;
+    }
+  }
+</style>
+
+<div class="productos-shell">
+  <div class="productos-header">
+    <h1>Gestion de <span>Productos</span></h1>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-stack">
+    {% for category, message in messages %}
+    <div class="flash-item {{ category }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <div class="productos-board">
+    <div class="toolbar">
+      <button class="register-btn" onclick="abrirModal('modalRegistro')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px">
+          <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+        </svg>
+        Registrar Producto
+      </button>
+    </div>
+
+    <div class="filters">
+      <div class="filters-title">Filtros de busqueda</div>
+      <form method="GET" action="{{ url_for('productos.listado_productos') }}">
+        <div>
+          <label>Nombre</label>
+          <input type="text" name="nombre" value="{{ filtros.nombre }}" placeholder="Ingresa el nombre...">
+        </div>
+        <div>
+          <label>Precio inicio</label>
+          <input type="number" step="0.01" min="0" name="precio_inicio" value="{{ filtros.precio_inicio }}">
+        </div>
+        <div>
+          <label>Precio fin</label>
+          <input type="number" step="0.01" min="0" name="precio_fin" value="{{ filtros.precio_fin }}">
+        </div>
+        <div>
+          <label>Estatus receta</label>
+          <select name="estatus_receta">
+            <option value="" {% if not filtros.estatus_receta %}selected{% endif %}>Todos</option>
+            <option value="1" {% if filtros.estatus_receta == '1' %}selected{% endif %}>Activa</option>
+            <option value="0" {% if filtros.estatus_receta == '0' %}selected{% endif %}>Inactiva</option>
+          </select>
+        </div>
+        <div>
+          <label>Estatus</label>
+          <select name="estatus">
+            <option value="" {% if not filtros.estatus %}selected{% endif %}>Todos</option>
+            <option value="1" {% if filtros.estatus == '1' %}selected{% endif %}>Activo</option>
+            <option value="0" {% if filtros.estatus == '0' %}selected{% endif %}>Inactivo</option>
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button type="submit" class="filter-btn">Filtrar</button>
+          <a href="{{ url_for('productos.listado_productos') }}" class="clear-btn">Limpiar</a>
+        </div>
+      </form>
+    </div>
+
+    {% if productos %}
+    <div class="cards-grid">
+      {% for p in productos %}
+      <article class="producto-card" data-id="{{ p.idProducto }}" data-nombre="{{ p.nombre }}"
+        data-precio="{{ p.precio }}" data-tamano="{{ p.tamano }}" data-stock="{{ p.stock }}"
+        data-estatus="{{ 1 if p.estatus == 1 else 0 }}" style="animation-delay: {{ loop.index0 * 0.05 }}s">
+        <div class="producto-card-top">PRODUCTO</div>
+        <div class="producto-card-body">
+          {% if p.imagen %}
+          <img class="producto-image" src="{{ url_for('static', filename=p.imagen) }}" alt="{{ p.nombre }}"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="producto-image-placeholder" style="display:none">PZ</div>
+          {% else %}
+          <div class="producto-image-placeholder">PZ</div>
+          {% endif %}
+
+          <div class="producto-data">
+            <div class="producto-line"><span class="label">Nombre:</span> {{ p.nombre }}</div>
+            <div class="producto-line"><span class="label">Precio:</span> {{ p.precio }}$</div>
+            <div class="producto-line"><span class="label">Stock:</span> {{ p.stock }}</div>
+            <div class="estado-line">
+              <span class="estado-dot {% if p.estatus != 1 %}inactive{% endif %}"></span>
+              {{ 'Activo' if p.estatus == 1 else 'Inactivo' }}
+            </div>
+            <div class="producto-line"><span class="label">Receta:</span></div>
+            <div class="estado-line">
+              <span class="estado-dot {% if p.receta_activa != 1 %}inactive{% endif %}"></span>
+              {{ 'Activa' if p.receta_activa == 1 else 'Inactiva' }}
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button type="button" class="card-action action-edit" onclick="abrirEditar(this.closest('.producto-card'))" title="Editar">
+              <svg viewBox="0 0 20 20">
+                <path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" />
+              </svg>
+            </button>
+            <button type="button" class="card-action action-view" onclick="abrirVer(this.closest('.producto-card'))" title="Ver">
+              <svg viewBox="0 0 20 20">
+                <path d="M10 4.5c-4.5 0-7.8 4.1-8.8 5.5 1 1.4 4.3 5.5 8.8 5.5s7.8-4.1 8.8-5.5c-1-1.4-4.3-5.5-8.8-5.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" />
+              </svg>
+            </button>
+            <button type="button" class="card-action action-delete" onclick="abrirConfirm(this.closest('.producto-card'))" title="Eliminar">
+              <svg viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5Z" />
+              </svg>
+            </button>
+            <a class="card-action action-stock" href="{{ url_for('recetas.ver_receta_producto', id_producto=p.idProducto) }}" title="Receta">
+              <svg viewBox="0 0 20 20">
+                <path d="M5.75 2A2.75 2.75 0 0 0 3 4.75v10.5A2.75 2.75 0 0 0 5.75 18h8.5A2.75 2.75 0 0 0 17 15.25V6.56a2.75 2.75 0 0 0-.805-1.945l-1.81-1.81A2.75 2.75 0 0 0 12.44 2H5.75Zm0 1.5h6.19c.331 0 .649.132.883.366l1.81 1.81c.234.234.367.552.367.884v8.69a1.25 1.25 0 0 1-1.25 1.25h-8.5A1.25 1.25 0 0 1 4 15.25V4.75A1.25 1.25 0 0 1 5.75 3.5Zm1.5 4a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Zm0 3a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Z" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">No se encontraron productos con esos filtros.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalRegistro" onclick="handleOverlay(event,'modalRegistro')">
+  <div class="modal">
+    <div class="modal-header">
+      <span>REGISTRAR PRODUCTO</span>
+      <button type="button" class="modal-close" onclick="cerrarModal('modalRegistro')">X</button>
+    </div>
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('productos.registrar_producto') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-grid">
+          <div class="field full">
+            <label>Nombre <span class="req">*</span></label>
+            <input name="nombre" required maxlength="100" placeholder="Ej: Pizza Pepperoni">
+          </div>
+          <div class="field">
+            <label>Precio <span class="req">*</span></label>
+            <input type="number" step="0.01" min="0" name="precio" required placeholder="0.00">
+          </div>
+          <div class="field">
+            <label>Tamano <span class="req">*</span></label>
+            <input name="tamano" required maxlength="50" placeholder="Ej: Grande, 30cm">
+          </div>
+          <div class="field">
+            <label>Stock <span class="req">*</span></label>
+            <input type="number" step="0.01" min="0" name="stock" required placeholder="0.00">
+          </div>
+          <div class="field full">
+            <label>Imagen</label>
+            <input type="file" name="imagen" accept=".png,.jpg,.jpeg,.webp,.gif,image/*">
+            <span class="field-hint">La imagen se sube manualmente y se guarda dentro de `static/img/productos`.</span>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="cerrarModal('modalRegistro')">Cancelar</button>
+          <button type="submit" class="btn-save">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEditar" onclick="handleOverlay(event,'modalEditar')">
+  <div class="modal">
+    <div class="modal-header">
+      <span>EDITAR PRODUCTO</span>
+      <button type="button" class="modal-close" onclick="cerrarModal('modalEditar')">X</button>
+    </div>
+    <div class="modal-body">
+      <form method="POST" id="formEditar" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-grid">
+          <div class="field full">
+            <label>Nombre <span class="req">*</span></label>
+            <input id="editNombre" name="nombre" required maxlength="100">
+          </div>
+          <div class="field">
+            <label>Precio <span class="req">*</span></label>
+            <input id="editPrecio" type="number" step="0.01" min="0" name="precio" required>
+          </div>
+          <div class="field">
+            <label>Tamano <span class="req">*</span></label>
+            <input id="editTamano" name="tamano" required maxlength="50">
+          </div>
+          <div class="field">
+            <label>Stock <span class="req">*</span></label>
+            <input id="editStock" type="number" step="0.01" min="0" name="stock" required>
+          </div>
+          <div class="field">
+            <label>Estatus</label>
+            <select id="editEstatus" name="estatus">
+              <option value="1">Activo</option>
+              <option value="0">Inactivo</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Nueva imagen</label>
+            <input type="file" name="imagen" accept=".png,.jpg,.jpeg,.webp,.gif,image/*">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="cerrarModal('modalEditar')">Cancelar</button>
+          <button type="submit" class="btn-save">Actualizar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalVer" onclick="handleOverlay(event,'modalVer')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span>DETALLE DEL PRODUCTO</span>
+      <button type="button" class="modal-close" onclick="cerrarModal('modalVer')">X</button>
+    </div>
+    <div class="modal-body">
+      <div id="verImgWrap" style="text-align:center;margin-bottom:1rem"></div>
+      <div class="detail-row">
+        <span class="detail-label">Nombre</span>
+        <span class="detail-value" id="verNombre">-</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Precio</span>
+        <span class="detail-value" id="verPrecio">-</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Tamano</span>
+        <span class="detail-value" id="verTamano">-</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Stock</span>
+        <span class="detail-value" id="verStock">-</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Estatus</span>
+        <span class="detail-value" id="verEstatus">-</span>
+      </div>
+      <div class="modal-actions" style="margin-top:16px;padding-top:12px">
+        <button type="button" class="btn-cancel" onclick="cerrarModal('modalVer')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalConfirm" onclick="handleOverlay(event,'modalConfirm')">
+  <div class="confirm-box">
+    <div class="modal-header">
+      <span>CONFIRMAR ELIMINACION</span>
+      <button type="button" class="modal-close" onclick="cerrarModal('modalConfirm')">X</button>
+    </div>
+    <div class="modal-body" style="text-align:center">
+      <div class="confirm-icon">
+        <svg style="width:26px;height:26px;color:#ef4444" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+        </svg>
+      </div>
+      <p id="confirmMensaje" style="font-family:'Poppins',sans-serif;font-size:.85rem;color:#555;margin-bottom:1.2rem"></p>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button type="button" class="btn-cancel" onclick="cerrarModal('modalConfirm')">Cancelar</button>
+        <a id="confirmUrl" href="#" class="btn-delete-confirm">Eliminar</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function abrirModal(id) {
+    document.getElementById(id).classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function cerrarModal(id) {
+    document.getElementById(id).classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function handleOverlay(e, id) {
+    if (e.target === document.getElementById(id)) {
+      cerrarModal(id);
+    }
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      ['modalRegistro', 'modalEditar', 'modalVer', 'modalConfirm'].forEach(cerrarModal);
+    }
+  });
+
+  function abrirEditar(card) {
+    document.getElementById('editNombre').value = card.dataset.nombre;
+    document.getElementById('editPrecio').value = card.dataset.precio;
+    document.getElementById('editTamano').value = card.dataset.tamano;
+    document.getElementById('editStock').value = card.dataset.stock;
+    document.getElementById('editEstatus').value = card.dataset.estatus;
+    document.getElementById('formEditar').action = `/editar-producto/${card.dataset.id}`;
+    abrirModal('modalEditar');
+  }
+
+  function abrirVer(card) {
+    document.getElementById('verNombre').textContent = card.dataset.nombre;
+    document.getElementById('verPrecio').textContent = card.dataset.precio + '$';
+    document.getElementById('verTamano').textContent = card.dataset.tamano || '-';
+    document.getElementById('verStock').textContent = card.dataset.stock || '-';
+    document.getElementById('verEstatus').textContent = card.dataset.estatus == 1 ? 'Activo' : 'Inactivo';
+    document.getElementById('verEstatus').style.color = card.dataset.estatus == 1 ? '#16a34a' : '#ef4444';
+
+    const img = card.querySelector('.producto-image');
+    const wrap = document.getElementById('verImgWrap');
+    wrap.innerHTML = img
+      ? `<img src="${img.src}" style="width:90px;height:90px;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(145,78,9,.2))">`
+      : '<div class="producto-image-placeholder" style="margin:0 auto">PZ</div>';
+
+    abrirModal('modalVer');
+  }
+
+  function abrirConfirm(card) {
+    document.getElementById('confirmMensaje').textContent =
+      `Estas seguro de eliminar "${card.dataset.nombre}"? Esta accion no se puede deshacer.`;
+    document.getElementById('confirmUrl').href = `/eliminar-producto/${card.dataset.id}`;
+    abrirModal('modalConfirm');
+  }
+</script>
+{% endblock %}

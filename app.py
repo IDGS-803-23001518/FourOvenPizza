@@ -2,11 +2,16 @@ from datetime import datetime, timedelta, timezone
 
 from flask import (Flask, g, redirect, render_template, request, session,
                    url_for)
+from flask_mail import Mail, Message
 from flask_wtf.csrf import CSRFProtect
 
 import forms
 from autentificacion.routes import autentificacion
 from config import DevelopmentConfig
+from materiasPrimas.routes import materiasPrimas
+from productos.routes import productos
+from recetas.routes import recetas
+from unidadesMedida.routes import unidadesMedida
 from models import db
 
 app = Flask(__name__)
@@ -15,6 +20,11 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=10)
 csrf = CSRFProtect(app)
 mail = Mail(app)
 app.register_blueprint(autentificacion)
+app.register_blueprint(materiasPrimas)
+app.register_blueprint(productos)
+app.register_blueprint(recetas)
+app.register_blueprint(unidadesMedida)
+
 db.init_app(app)
 
 
