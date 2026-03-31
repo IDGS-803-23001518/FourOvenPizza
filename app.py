@@ -7,11 +7,9 @@ from flask_wtf.csrf import CSRFProtect
 
 import forms
 from autentificacion.routes import autentificacion
-from config import DevelopmentConfig
-from materiasPrimas.routes import materiasPrimas
-from productos.routes import productos
-from recetas.routes import recetas
-from unidadesMedida.routes import unidadesMedida
+from bitacoras import bitacoras
+from proveedores import proveedores
+from compras import compras
 from models import db
 
 app = Flask(__name__)
@@ -19,12 +17,11 @@ app.config.from_object(DevelopmentConfig)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=10)
 csrf = CSRFProtect(app)
 mail = Mail(app)
-app.register_blueprint(autentificacion)
-app.register_blueprint(materiasPrimas)
-app.register_blueprint(productos)
-app.register_blueprint(recetas)
-app.register_blueprint(unidadesMedida)
 
+app.register_blueprint(autentificacion)
+app.register_blueprint(bitacoras)
+app.register_blueprint(proveedores)
+app.register_blueprint(compras) 
 db.init_app(app)
 
 
@@ -72,6 +69,7 @@ def verificar_sesion():
     session['ultima_actividad'] = ahora.isoformat()
     session.modified = True
 
+
 @app.route("/")
 def index():
     return redirect(url_for('autentificacion.login'))
@@ -82,6 +80,7 @@ def inicio():
     if not session.get('usuario_id'):
         return redirect(url_for('autentificacion.login'))
     return render_template("inicio.html")
+
 
 @app.context_processor
 def inject_layout():
