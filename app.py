@@ -39,23 +39,34 @@ def verificar_sesion():
     if ultima:
         if isinstance(ultima, str):
             ultima = datetime.fromisoformat(ultima)
-        if (ahora - ultima) > timedelta(minutes=10):
-            from models import BitacoraAccesos, db
+        if ultima.tzinfo is None:
+            ultima = ultima.replace(tzinfo=timezone.utc)
+
+        if (ahora - ultima) > timedelta(minutes=1):
+            usuario_id    = session.get('usuario_id')
+            nombre_usuario = session.get('usuario_nombre')
+            ip             = request.headers.get('X-Forwarded-For',
+                             request.remote_addr).split(',')[0].strip()
+            navegador      = request.headers.get('User-Agent', '')[:255]
+
+            session.clear()
+
             try:
+                from models import BitacoraAccesos
                 entrada = BitacoraAccesos(
-                    usuarioId=session.get('usuario_id'),
-                    nombreUsuario=session.get('usuario_nombre'),
-                    evento='LOGOUT_INACTIVIDAD',
-                    ip=request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip(),
-                    navegador=request.headers.get('User-Agent', '')[:255],
-                    resultado='SESION_EXPIRADA'
+                    usuarioId     = usuario_id,
+                    nombreUsuario = nombre_usuario,
+                    evento        = 'LOGOUT_INACTIVIDAD',
+                    ip            = ip,
+                    navegador     = navegador,
+                    resultado     = 'SESION_EXPIRADA'
                 )
                 db.session.add(entrada)
                 db.session.commit()
-            except Exception:
+            except Exception as e:
                 db.session.rollback()
+                print(f"Error registrando logout por inactividad: {e}")
 
-            session.clear()
             return redirect(url_for('autentificacion.login'))
 
     session['ultima_actividad'] = ahora.isoformat()
