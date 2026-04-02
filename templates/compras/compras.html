@@ -1,19 +1,1304 @@
 {% extends layout %}
+
 {% block title %}Compras{% endblock %}
 
 {% block container %}
+<style>
+    .modal-overlay.hidden { display: none !important; }
 
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow-y: auto;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 1000;
+        padding: 1rem;
+        transition: left 0.3s ease-in-out;
+    }
+
+    @media (min-width: 769px) {
+        body:not(.sidebar-closed) .modal-overlay { left: 288px; }
+        body.sidebar-closed .modal-overlay { left: 0; }
+    }
+
+    #modal-insumo  { z-index: 1100; }
+    #modal-confirm { z-index: 1200; }
+
+    .modal-box {
+        position: relative;
+        background: #fff;
+        border-radius: 1rem;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+        width: 100%;
+        margin: auto;
+        flex-shrink: 0;
+    }
+
+    body.modal-open { overflow: hidden; }
+
+    .radio-tipo { display: flex; gap: 0; border: 1.5px solid #e5e7eb; border-radius: 0.6rem; overflow: hidden; }
+    .radio-tipo label {
+        flex: 1; text-align: center; padding: 0.45rem 0.75rem;
+        font-size: 0.78rem; font-weight: 600; cursor: pointer;
+        color: #6b7280; background: #f9fafb;
+        transition: all 0.2s; user-select: none;
+    }
+    .radio-tipo input[type=radio] { display: none; }
+    .radio-tipo input[type=radio]:checked + label { background: #38230f; color: #fff; }
+
+    .inp-inline {
+        width: 100%;
+        border: 1.5px solid #f29f05;
+        border-radius: 6px;
+        padding: 2px 6px;
+        font-size: 0.72rem;
+        background: #fffbf0;
+        outline: none;
+        min-width: 60px;
+    }
+    .inp-inline:focus {
+        box-shadow: 0 0 0 2px rgba(242,159,5,0.25);
+    }
+    .btn-save-inline {
+        background: #f29f05;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        padding: 2px 8px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: filter 0.15s;
+    }
+    .btn-save-inline:hover {
+        filter: brightness(1.1);
+    }
+    .btn-edit-inline {
+        background: #e8f4fd;
+        color: #2563eb;
+        border: none;
+        border-radius: 5px;
+        padding: 2px 8px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s;
+    }
+    .btn-edit-inline:hover {
+        background: #bfdbfe;
+    }
+</style>
+
+<!-- NAV -->
 <nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
-    style="border-bottom: 3px solid #f29f05;">
+    style="border-bottom:3px solid #f29f05;">
     <div class="container flex flex-wrap items-center justify-between mx-auto">
         <div class="flex-1 flex justify-center">
-            <div class="flex items-center space-x-2 sm:space-x-3 bg-opacity-20 px-3 sm:px-6 py-2 rounded-full">
-                <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Gestión de</span>
-                <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap"
-                    style="color: #f29f05;">Compras</span>
+            <div class="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2 rounded-full">
+                <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Gestion de</span>
+                <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap" style="color:#f29f05;">Compras</span>
             </div>
         </div>
     </div>
 </nav>
+
+<div class="w-full px-4 sm:px-6 max-w-7xl mx-auto">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for category, message in messages %}
+    <div id="flash-msg"
+        class="mb-4 p-4 rounded-lg {% if category=='success' %}bg-green-100 text-green-700{% elif category=='danger' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="flex justify-end mb-4">
+        <button onclick="abrirModalRegistro()"
+            class="text-white font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-md transition-all duration-300 hover:brightness-110 hover:shadow-lg text-sm sm:text-base"
+            style="background-color:#f29f05;">+ Nueva Compra</button>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
+        <div class="px-4 sm:px-5 py-3 rounded-t-2xl" style="background-color:#38230f;">
+            <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">FILTROS DE BUSQUEDA</h2>
+        </div>
+        <div class="p-4 sm:p-5 space-y-3">
+            <div class="flex flex-wrap gap-3 sm:gap-4 items-end">
+                <div class="flex flex-col flex-1 min-w-[180px]">
+                    <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Proveedor</label>
+                    <select id="filtro-proveedor"
+                        class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                        <option value="">Todos los proveedores</option>
+                        {% for p in proveedores %}
+                        <option value="{{ p.idProveedor }}">{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex flex-col min-w-[140px]">
+                    <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Estatus</label>
+                    <select id="filtro-estatus"
+                        class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                        <option value="">Todos</option>
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Completado">Completado</option>
+                        <option value="Cancelado">Cancelado</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-3 sm:gap-4 items-end">
+                <div class="flex flex-col min-w-[145px]">
+                    <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Fecha inicio</label>
+                    <input type="date" id="filtro-fecha-inicio"
+                        class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                </div>
+                <div class="flex flex-col min-w-[145px]">
+                    <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Fecha fin</label>
+                    <input type="date" id="filtro-fecha-fin"
+                        class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                </div>
+                <div class="flex flex-col min-w-[115px]">
+                    <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Precio min ($)</label>
+                    <input type="number" id="filtro-precio-min" min="0" step="0.01" placeholder="0.00"
+                        class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                </div>
+                <div class="flex flex-col min-w-[115px]">
+                    <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Precio max ($)</label>
+                    <input type="number" id="filtro-precio-max" min="0" step="0.01" placeholder="0.00"
+                        class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                </div>
+                <div class="flex flex-col justify-end">
+                    <button onclick="filtrarCompras()"
+                        class="text-white font-semibold px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg shadow transition-all hover:brightness-110 text-xs sm:text-sm"
+                        style="background-color:#f29f05;">Filtrar</button>
+                </div>
+                <div class="flex flex-col justify-end">
+                    <button onclick="limpiarFiltros()"
+                        class="text-white font-semibold px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg shadow transition-all hover:brightness-110 text-xs sm:text-sm"
+                        style="background-color:#6b7280;">Limpiar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla compras -->
+    <div class="rounded-2xl overflow-hidden shadow-md">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead>
+                    <tr style="background-color:#38230f;">
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">#</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">PROVEEDOR</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">FECHA</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">TOTAL</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">ESTATUS</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-compras">
+                    {% for compra in compras %}
+                    {% set total_compra = compra.detalle_compras | map(attribute='precio') | list | sum %}
+                    <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors compra-row"
+                        data-id="{{ compra.idCompra }}"
+                        data-idproveedor="{{ compra.idProveedor }}"
+                        data-estatus="{{ compra.estatus }}"
+                        data-fecha-iso="{{ compra.fecha.strftime('%Y-%m-%d') }}"
+                        data-total="{{ '%.2f' | format(total_compra) }}">
+                        <td class="px-5 py-3 font-semibold text-gray-700">{{ compra.idCompra }}</td>
+                        <td class="px-5 py-3 font-semibold text-gray-800">{{ compra.proveedor.nombre }}</td>
+                        <td class="px-5 py-3 text-gray-700">{{ compra.fecha.strftime('%d/%m/%Y') }}</td>
+                        <td class="px-5 py-3 text-gray-700">${{ "%.2f"|format(total_compra) }}</td>
+                        <td class="px-5 py-3">
+                            {% if compra.estatus == 'Pendiente' %}
+                            <span class="flex items-center gap-1 font-semibold text-yellow-600">
+                                <span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span>Pendiente
+                            </span>
+                            {% elif compra.estatus == 'Completado' %}
+                            <span class="flex items-center gap-1 font-semibold text-green-600">
+                                <span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>Completado
+                            </span>
+                            {% else %}
+                            <span class="flex items-center gap-1 font-semibold text-red-500">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>Cancelado
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3">
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="verDetalle({{ compra.idCompra }})"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
+                                    style="background-color:#3b82f6;" title="Ver detalle">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                </button>
+                                {% if compra.estatus == 'Pendiente' %}
+                                <button onclick="abrirModalEdicion({{ compra.idCompra }})"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
+                                    style="background-color:#f29f05;" title="Editar">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                </button>
+                                <button onclick="abrirModalCompletar({{ compra.idCompra }})"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
+                                    style="background-color:#48bb78;" title="Completar compra">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </button>
+                                <button onclick="confirmarCancelar({{ compra.idCompra }})"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
+                                    style="background-color:#e53e3e;" title="Cancelar compra">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div id="sin-resultados" class="hidden text-center py-10 bg-white text-gray-400 text-sm font-medium">
+            No se encontraron compras con los filtros seleccionados.
+        </div>
+    </div>
+</div>
+
+<!-- MODAL REGISTRAR -->
+<div id="modal-registro" class="modal-overlay hidden">
+    <div class="modal-box max-w-3xl">
+        <div class="flex justify-between items-center px-6 py-4 rounded-t-2xl" style="background-color:#38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">REGISTRAR COMPRA</h3>
+            <button onclick="cerrarModalRegistro()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[80vh]">
+            <div id="error-registro" class="hidden mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm"></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Proveedor *</label>
+                    <select id="reg-proveedor"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                        <option value="">Seleccione un proveedor</option>
+                        {% for p in proveedores %}
+                        <option value="{{ p.idProveedor }}">{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Fecha *</label>
+                    <input type="date" id="reg-fecha"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                </div>
+            </div>
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-sm font-bold text-gray-700">INSUMOS A COMPRAR</h4>
+                    <button onclick="abrirModalInsumo('registro')"
+                        class="text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:brightness-110 transition"
+                        style="background-color:#38230f;">+ Agregar Insumo</button>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-gray-200">
+                    <table class="w-full text-xs">
+                        <thead style="background-color:#f3f4f6;">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">MATERIA PRIMA</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">UNIDAD</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">CANTIDAD</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">PRECIO</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-insumos-registro">
+                            <tr id="fila-vacia-registro">
+                                <td colspan="5" class="px-3 py-4 text-center text-gray-400">Sin insumos agregados. Haz clic en "+ Agregar Insumo".</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="flex justify-end mt-2">
+                    <span class="text-sm font-bold text-gray-700">Total: $<span id="total-registro">0.00</span></span>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-4">
+                <button onclick="cerrarModalRegistro()"
+                    class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">Cancelar</button>
+                <button onclick="guardarCompra()"
+                    class="flex-1 px-4 py-2 rounded-lg text-white font-semibold hover:brightness-110 transition"
+                    style="background-color:#f29f05;">Registrar Compra</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div id="modal-edicion" class="modal-overlay hidden">
+    <div class="modal-box max-w-3xl">
+        <div class="flex justify-between items-center px-6 py-4 rounded-t-2xl" style="background-color:#38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">EDITAR COMPRA</h3>
+            <button onclick="cerrarModalEdicion()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[80vh]">
+            <input type="hidden" id="edit-idCompra">
+            <div id="error-edicion" class="hidden mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm"></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Proveedor *</label>
+                    <select id="edit-proveedor"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                        <option value="">Seleccione un proveedor</option>
+                        {% for p in proveedores %}
+                        <option value="{{ p.idProveedor }}">{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Fecha *</label>
+                    <input type="date" id="edit-fecha"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                </div>
+            </div>
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-sm font-bold text-gray-700">INSUMOS</h4>
+                    <button onclick="abrirModalInsumo('edicion')"
+                        class="text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:brightness-110 transition"
+                        style="background-color:#38230f;">+ Agregar Insumo</button>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-gray-200">
+                    <table class="w-full text-xs">
+                        <thead style="background-color:#f3f4f6;">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">MATERIA PRIMA</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">UNIDAD</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">CANTIDAD</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">PRECIO</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-insumos-edicion">
+                            <tr id="fila-vacia-edicion">
+                                <td colspan="5" class="px-3 py-4 text-center text-gray-400">Sin insumos.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="flex justify-end mt-2">
+                    <span class="text-sm font-bold text-gray-700">Total: $<span id="total-edicion">0.00</span></span>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-4">
+                <button onclick="cerrarModalEdicion()"
+                    class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">Cancelar</button>
+                <button onclick="actualizarCompra()"
+                    class="flex-1 px-4 py-2 rounded-lg text-white font-semibold hover:brightness-110 transition"
+                    style="background-color:#f29f05;">Actualizar Compra</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL COMPLETAR -->
+<div id="modal-completar" class="modal-overlay hidden">
+    <div class="modal-box max-w-3xl">
+        <div class="flex justify-between items-center px-6 py-4 rounded-t-2xl" style="background-color:#38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">COMPLETAR COMPRA</h3>
+            <button onclick="cerrarModalCompletar()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[80vh]">
+            <input type="hidden" id="completar-idCompra">
+            <div class="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                <strong>Revisa las cantidades antes de confirmar.</strong> Puedes editar cantidad y precio directamente en la tabla. Al confirmar se actualizara el stock de cada materia prima.
+            </div>
+            <div id="error-completar" class="hidden mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm"></div>
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-sm font-bold text-gray-700">INSUMOS RECIBIDOS</h4>
+                    <button onclick="abrirModalInsumo('completar')"
+                        class="text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:brightness-110 transition"
+                        style="background-color:#38230f;">+ Agregar Insumo</button>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-gray-200">
+                    <table class="w-full text-xs">
+                        <thead style="background-color:#f3f4f6;">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">MATERIA PRIMA</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">UNIDAD</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">CANTIDAD</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">PRECIO</th>
+                                <th class="px-3 py-2 text-left text-gray-600 font-semibold">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-insumos-completar">
+                            <tr id="fila-vacia-completar">
+                                <td colspan="5" class="px-3 py-4 text-center text-gray-400">Sin insumos.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="flex justify-end mt-2">
+                    <span class="text-sm font-bold text-gray-700">Total: $<span id="total-completar">0.00</span></span>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-4">
+                <button onclick="cerrarModalCompletar()"
+                    class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">Cancelar</button>
+                <button onclick="confirmarCompletar()"
+                    class="flex-1 px-4 py-2 rounded-lg text-white font-semibold hover:brightness-110 transition"
+                    style="background-color:#48bb78;">Confirmar y Completar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL AGREGAR INSUMO -->
+<div id="modal-insumo" class="modal-overlay hidden">
+    <div class="modal-box max-w-md">
+        <div class="flex justify-between items-center px-6 py-4 rounded-t-2xl" style="background-color:#38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">AGREGAR INSUMO</h3>
+            <button onclick="cerrarModalInsumo()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[85vh]">
+            <input type="hidden" id="insumo-contexto">
+            <div id="error-insumo" class="hidden mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm"></div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Materia Prima *</label>
+                <select id="insumo-materia" onchange="onMateriaPrimaChange()"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                    <option value="">Seleccione una materia prima</option>
+                    {% for mp in materias_primas %}
+                    <option value="{{ mp.idMateriaP }}" data-tipo="{{ mp.tipo }}" data-nombre="{{ mp.nombre }}">
+                        {{ mp.nombre }} ({{ mp.tipo }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Forma de registro *</label>
+                <div class="radio-tipo">
+                    <input type="radio" name="tipo-registro" id="tipo-cantidad" value="cantidad" checked onchange="onTipoRegistroChange()">
+                    <label for="tipo-cantidad">Por Cantidad</label>
+                    <input type="radio" name="tipo-registro" id="tipo-unidad" value="unidad" onchange="onTipoRegistroChange()">
+                    <label for="tipo-unidad">Por Unidad de Medida</label>
+                </div>
+                <p id="desc-tipo-registro" class="text-xs text-gray-500 mt-1.5">Ingresa directamente la cantidad en gramos o mililitros.</p>
+            </div>
+
+            <div id="bloque-cantidad-directa">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">
+                        Cantidad * <span id="label-unidad-base" class="font-normal text-gray-500 text-xs">(g / ml)</span>
+                    </label>
+                    <input type="number" id="insumo-cantidad-directa" min="0.01" step="0.01" placeholder="0.00"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                </div>
+            </div>
+
+            <div id="bloque-unidad-medida" class="hidden">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Unidad de Medida *</label>
+                    <select id="insumo-unidad" onchange="onUnidadChange()"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                        <option value="">— Selecciona una materia prima primero —</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">
+                        Numero de unidades *
+                        <span class="font-normal text-gray-500 text-xs" id="label-num-unidades-hint"></span>
+                    </label>
+                    <input type="number" id="insumo-num-unidades" min="1" step="1" placeholder="1"
+                        oninput="recalcularCantidad()"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                </div>
+                <div class="mb-4 p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs hidden" id="resumen-calculo">
+                    <span id="texto-resumen-calculo"></span>
+                </div>
+            </div>
+
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Precio Total *</label>
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                    <input type="number" id="insumo-precio" min="0.01" step="0.01" placeholder="0.00"
+                        class="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="cerrarModalInsumo()"
+                    class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">Cancelar</button>
+                <button onclick="agregarInsumo()"
+                    class="flex-1 px-4 py-2 rounded-lg text-white font-semibold hover:brightness-110 transition"
+                    style="background-color:#f29f05;">Agregar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL VER DETALLE -->
+<div id="modal-detalle" class="modal-overlay hidden">
+    <div class="modal-box max-w-2xl">
+        <div class="flex justify-between items-center px-6 py-4 rounded-t-2xl" style="background-color:#38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">DETALLE DE COMPRA</h3>
+            <button onclick="cerrarModalDetalle()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[80vh]">
+            <div id="detalle-info" class="mb-4 grid grid-cols-2 gap-3 text-sm text-gray-700"></div>
+            <div class="overflow-x-auto rounded-xl border border-gray-200">
+                <table class="w-full text-xs">
+                    <thead style="background-color:#f3f4f6;">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-gray-600 font-semibold">MATERIA PRIMA</th>
+                            <th class="px-3 py-2 text-left text-gray-600 font-semibold">UNIDAD</th>
+                            <th class="px-3 py-2 text-left text-gray-600 font-semibold">CANTIDAD</th>
+                            <th class="px-3 py-2 text-left text-gray-600 font-semibold">PRECIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-detalle-ver"></tbody>
+                </table>
+            </div>
+            <div class="flex justify-end mt-3">
+                <span class="text-sm font-bold text-gray-700">Total: $<span id="total-detalle-ver">0.00</span></span>
+            </div>
+            <div class="flex justify-end mt-4">
+                <button onclick="cerrarModalDetalle()"
+                    class="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition text-sm">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMACION -->
+<div id="modal-confirm" class="modal-overlay hidden">
+    <div class="modal-box max-w-xs text-center p-5">
+        <div class="flex justify-center mb-3">
+            <div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+            </div>
+        </div>
+        <h3 class="text-base font-bold text-gray-800 mb-1">Confirmar accion</h3>
+        <p id="confirm-mensaje" class="text-sm text-gray-500 mb-5"></p>
+        <div class="flex gap-2">
+            <button onclick="cerrarModalConfirm()"
+                class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition">Cancelar</button>
+            <button id="confirm-btn"
+                class="flex-1 px-3 py-2 rounded-lg text-white text-sm font-semibold hover:brightness-110 transition"
+                style="background-color:#f29f05;">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const UNIDADES_MEDIDA = {{ unidades_medida_json | safe }};
+    const COMPRAS_DATA = {{ compras_json | safe }};
+    const MATERIAS_PRIMAS_DATA = [
+        {% for mp in materias_primas %}
+        {
+            idMateriaP: {{ mp.idMateriaP }},
+            nombre: '{{ mp.nombre }}',
+            tipo: '{{ mp.tipo }}'
+        },
+        {% endfor %}
+    ];
+
+    // Variables globales
+    let insumosRegistro = [];
+    let insumosEdicion = [];
+    let insumosCompletar = [];
+    let contextoInsumo = '';
+
+    // Funciones auxiliares
+    function getUnidadBase(tipoMP) {
+        const tipoMap = { 'Solido': 'Masa', 'Liquido': 'Volumen' };
+        const tipoU = tipoMap[tipoMP] || null;
+        if (!tipoU) return null;
+        const candidatas = UNIDADES_MEDIDA.filter(u => u.tipo === tipoU);
+        if (!candidatas.length) return null;
+        const base1 = candidatas.find(u => parseFloat(u.equivalente) === 1);
+        if (base1) return base1;
+        return [...candidatas].sort((a, b) => parseFloat(a.equivalente) - parseFloat(b.equivalente))[0];
+    }
+
+    function getTipoMateriaPrima(idMateriaP) {
+        const materia = MATERIAS_PRIMAS_DATA.find(m => m.idMateriaP === idMateriaP);
+        return materia ? materia.tipo : '';
+    }
+
+    function getUnidadBaseTexto(idMateriaP) {
+        const tipo = getTipoMateriaPrima(idMateriaP);
+        if (tipo === 'Solido') return 'gramos';
+        if (tipo === 'Liquido') return 'mililitros';
+        return 'unidades';
+    }
+
+    function getLista(ctx) {
+        return ctx === 'registro' ? insumosRegistro : ctx === 'edicion' ? insumosEdicion : insumosCompletar;
+    }
+
+    function mapDetalle(i) {
+        return {
+            idMateriaP: i.idMateriaP,
+            idUnidadM: i.idUnidadM !== undefined && i.idUnidadM !== null ? i.idUnidadM : null,
+            cantidad: i.cantidad,
+            precio: i.precio
+        };
+    }
+
+    function bloquearScroll() { document.body.classList.add('modal-open'); }
+    function desbloquearScroll() {
+        if (!document.querySelectorAll('.modal-overlay:not(.hidden)').length)
+            document.body.classList.remove('modal-open');
+    }
+    function getCSRF() { return '{{ csrf_token }}'; }
+
+    // Funciones de filtrado
+    function filtrarCompras() {
+        const idProv = document.getElementById('filtro-proveedor').value;
+        const estatus = document.getElementById('filtro-estatus').value;
+        const fechaIni = document.getElementById('filtro-fecha-inicio').value;
+        const fechaFin = document.getElementById('filtro-fecha-fin').value;
+        const precioMin = document.getElementById('filtro-precio-min').value !== '' ? parseFloat(document.getElementById('filtro-precio-min').value) : null;
+        const precioMax = document.getElementById('filtro-precio-max').value !== '' ? parseFloat(document.getElementById('filtro-precio-max').value) : null;
+
+        let visibles = 0;
+        document.querySelectorAll('.compra-row').forEach(f => {
+            let ok = true;
+            if (idProv && f.dataset.idproveedor !== idProv) ok = false;
+            if (ok && estatus && f.dataset.estatus !== estatus) ok = false;
+            if (ok && fechaIni && f.dataset.fechaIso < fechaIni) ok = false;
+            if (ok && fechaFin && f.dataset.fechaIso > fechaFin) ok = false;
+            const total = parseFloat(f.dataset.total || 0);
+            if (ok && precioMin !== null && total < precioMin) ok = false;
+            if (ok && precioMax !== null && total > precioMax) ok = false;
+            f.classList.toggle('hidden', !ok);
+            if (ok) visibles++;
+        });
+        document.getElementById('sin-resultados').classList.toggle('hidden', visibles > 0);
+    }
+
+    function limpiarFiltros() {
+        ['filtro-proveedor', 'filtro-estatus', 'filtro-fecha-inicio', 'filtro-fecha-fin', 'filtro-precio-min', 'filtro-precio-max']
+            .forEach(id => { document.getElementById(id).value = ''; });
+        filtrarCompras();
+    }
+
+    // Funciones de renderizado de tabla
+    function renderTablaInsumos(ctx) {
+        const lista = getLista(ctx);
+        const tbody = document.getElementById(`tabla-insumos-${ctx}`);
+        const filaV = document.getElementById(`fila-vacia-${ctx}`);
+        const totalEl = document.getElementById(`total-${ctx}`);
+
+        Array.from(tbody.querySelectorAll('tr:not([id])')).forEach(r => r.remove());
+
+        if (!lista.length) {
+            filaV.classList.remove('hidden');
+            totalEl.textContent = '0.00';
+            return;
+        }
+        filaV.classList.add('hidden');
+        let total = 0;
+
+        lista.forEach((ins, i) => {
+            total += ins.precio;
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-gray-100';
+            tr.dataset.idx = i;
+
+            let unidadDisplay = '';
+            if (ins.idUnidadM) {
+                const unidad = UNIDADES_MEDIDA.find(u => u.idUnidadM === ins.idUnidadM);
+                if (unidad) {
+                    const numUnidades = ins.cantidad / parseFloat(unidad.equivalente);
+                    unidadDisplay = `${unidad.nombre} x${numUnidades.toFixed(2)}`;
+                } else {
+                    unidadDisplay = ins.nombreUnidad || 'Unidad';
+                }
+            } else {
+                const tipoMP = getTipoMateriaPrima(ins.idMateriaP);
+                unidadDisplay = tipoMP === 'Solido' ? 'g' : tipoMP === 'Liquido' ? 'ml' : 'Por cantidad';
+            }
+
+            tr.innerHTML = `
+                <td class="px-3 py-2 text-gray-800 font-medium">${ins.nombreMP}</td>
+                <td class="px-3 py-2 text-gray-600">${unidadDisplay}</td>
+                <td class="px-3 py-2">
+                    <span class="cantidad-display">${ins.cantidad}</span>
+                    <input type="number" class="inp-inline cantidad-input hidden" 
+                           value="${ins.cantidad}" min="0.01" step="0.01" style="display:none;">
+                </td>
+                <td class="px-3 py-2">
+                    <span class="precio-display">$${ins.precio.toFixed(2)}</span>
+                    <input type="number" class="inp-inline precio-input hidden" 
+                           value="${ins.precio.toFixed(2)}" min="0.01" step="0.01" style="display:none;">
+                </td>
+                <td class="px-3 py-2">
+                    <div class="flex gap-1 items-center">
+                        <button class="btn-edit-inline" onclick="editarInsumoInline('${ctx}', ${i})">Editar</button>
+                        <button onclick="eliminarInsumo('${ctx}', ${i})"
+                            class="text-red-500 hover:text-red-700 font-bold text-xs px-2 py-1 rounded hover:bg-red-50 transition">X</button>
+                    </div>
+                </td>`;
+            tbody.appendChild(tr);
+        });
+        totalEl.textContent = total.toFixed(2);
+    }
+
+    function editarInsumoInline(ctx, idx) {
+        const lista = getLista(ctx);
+        const ins = lista[idx];
+        const tr = document.querySelector(`#tabla-insumos-${ctx} tr[data-idx="${idx}"]`);
+        
+        const cantidadDisplay = tr.querySelector('.cantidad-display');
+        const cantidadInput = tr.querySelector('.cantidad-input');
+        const precioDisplay = tr.querySelector('.precio-display');
+        const precioInput = tr.querySelector('.precio-input');
+        
+        if (ins.idUnidadM) {
+            const unidad = UNIDADES_MEDIDA.find(u => u.idUnidadM === ins.idUnidadM);
+            if (unidad && unidad.equivalente) {
+                const numUnidades = ins.cantidad / parseFloat(unidad.equivalente);
+                cantidadInput.value = numUnidades.toFixed(2);
+                const hint = document.createElement('div');
+                hint.className = 'text-xs text-gray-500 mt-1';
+                hint.id = 'hint-unidades';
+                hint.textContent = `Cada ${unidad.nombre} equivale a ${unidad.equivalente} ${getUnidadBaseTexto(ins.idMateriaP)}`;
+                tr.querySelector('td:nth-child(3)').appendChild(hint);
+            }
+        }
+        
+        cantidadDisplay.style.display = 'none';
+        cantidadInput.style.display = 'block';
+        precioDisplay.style.display = 'none';
+        precioInput.style.display = 'block';
+        
+        const btnEditar = tr.querySelector('.btn-edit-inline');
+        btnEditar.textContent = 'Guardar';
+        btnEditar.onclick = () => guardarEdicionInline(ctx, idx);
+        btnEditar.classList.remove('btn-edit-inline');
+        btnEditar.classList.add('btn-save-inline');
+        btnEditar.style.backgroundColor = '#f29f05';
+    }
+
+    function guardarEdicionInline(ctx, idx) {
+        const lista = getLista(ctx);
+        const ins = lista[idx];
+        const tr = document.querySelector(`#tabla-insumos-${ctx} tr[data-idx="${idx}"]`);
+        
+        const cantidadInput = tr.querySelector('.cantidad-input');
+        const precioInput = tr.querySelector('.precio-input');
+        
+        let nuevaCantidad = parseFloat(cantidadInput.value);
+        const nuevoPrecio = parseFloat(precioInput.value);
+        
+        if (isNaN(nuevaCantidad) || nuevaCantidad <= 0) {
+            alert('La cantidad debe ser mayor a 0');
+            return;
+        }
+        
+        if (isNaN(nuevoPrecio) || nuevoPrecio <= 0) {
+            alert('El precio debe ser mayor a 0');
+            return;
+        }
+        
+        if (ins.idUnidadM) {
+            const unidad = UNIDADES_MEDIDA.find(u => u.idUnidadM === ins.idUnidadM);
+            if (unidad && unidad.equivalente) {
+                ins.cantidad = nuevaCantidad * parseFloat(unidad.equivalente);
+            } else {
+                ins.cantidad = nuevaCantidad;
+            }
+        } else {
+            ins.cantidad = nuevaCantidad;
+        }
+        
+        ins.precio = nuevoPrecio;
+        
+        const hint = tr.querySelector('#hint-unidades');
+        if (hint) hint.remove();
+        
+        renderTablaInsumos(ctx);
+    }
+
+    function eliminarInsumo(ctx, i) {
+        if (confirm('¿Eliminar este insumo?')) {
+            getLista(ctx).splice(i, 1);
+            renderTablaInsumos(ctx);
+        }
+    }
+
+    // Funciones del modal de insumo
+    function onMateriaPrimaChange() {
+        const mSel = document.getElementById('insumo-materia');
+        const opt = mSel.options[mSel.selectedIndex];
+        const tipoMP = opt?.dataset.tipo || '';
+        const unidBase = tipoMP === 'Solido' ? 'g' : tipoMP === 'Liquido' ? 'ml' : 'unidad';
+
+        document.getElementById('label-unidad-base').textContent = `(${unidBase})`;
+        document.getElementById('desc-tipo-registro').textContent = `Ingresa directamente la cantidad en ${unidBase}.`;
+        document.getElementById('insumo-cantidad-directa').value = '';
+        document.getElementById('insumo-num-unidades').value = '';
+        document.getElementById('resumen-calculo').classList.add('hidden');
+
+        poblarUnidades(tipoMP);
+
+        document.getElementById('tipo-cantidad').checked = true;
+        document.getElementById('bloque-cantidad-directa').classList.remove('hidden');
+        document.getElementById('bloque-unidad-medida').classList.add('hidden');
+    }
+
+    function poblarUnidades(tipoMP) {
+        const tipoMap = { 'Solido': 'Masa', 'Liquido': 'Volumen' };
+        const tipoU = tipoMap[tipoMP] || null;
+        const unidBase = tipoMP === 'Solido' ? 'g' : tipoMP === 'Liquido' ? 'ml' : 'unidad';
+        const uSelect = document.getElementById('insumo-unidad');
+
+        uSelect.innerHTML = '';
+        const filtradas = tipoU ? UNIDADES_MEDIDA.filter(u => u.tipo === tipoU) : UNIDADES_MEDIDA;
+
+        if (!filtradas.length) {
+            const o = document.createElement('option');
+            o.value = '';
+            o.textContent = '— Sin unidades disponibles para este tipo —';
+            uSelect.appendChild(o);
+        } else {
+            filtradas.forEach(u => {
+                const o = document.createElement('option');
+                o.value = u.idUnidadM;
+                o.dataset.equiv = u.equivalente;
+                o.dataset.nombre = u.nombre;
+                o.textContent = `${u.nombre} (equiv. ${u.equivalente} ${unidBase})`;
+                uSelect.appendChild(o);
+            });
+        }
+        onUnidadChange();
+    }
+
+    function onUnidadChange() {
+        const uSel = document.getElementById('insumo-unidad');
+        const opt = uSel.options[uSel.selectedIndex];
+        const equiv = parseFloat(opt?.dataset.equiv || 0);
+        document.getElementById('label-num-unidades-hint').textContent = equiv > 0 ? `(cada una equivale a ${equiv} unidades base)` : '';
+        document.getElementById('insumo-num-unidades').value = '';
+        document.getElementById('resumen-calculo').classList.add('hidden');
+    }
+
+    function recalcularCantidad() {
+        const uSel = document.getElementById('insumo-unidad');
+        const equiv = parseFloat(uSel.options[uSel.selectedIndex]?.dataset.equiv || 0);
+        const num = parseFloat(document.getElementById('insumo-num-unidades').value || 0);
+        const res = document.getElementById('resumen-calculo');
+        if (equiv > 0 && num > 0) {
+            document.getElementById('texto-resumen-calculo').textContent = `${num} x ${equiv} = ${(num * equiv).toFixed(2)} unidades base en stock`;
+            res.classList.remove('hidden');
+        } else {
+            res.classList.add('hidden');
+        }
+    }
+
+    function onTipoRegistroChange() {
+        const tipo = document.querySelector('input[name="tipo-registro"]:checked').value;
+        const tipoMP = document.getElementById('insumo-materia').options[document.getElementById('insumo-materia').selectedIndex]?.dataset.tipo || '';
+        const unidBase = tipoMP === 'Solido' ? 'g' : tipoMP === 'Liquido' ? 'ml' : 'unidad';
+
+        document.getElementById('bloque-cantidad-directa').classList.toggle('hidden', tipo !== 'cantidad');
+        document.getElementById('bloque-unidad-medida').classList.toggle('hidden', tipo !== 'unidad');
+        document.getElementById('desc-tipo-registro').textContent = tipo === 'cantidad'
+            ? `Ingresa directamente la cantidad en ${unidBase}.`
+            : 'Selecciona una unidad de medida e indica cuantas unidades se compraron.';
+
+        if (tipo === 'unidad') poblarUnidades(tipoMP);
+    }
+
+    function abrirModalInsumo(ctx) {
+        contextoInsumo = ctx;
+        document.getElementById('insumo-contexto').value = ctx;
+        document.getElementById('insumo-materia').value = '';
+        document.getElementById('insumo-unidad').innerHTML = '<option value="">— Selecciona una materia prima primero —</option>';
+        document.getElementById('insumo-cantidad-directa').value = '';
+        document.getElementById('insumo-num-unidades').value = '';
+        document.getElementById('insumo-precio').value = '';
+        document.getElementById('resumen-calculo').classList.add('hidden');
+        document.getElementById('error-insumo').classList.add('hidden');
+        document.getElementById('label-unidad-base').textContent = '(g / ml)';
+        document.getElementById('label-num-unidades-hint').textContent = '';
+        document.getElementById('tipo-cantidad').checked = true;
+        document.getElementById('bloque-cantidad-directa').classList.remove('hidden');
+        document.getElementById('bloque-unidad-medida').classList.add('hidden');
+        document.getElementById('desc-tipo-registro').textContent = 'Ingresa directamente la cantidad en gramos o mililitros.';
+        document.getElementById('modal-insumo').classList.remove('hidden');
+        bloquearScroll();
+    }
+
+    function cerrarModalInsumo() {
+        document.getElementById('modal-insumo').classList.add('hidden');
+        desbloquearScroll();
+    }
+
+    function agregarInsumo() {
+        const errDiv = document.getElementById('error-insumo');
+        errDiv.classList.add('hidden');
+
+        const mSel = document.getElementById('insumo-materia');
+        const idMP = mSel.value;
+        const nombreMP = mSel.options[mSel.selectedIndex]?.dataset.nombre || '';
+        const tipoMP = mSel.options[mSel.selectedIndex]?.dataset.tipo || '';
+        const precio = parseFloat(document.getElementById('insumo-precio').value);
+        const tipoReg = document.querySelector('input[name="tipo-registro"]:checked').value;
+
+        if (!idMP) {
+            errDiv.textContent = 'Selecciona una materia prima';
+            errDiv.classList.remove('hidden');
+            return;
+        }
+        if (!precio || precio <= 0) {
+            errDiv.textContent = 'Ingresa un precio valido mayor a 0';
+            errDiv.classList.remove('hidden');
+            return;
+        }
+
+        let cantidad, idUnidadM, nombreUnidad, etiquetaTipo;
+
+        if (tipoReg === 'cantidad') {
+            cantidad = parseFloat(document.getElementById('insumo-cantidad-directa').value);
+            if (!cantidad || cantidad <= 0) {
+                errDiv.textContent = 'Ingresa una cantidad valida mayor a 0';
+                errDiv.classList.remove('hidden');
+                return;
+            }
+            const ub = getUnidadBase(tipoMP);
+            if (ub) {
+                idUnidadM = ub.idUnidadM;
+                nombreUnidad = ub.nombre;
+                etiquetaTipo = `${ub.nombre} (directo)`;
+            } else {
+                idUnidadM = null;
+                nombreUnidad = tipoMP === 'Solido' ? 'g' : tipoMP === 'Liquido' ? 'ml' : 'unidad';
+                etiquetaTipo = nombreUnidad;
+            }
+        } else {
+            const uSel = document.getElementById('insumo-unidad');
+            const optU = uSel.options[uSel.selectedIndex];
+            const equiv = parseFloat(optU?.dataset.equiv || 0);
+            const numU = parseFloat(document.getElementById('insumo-num-unidades').value || 0);
+
+            if (!uSel.value) {
+                errDiv.textContent = 'Selecciona una unidad de medida';
+                errDiv.classList.remove('hidden');
+                return;
+            }
+            if (!numU || numU < 1) {
+                errDiv.textContent = 'Ingresa el numero de unidades (minimo 1)';
+                errDiv.classList.remove('hidden');
+                return;
+            }
+            if (equiv <= 0) {
+                errDiv.textContent = 'La unidad seleccionada no tiene equivalente valido';
+                errDiv.classList.remove('hidden');
+                return;
+            }
+
+            idUnidadM = parseInt(uSel.value);
+            nombreUnidad = optU.dataset.nombre;
+            cantidad = parseFloat((numU * equiv).toFixed(2));
+            etiquetaTipo = `${nombreUnidad} x${numU}`;
+        }
+
+        getLista(contextoInsumo).push({
+            idMateriaP: parseInt(idMP),
+            idUnidadM: idUnidadM,
+            nombreMP: nombreMP,
+            nombreUnidad: nombreUnidad,
+            etiquetaTipo: etiquetaTipo,
+            cantidad: cantidad,
+            precio: precio
+        });
+
+        renderTablaInsumos(contextoInsumo);
+        cerrarModalInsumo();
+    }
+
+    // Funciones de modales principales
+    function abrirModalRegistro() {
+        insumosRegistro = [];
+        document.getElementById('reg-proveedor').value = '';
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('reg-fecha').value = today;
+        renderTablaInsumos('registro');
+        document.getElementById('error-registro').classList.add('hidden');
+        document.getElementById('modal-registro').classList.remove('hidden');
+        bloquearScroll();
+    }
+
+    function cerrarModalRegistro() {
+        document.getElementById('modal-registro').classList.add('hidden');
+        insumosRegistro = [];
+        desbloquearScroll();
+    }
+
+    function guardarCompra() {
+        const errDiv = document.getElementById('error-registro');
+        const prov = document.getElementById('reg-proveedor').value;
+        const fecha = document.getElementById('reg-fecha').value;
+
+        errDiv.classList.add('hidden');
+        if (!prov) {
+            errDiv.textContent = 'Selecciona un proveedor';
+            errDiv.classList.remove('hidden');
+            return;
+        }
+        if (!fecha) {
+            errDiv.textContent = 'Selecciona una fecha';
+            errDiv.classList.remove('hidden');
+            return;
+        }
+        if (!insumosRegistro.length) {
+            errDiv.textContent = 'Agrega al menos un insumo';
+            errDiv.classList.remove('hidden');
+            return;
+        }
+
+        submitCompra('/compras/registrar', {
+            csrf_token: getCSRF(),
+            idProveedor: prov,
+            fecha: fecha,
+            detalles: JSON.stringify(insumosRegistro.map(mapDetalle))
+        });
+    }
+
+    function abrirModalEdicion(id) {
+        const c = COMPRAS_DATA.find(x => x.idCompra === id);
+        if (!c) return;
+        document.getElementById('edit-idCompra').value = id;
+        document.getElementById('edit-proveedor').value = c.idProveedor;
+        document.getElementById('edit-fecha').value = c.fecha;
+        document.getElementById('error-edicion').classList.add('hidden');
+
+        insumosEdicion = c.detalles.map(d => {
+            const insumo = {
+                idMateriaP: d.idMateriaP,
+                idUnidadM: d.idUnidadM,
+                nombreMP: d.nombreMP,
+                nombreUnidad: d.nombreUnidad,
+                cantidad: d.cantidad,
+                precio: d.precio
+            };
+            if (d.idUnidadM) {
+                const unidad = UNIDADES_MEDIDA.find(u => u.idUnidadM === d.idUnidadM);
+                if (unidad && unidad.equivalente) {
+                    insumo.cantidadOriginal = d.cantidad / parseFloat(unidad.equivalente);
+                }
+            }
+            return insumo;
+        });
+
+        renderTablaInsumos('edicion');
+        document.getElementById('modal-edicion').classList.remove('hidden');
+        bloquearScroll();
+    }
+
+    function cerrarModalEdicion() {
+        document.getElementById('modal-edicion').classList.add('hidden');
+        insumosEdicion = [];
+        desbloquearScroll();
+    }
+
+    function actualizarCompra() {
+        const errDiv = document.getElementById('error-edicion');
+        const id = document.getElementById('edit-idCompra').value;
+        const prov = document.getElementById('edit-proveedor').value;
+        const fecha = document.getElementById('edit-fecha').value;
+
+        errDiv.classList.add('hidden');
+        if (!prov) {
+            errDiv.textContent = 'Selecciona un proveedor';
+            errDiv.classList.remove('hidden');
+            return;
+        }
+        if (!fecha) {
+            errDiv.textContent = 'Selecciona una fecha';
+            errDiv.classList.remove('hidden');
+            return;
+        }
+        if (!insumosEdicion.length) {
+            errDiv.textContent = 'Agrega al menos un insumo';
+            errDiv.classList.remove('hidden');
+            return;
+        }
+
+        submitCompra(`/compras/editar/${id}`, {
+            csrf_token: getCSRF(),
+            idProveedor: prov,
+            fecha: fecha,
+            detalles: JSON.stringify(insumosEdicion.map(mapDetalle))
+        });
+    }
+
+    function abrirModalCompletar(id) {
+        const c = COMPRAS_DATA.find(x => x.idCompra === id);
+        if (!c) return;
+        document.getElementById('completar-idCompra').value = id;
+        document.getElementById('error-completar').classList.add('hidden');
+
+        insumosCompletar = c.detalles.map(d => ({
+            idMateriaP: d.idMateriaP,
+            idUnidadM: d.idUnidadM,
+            nombreMP: d.nombreMP,
+            nombreUnidad: d.nombreUnidad,
+            etiquetaTipo: d.nombreUnidad,
+            cantidad: d.cantidad,
+            precio: d.precio
+        }));
+
+        renderTablaInsumos('completar');
+        document.getElementById('modal-completar').classList.remove('hidden');
+        bloquearScroll();
+    }
+
+    function cerrarModalCompletar() {
+        document.getElementById('modal-completar').classList.add('hidden');
+        insumosCompletar = [];
+        desbloquearScroll();
+    }
+
+    function confirmarCompletar() {
+        const errDiv = document.getElementById('error-completar');
+        const id = document.getElementById('completar-idCompra').value;
+        errDiv.classList.add('hidden');
+        if (!insumosCompletar.length) {
+            errDiv.textContent = 'Debe haber al menos un insumo para completar la compra';
+            errDiv.classList.remove('hidden');
+            return;
+        }
+        document.getElementById('confirm-mensaje').textContent = 'Confirmas que los insumos recibidos son correctos? Se actualizara el stock de las materias primas.';
+        document.getElementById('confirm-btn').onclick = () => {
+            cerrarModalConfirm();
+            ejecutarCompletar(id);
+        };
+        document.getElementById('modal-confirm').classList.remove('hidden');
+        bloquearScroll();
+    }
+
+    function ejecutarCompletar(id) {
+        submitCompra(`/compras/completar/${id}`, {
+            csrf_token: getCSRF(),
+            detalles: JSON.stringify(insumosCompletar.map(mapDetalle))
+        });
+    }
+
+    function confirmarCancelar(id) {
+        document.getElementById('confirm-mensaje').textContent = 'Estas seguro de que deseas cancelar esta compra? Esta accion no se puede deshacer.';
+        document.getElementById('confirm-btn').onclick = () => {
+            cerrarModalConfirm();
+            window.location.href = `/compras/cancelar/${id}`;
+        };
+        document.getElementById('modal-confirm').classList.remove('hidden');
+        bloquearScroll();
+    }
+
+    function cerrarModalConfirm() {
+        document.getElementById('modal-confirm').classList.add('hidden');
+        desbloquearScroll();
+    }
+
+    function verDetalle(id) {
+        const c = COMPRAS_DATA.find(x => x.idCompra === id);
+        if (!c) return;
+        document.getElementById('detalle-info').innerHTML = `
+            <div><span class="font-semibold">Compra #:</span> ${c.idCompra}</div>
+            <div><span class="font-semibold">Proveedor:</span> ${c.nombreProveedor}</div>
+            <div><span class="font-semibold">Fecha:</span> ${c.fechaDisplay}</div>
+            <div><span class="font-semibold">Estatus:</span> ${c.estatus}</div>`;
+        const tbody = document.getElementById('tabla-detalle-ver');
+        tbody.innerHTML = '';
+        let total = 0;
+        c.detalles.forEach(d => {
+            total += d.precio;
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-gray-100';
+            tr.innerHTML = `<td class="px-3 py-2 text-gray-800">${d.nombreMP}</td>
+                            <td class="px-3 py-2 text-gray-600">${d.nombreUnidad}</td>
+                            <td class="px-3 py-2 text-gray-600">${d.cantidad}</td>
+                            <td class="px-3 py-2 text-gray-600">$${d.precio.toFixed(2)}</td>`;
+            tbody.appendChild(tr);
+        });
+        document.getElementById('total-detalle-ver').textContent = total.toFixed(2);
+        document.getElementById('modal-detalle').classList.remove('hidden');
+        bloquearScroll();
+    }
+
+    function cerrarModalDetalle() {
+        document.getElementById('modal-detalle').classList.add('hidden');
+        desbloquearScroll();
+    }
+
+    function submitCompra(action, campos) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = action;
+        Object.entries(campos).forEach(([k, v]) => {
+            const inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = k;
+            inp.value = v;
+            form.appendChild(inp);
+        });
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // Event listeners
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', function(e) {
+            if (e.target !== this) return;
+            const id = this.id;
+            if (id === 'modal-registro') cerrarModalRegistro();
+            else if (id === 'modal-edicion') cerrarModalEdicion();
+            else if (id === 'modal-completar') cerrarModalCompletar();
+            else if (id === 'modal-detalle') cerrarModalDetalle();
+            else if (id === 'modal-insumo') cerrarModalInsumo();
+            else if (id === 'modal-confirm') cerrarModalConfirm();
+        });
+    });
+
+    const flashEl = document.getElementById('flash-msg');
+    if (flashEl) setTimeout(() => flashEl.remove(), 4000);
+</script>
 
 {% endblock %}

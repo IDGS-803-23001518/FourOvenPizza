@@ -397,3 +397,297 @@ INSERT INTO proveedores (nombre, correo, telefono, direccion, estatus) VALUES
 
 -- PEPPERONI
 ('Carnes Mark S.A. de C.V.', 'ventas@carnesmark.com', '2278-9012', 'Boulevard Los Próceres #456, San Salvador', 1);
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_compras$$
+CREATE PROCEDURE sp_gestion_compras(
+    IN  p_accion        VARCHAR(20),
+    IN  p_idCompra      INT,
+    IN  p_idProveedor   INT,
+    IN  p_idUsuario     INT,
+    IN  p_estatus       VARCHAR(30),
+    IN  p_detalles      JSON,
+    IN  p_ip            VARCHAR(45),
+    IN  p_ejecutadoPor  INT,
+    IN  p_fecha         DATE,
+    OUT p_resultado     VARCHAR(255),
+    OUT p_idGenerado    INT
+)
+sp_gestion_compras:BEGIN
+
+    -- Declaración de variables
+    DECLARE v_nombre_ejecutor   VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_idx               INT DEFAULT 0;
+    DECLARE v_total_items       INT DEFAULT 0;
+    DECLARE v_idMateriaP        INT;
+    DECLARE v_idUnidadM         INT;
+    DECLARE v_cantidad          DECIMAL(10,2);
+    DECLARE v_precio            DECIMAL(10,2);
+    DECLARE v_estatus_actual    VARCHAR(30);
+    DECLARE v_raw_unidad        TEXT;
+
+    -- Manejador de excepciones
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado  = 'ERROR: Ocurrió un error en la operación';
+        SET p_idGenerado = 0;
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES ('ERROR', 'Compras',
+                CONCAT('Error en sp_gestion_compras acción: ', p_accion),
+                CONCAT('Compra ID: ',      IFNULL(p_idCompra, 0),
+                       ' | Proveedor ID: ', IFNULL(p_idProveedor, 0),
+                       ' | Ejecutado por ID: ', IFNULL(p_ejecutadoPor, 0)),
+                NOW(), p_ip, p_ejecutadoPor);
+    END;
+
+    -- Nombre del ejecutor
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor
+        FROM usuarios
+        WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    START TRANSACTION;
+
+    -- ════════════════════════════════════════════════════════════════════════
+    --  INSERT  –  Registrar una compra con su detalle
+    -- ════════════════════════════════════════════════════════════════════════
+    IF p_accion = 'INSERT' THEN
+
+        IF NOT EXISTS (SELECT 1 FROM proveedores WHERE idProveedor = p_idProveedor AND estatus = 1) THEN
+            SET p_resultado  = 'ERROR: El proveedor no existe o está inactivo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+            SET p_resultado  = 'ERROR: Debe incluir al menos un producto en el detalle';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+            INSERT INTO compras (idProveedor, idUsuario, fecha, estatus)
+            VALUES (p_idProveedor, p_ejecutadoPor, p_fecha, 'Pendiente');
+
+            SET p_idGenerado  = LAST_INSERT_ID();
+            SET v_total_items = JSON_LENGTH(p_detalles);
+            SET v_idx         = 0;
+
+            loop_insert: WHILE v_idx < v_total_items DO
+
+                SET v_idMateriaP = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idMateriaP'))) AS UNSIGNED);
+                SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+                SET v_precio     = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].precio')))     AS DECIMAL(10,2));
+
+                -- idUnidadM es OPCIONAL: puede ser null en el JSON
+                SET v_raw_unidad = JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idUnidadM')));
+                IF v_raw_unidad IS NULL OR v_raw_unidad = 'null' OR v_raw_unidad = '' THEN
+                    SET v_idUnidadM = NULL;
+                ELSE
+                    SET v_idUnidadM = CAST(v_raw_unidad AS UNSIGNED);
+                END IF;
+
+                -- Validar materia prima
+                IF NOT EXISTS (SELECT 1 FROM materiasPrimas WHERE idMateriaP = v_idMateriaP AND estatus = 1) THEN
+                    SET p_resultado  = CONCAT('ERROR: La materia prima ID ', v_idMateriaP, ' no existe o está inactiva');
+                    SET p_idGenerado = 0;
+                    ROLLBACK;
+                    LEAVE sp_gestion_compras;
+
+                -- Validar unidad de medida SOLO si se proporcionó
+                ELSEIF v_idUnidadM IS NOT NULL AND NOT EXISTS (SELECT 1 FROM unidadesMedida WHERE idUnidadM = v_idUnidadM AND estatus = 1) THEN
+                    SET p_resultado  = CONCAT('ERROR: La unidad de medida ID ', v_idUnidadM, ' no existe o está inactiva');
+                    SET p_idGenerado = 0;
+                    ROLLBACK;
+                    LEAVE sp_gestion_compras;
+
+                ELSEIF v_cantidad <= 0 OR v_precio <= 0 THEN
+                    SET p_resultado  = 'ERROR: La cantidad y el precio deben ser mayores a cero';
+                    SET p_idGenerado = 0;
+                    ROLLBACK;
+                    LEAVE sp_gestion_compras;
+
+                ELSE
+                    INSERT INTO detalleCompra (idCompra, idMateriaP, idUnidadM, cantidad, precio)
+                    VALUES (p_idGenerado, v_idMateriaP, v_idUnidadM, v_cantidad, v_precio);
+                END IF;
+
+                SET v_idx = v_idx + 1;
+            END WHILE loop_insert;
+
+            SET p_resultado = 'SUCCESS: Compra registrada correctamente';
+
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Compras', 'CREAR',
+                    'compra', CONCAT('ID:', p_idGenerado, ' | Proveedor ID:', p_idProveedor), NOW(), p_ip);
+
+            COMMIT;
+        END IF;
+
+    -- ════════════════════════════════════════════════════════════════════════
+    --  UPDATE  –  Editar cabecera y reemplazar detalle completo
+    -- ════════════════════════════════════════════════════════════════════════
+    ELSEIF p_accion = 'UPDATE' THEN
+
+        SELECT estatus INTO v_estatus_actual
+        FROM compras
+        WHERE idCompra = p_idCompra;
+
+        IF v_estatus_actual IS NULL THEN
+            SET p_resultado  = 'ERROR: La compra no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF v_estatus_actual != 'Pendiente' THEN
+            SET p_resultado  = 'ERROR: Solo se pueden editar compras en estado Pendiente';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF NOT EXISTS (SELECT 1 FROM proveedores WHERE idProveedor = p_idProveedor AND estatus = 1) THEN
+            SET p_resultado  = 'ERROR: El proveedor no existe o está inactivo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+            SET p_resultado  = 'ERROR: Debe incluir al menos un producto en el detalle';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+            UPDATE compras
+            SET idProveedor = p_idProveedor,
+                idUsuario   = p_ejecutadoPor,
+                fecha       = p_fecha
+            WHERE idCompra  = p_idCompra;
+
+            DELETE FROM detalleCompra WHERE idCompra = p_idCompra;
+
+            SET v_total_items = JSON_LENGTH(p_detalles);
+            SET v_idx         = 0;
+
+            loop_update: WHILE v_idx < v_total_items DO
+
+                SET v_idMateriaP = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idMateriaP'))) AS UNSIGNED);
+                SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+                SET v_precio     = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].precio')))     AS DECIMAL(10,2));
+
+                -- idUnidadM es OPCIONAL: puede ser null en el JSON
+                SET v_raw_unidad = JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idUnidadM')));
+                IF v_raw_unidad IS NULL OR v_raw_unidad = 'null' OR v_raw_unidad = '' THEN
+                    SET v_idUnidadM = NULL;
+                ELSE
+                    SET v_idUnidadM = CAST(v_raw_unidad AS UNSIGNED);
+                END IF;
+
+                -- Validar materia prima
+                IF NOT EXISTS (SELECT 1 FROM materiasPrimas WHERE idMateriaP = v_idMateriaP AND estatus = 1) THEN
+                    SET p_resultado  = CONCAT('ERROR: La materia prima ID ', v_idMateriaP, ' no existe o está inactiva');
+                    SET p_idGenerado = 0;
+                    ROLLBACK;
+                    LEAVE sp_gestion_compras;
+
+                -- Validar unidad de medida SOLO si se proporcionó
+                ELSEIF v_idUnidadM IS NOT NULL AND NOT EXISTS (SELECT 1 FROM unidadesMedida WHERE idUnidadM = v_idUnidadM AND estatus = 1) THEN
+                    SET p_resultado  = CONCAT('ERROR: La unidad de medida ID ', v_idUnidadM, ' no existe o está inactiva');
+                    SET p_idGenerado = 0;
+                    ROLLBACK;
+                    LEAVE sp_gestion_compras;
+
+                ELSEIF v_cantidad <= 0 OR v_precio <= 0 THEN
+                    SET p_resultado  = 'ERROR: La cantidad y el precio deben ser mayores a cero';
+                    SET p_idGenerado = 0;
+                    ROLLBACK;
+                    LEAVE sp_gestion_compras;
+
+                ELSE
+                    INSERT INTO detalleCompra (idCompra, idMateriaP, idUnidadM, cantidad, precio)
+                    VALUES (p_idCompra, v_idMateriaP, v_idUnidadM, v_cantidad, v_precio);
+                END IF;
+
+                SET v_idx = v_idx + 1;
+            END WHILE loop_update;
+
+            SET p_idGenerado = p_idCompra;
+            SET p_resultado  = 'SUCCESS: Compra actualizada correctamente';
+
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Compras', 'EDITAR',
+                    'compra', CONCAT('ID:', p_idCompra, ' | Proveedor ID:', p_idProveedor), NOW(), p_ip);
+
+            COMMIT;
+        END IF;
+
+    -- ════════════════════════════════════════════════════════════════════════
+    --  CHANGE_STATUS  –  Actualiza el estado de la compra
+    --  Al Completar: incrementa el stock de cada materia prima
+    -- ════════════════════════════════════════════════════════════════════════
+    ELSEIF p_accion = 'CHANGE_STATUS' THEN
+
+        SELECT estatus INTO v_estatus_actual
+        FROM compras
+        WHERE idCompra = p_idCompra;
+
+        IF v_estatus_actual IS NULL THEN
+            SET p_resultado  = 'ERROR: La compra no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF p_estatus NOT IN ('Pendiente', 'Completado', 'Cancelado') THEN
+            SET p_resultado  = 'ERROR: Estado no válido. Use Pendiente, Completado o Cancelado';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF v_estatus_actual = p_estatus THEN
+            SET p_resultado  = CONCAT('ERROR: La compra ya se encuentra en estado ', p_estatus);
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSEIF v_estatus_actual IN ('Completado', 'Cancelado') THEN
+            SET p_resultado  = 'ERROR: No se puede cambiar el estado de una compra ya finalizada';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+
+        ELSE
+            UPDATE compras
+            SET estatus = p_estatus
+            WHERE idCompra = p_idCompra;
+
+            -- Al completar: sumar la cantidad comprada al stock de cada materia prima
+            IF p_estatus = 'Completado' THEN
+                UPDATE materiasPrimas mp
+                JOIN detalleCompra dc ON dc.idMateriaP = mp.idMateriaP
+                SET mp.stock = mp.stock + dc.cantidad
+                WHERE dc.idCompra = p_idCompra;
+            END IF;
+
+            SET p_idGenerado = p_idCompra;
+            SET p_resultado  = CONCAT('SUCCESS: Compra marcada como ', p_estatus, ' correctamente');
+
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Compras',
+                    UPPER(p_estatus),
+                    'compra', CONCAT('ID:', p_idCompra), NOW(), p_ip);
+
+            COMMIT;
+        END IF;
+
+    -- ════════════════════════════════════════════════════════════════════════
+    --  Acción no reconocida
+    -- ════════════════════════════════════════════════════════════════════════
+    ELSE
+        SET p_resultado  = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    END IF;
+
+END$$
+DELIMITER ;
+
+
+INSERT INTO unidadesMedida (nombre, tipo, equivalente, estatus) VALUES
+('Gramo', 'Masa', 1.00, 1),
+('Kilogramo', 'Masa', 1000.00, 1),
+('Mililitro', 'Volumen', 1.00, 1),
+('Litro', 'Volumen', 1000.00, 1),
+('Cucharada', 'Volumen', 15.00, 1),
+('Taza', 'Volumen', 240.00, 1);

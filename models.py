@@ -140,8 +140,7 @@ class Compras(db.Model):
     idProveedor = db.Column(db.Integer, db.ForeignKey('proveedores.idProveedor'), nullable=False)
     idUsuario = db.Column(db.Integer, db.ForeignKey('usuarios.idUsuario'), nullable=False)
     fecha = db.Column(db.DateTime, default=datetime.datetime.now)
-    estado = db.Column(db.String(50))
-
+    estatus = db.Column(db.String(30))
     proveedor = db.relationship('Proveedores', back_populates='compras')
     usuario = db.relationship('Usuarios', back_populates='compras')
     detalle_compras = db.relationship('DetalleCompra', back_populates='compra', cascade='all, delete-orphan')
@@ -152,13 +151,14 @@ class DetalleCompra(db.Model):
     idDetalleC = db.Column(db.Integer, primary_key=True)
     idCompra = db.Column(db.Integer, db.ForeignKey('compras.idCompra'), nullable=False)
     idMateriaP = db.Column(db.Integer, db.ForeignKey('materiasPrimas.idMateriaP'), nullable=False)
-    idUnidadM = db.Column(db.Integer, db.ForeignKey('unidadesMedida.idUnidadM'), nullable=False)
+    idUnidadM = db.Column(db.Integer, db.ForeignKey('unidadesMedida.idUnidadM'), nullable=True)
     cantidad = db.Column(db.Numeric(10, 2))
     precio = db.Column(db.Numeric(10, 2))
 
     compra = db.relationship('Compras', back_populates='detalle_compras')
     materia_prima = db.relationship('MateriasPrimas', back_populates='detalle_compras')
     unidad_medida = db.relationship('UnidadesMedida', back_populates='detalle_compras')
+
 
 
 class Productos(db.Model):
@@ -329,3 +329,5 @@ class CajaMovimientos(db.Model):
     fecha = db.Column(db.DateTime, default=datetime.datetime.now)
 
     usuario = db.relationship('Usuarios', back_populates='caja_movimientos')
+
+

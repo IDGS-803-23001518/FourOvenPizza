@@ -5,7 +5,7 @@ from config import DevelopmentConfig
 from autentificacion.routes import autentificacion
 from bitacoras import bitacoras
 from proveedores import proveedores
-from compras import compras
+from compras import comprass
 from models import db
 from datetime import timedelta, datetime, timezone
 
@@ -18,7 +18,7 @@ mail = Mail(app)
 app.register_blueprint(autentificacion)
 app.register_blueprint(bitacoras)
 app.register_blueprint(proveedores)
-app.register_blueprint(compras)
+app.register_blueprint(comprass)
 
 db.init_app(app)
 
