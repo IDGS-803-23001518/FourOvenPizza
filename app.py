@@ -7,9 +7,11 @@ from autentificacion.routes import autentificacion
 from bitacoras.routes import bitacoras
 from compras.routes import compras
 from materiasPrimas.routes import materiasPrimas
-from proveedores.routes import proveedores  # <--- si existe
+from proveedores.routes import proveedores
+from unidadesMedida.routes import unidadesMedida
+from recetas.routes import recetas
 from models import db
-
+from productos.routes import productos
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=10)
@@ -18,9 +20,13 @@ mail = Mail(app)
 
 app.register_blueprint(autentificacion)
 app.register_blueprint(bitacoras)
-app.register_blueprint(proveedores)  # <--- si existe
+app.register_blueprint(proveedores)
 app.register_blueprint(compras)
 app.register_blueprint(materiasPrimas)
+app.register_blueprint(unidadesMedida)
+app.register_blueprint(productos)
+app.register_blueprint(recetas)
+
 db.init_app(app)
 
 

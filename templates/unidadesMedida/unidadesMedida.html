@@ -282,7 +282,11 @@
     background: var(--amber);
   }
 
-  .action-btn.delete {
+  .action-btn.activate {
+    background: var(--green);
+  }
+
+  .action-btn.deactivate {
     background: var(--red);
   }
 
@@ -600,14 +604,57 @@
       width: 100%;
     }
 
-    table {
-      font-size: 0.78rem;
+    /* Cards en móvil en lugar de tabla */
+    .table-wrapper { display: none; }
+    .cards-mobile { display: grid; grid-template-columns: 1fr; gap: 14px; }
+
+    .um-card {
+      background: var(--white);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 18px rgba(0,0,0,.12);
     }
 
-    thead th,
-    tbody td {
-      padding: 10px 10px;
+    .um-card-header {
+      background: var(--brown);
+      padding: 10px 16px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 0.85rem;
+      color: var(--white);
+      letter-spacing: .1em;
     }
+
+    .um-card-body {
+      padding: 14px 16px 10px;
+    }
+
+    .um-card-nombre {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 1.15rem;
+      color: var(--brown);
+      margin-bottom: 8px;
+    }
+
+    .um-card-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.84rem;
+      margin-bottom: 4px;
+    }
+
+    .um-card-row .lbl { font-family: 'Nunito', sans-serif; font-weight: 700; color: var(--orange); }
+    .um-card-row .val { font-family: 'Poppins', sans-serif; font-weight: 600; color: #1e1e1e; }
+
+    .um-card-actions {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px 14px;
+      justify-content: center;
+    }
+
+    .page-header h1 { font-size: 1.2rem; }
 
     .form-grid {
       grid-template-columns: 1fr;
@@ -627,6 +674,10 @@
       justify-content: center;
     }
   }
+
+  @media (min-width: 641px) {
+    .cards-mobile { display: none; }
+  }
 </style>
 
 <!-- Header -->
@@ -638,10 +689,7 @@
   <!-- Botón registrar -->
   <div class="top-bar">
     <button class="btn-register" onclick="openModal()">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px">
-        <path
-          d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-      </svg>
+      <img src="{{ url_for('static', filename='img/IconosTable/icons8-más-100.png') }}" style="width:16px;height:16px">
       Registrar Unidad de medida
     </button>
   </div>
@@ -655,23 +703,24 @@
           <label>Nombre</label>
           <input type="text" name="nombre" id="filtro-nombre-unidad" placeholder="Ingresa el nombre...">
         </div>
-        <div class="filter-group" style="max-width: 150px">
-          <label>Tipo</label>
+        <div class="filter-group" style="max-width: 180px">
+          <label>Tipo de conversión</label>
           <select name="tipo" id="filtro-tipo-unidad">
             <option value="">Todos</option>
-            <option value="Peso">Peso</option>
-            <option value="Volumen">Volumen</option>
-            <option value="Unidad">Unidad</option>
+            <option value="Solido">Sólido (Gramos)</option>
+            <option value="Liquido">Líquido (Mililitros)</option>
           </select>
         </div>
         <div class="filter-group" style="max-width: 150px">
           <label>Estatus</label>
           <select name="estatus" id="filtro-estatus-unidad">
-            <option value="Activo">Activo</option>
+            <option value="">Todos</option>
+            <option value="Activo" selected>Activo</option>
             <option value="Inactivo">Inactivo</option>
           </select>
         </div>
         <button class="btn-filter" type="button" id="btn-filtrar-unidades">Filtrar</button>
+        <button class="btn-filter" type="button" id="btn-limpiar-unidades" style="background:#6b7280;box-shadow:none;">Limpiar</button>
       </div>
     </div>
   </div>
@@ -682,7 +731,7 @@
       <thead>
         <tr>
           <th>Nombre</th>
-          <th>Tipo</th>
+          <th>Tipo de conversión</th>
           <th>Equivalente</th>
           <th>Estatus</th>
           <th>Acciones</th>
@@ -693,7 +742,7 @@
         <tr data-id="{{ um.idUnidadM }}" data-nombre="{{ um.nombre }}" data-tipo="{{ um.tipo }}"
           data-equivalente="{{ um.equivalente }}" data-estatus="{{ 1 if um.estatus == 1 else 0 }}">
           <td class="td-nombre">{{ um.nombre }}</td>
-          <td class="td-tipo">{{ um.tipo }}</td>
+          <td class="td-tipo">{{ 'Sólido (Gramos)' if um.tipo == 'Solido' else ('Líquido (Mililitros)' if um.tipo == 'Liquido' else um.tipo) }}</td>
           <td class="td-valor">{{ um.equivalente }}</td>
           <td>
             <span class="badge">
@@ -703,35 +752,56 @@
           </td>
           <td class="td-acciones">
             <div class="actions-wrap">
-
               <button onclick="abrirEditar(this)" class="action-btn edit" title="Editar">
-                <svg viewBox="0 0 20 20">
-                  <path
-                    d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" />
-                </svg>
+                <img src="{{ url_for('static', filename='img/IconosTable/icons8-lápiz-96.png') }}" style="width:15px;height:15px">
               </button>
-
-              <button onclick="confirmarEliminar({{ um.idUnidadM }}, '{{ um.nombre }}')" class="action-btn delete"
-                title="Eliminar">
-
-                <svg viewBox="0 0 20 20">
-                  <path fill-rule="evenodd"
-                    d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5Z" />
-                </svg>
+              <button onclick="confirmarCambioEstatus({{ um.idUnidadM }}, '{{ um.nombre }}', {{ 1 if um.estatus == 1 else 0 }})" class="action-btn {% if um.estatus == 1 %}deactivate{% else %}activate{% endif %}"
+          title="{% if um.estatus == 1 %}Desactivar{% else %}Activar{% endif %}">
+          {% if um.estatus == 1 %}
+          <img src="{{ url_for('static', filename='img/IconosTable/icons8-basura-100.png') }}" style="width:15px;height:15px;filter:brightness(0) invert(1)">
+          {% else %}
+                <img src="{{ url_for('static', filename='img/IconosTable/icons8-de-acuerdo-144.png') }}" style="width:15px;height:15px">
+                {% endif %}
               </button>
             </div>
           </td>
         </tr>
-
         {% else %}
         <tr class="empty-row">
-          <td colspan="5">
-            No se encontraron unidades de medida.
-          </td>
+          <td colspan="5">No se encontraron unidades de medida.</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+  </div>
+
+  <!-- Cards móvil -->
+  <div class="cards-mobile">
+    {% for um in unidades %}
+    <div class="um-card" data-id="{{ um.idUnidadM }}" data-nombre="{{ um.nombre }}" data-tipo="{{ um.tipo }}" data-equivalente="{{ um.equivalente }}" data-estatus="{{ 1 if um.estatus == 1 else 0 }}">
+      <div class="um-card-header">UNIDAD DE MEDIDA</div>
+      <div class="um-card-body">
+        <div class="um-card-nombre">{{ um.nombre }}</div>
+        <div class="um-card-row"><span class="lbl">Tipo:</span><span class="val">{{ 'Sólido (g)' if um.tipo == 'Solido' else ('Líquido (ml)' if um.tipo == 'Liquido' else um.tipo) }}</span></div>
+        <div class="um-card-row"><span class="lbl">Equivalente:</span><span class="val">{{ um.equivalente }}</span></div>
+        <div class="um-card-row"><span class="lbl">Estatus:</span><span class="val" style="color:{{ '#16a34a' if um.estatus == 1 else '#ef4444' }}">{{ 'Activo' if um.estatus == 1 else 'Inactivo' }}</span></div>
+      </div>
+      <div class="um-card-actions">
+        <button onclick="abrirEditarCard(this)" class="action-btn edit" title="Editar">
+          <img src="{{ url_for('static', filename='img/IconosTable/icons8-lápiz-96.png') }}" style="width:15px;height:15px">
+        </button>
+        <button onclick="confirmarCambioEstatus({{ um.idUnidadM }}, '{{ um.nombre }}', {{ 1 if um.estatus == 1 else 0 }})" class="action-btn {% if um.estatus == 1 %}deactivate{% else %}activate{% endif %}" title="{% if um.estatus == 1 %}Desactivar{% else %}Activar{% endif %}">
+          {% if um.estatus == 1 %}
+          <img src="{{ url_for('static', filename='img/IconosTable/icons8-basura-100.png') }}" style="width:15px;height:15px;filter:brightness(0) invert(1)">
+          {% else %}
+          <img src="{{ url_for('static', filename='img/IconosTable/icons8-de-acuerdo-144.png') }}" style="width:15px;height:15px">
+          {% endif %}
+        </button>
+      </div>
+    </div>
+    {% else %}
+    <p style="text-align:center;color:#888;font-family:'Nunito',sans-serif;font-weight:700;padding:32px 0;">No se encontraron unidades de medida.</p>
+    {% endfor %}
   </div>
 </div>
 
@@ -760,12 +830,12 @@
           </div>
 
           <div class="field">
-            <label>Tipo</label>
+            <label>Tipo de conversión <span class="req">*</span></label>
             <select name="tipo">
-              <option value="Peso">Peso</option>
-              <option value="Volumen">Volumen</option>
-              <option value="Unidad">Unidad</option>
+              <option value="Solido">Sólido (Gramos)</option>
+              <option value="Liquido">Líquido (Mililitros)</option>
             </select>
+            <span class="hint">Define la conversión automática en compras.</span>
           </div>
 
           <div class="field">
@@ -819,27 +889,16 @@
           </div>
 
           <div class="field">
-            <label>Tipo</label>
+            <label>Tipo de conversión <span class="req">*</span></label>
             <select id="editTipo" name="tipo">
-              <option value="Peso">Peso</option>
-              <option value="Volumen">Volumen</option>
-              <option value="Unidad">Unidad</option>
+              <option value="Solido">Sólido (Gramos)</option>
+              <option value="Liquido">Líquido (Mililitros)</option>
             </select>
           </div>
 
           <div class="field">
             <label>Equivalente</label>
             <input id="editEquivalente" name="equivalente" type="number" step="1" min="1">
-          </div>
-
-          <div class="field full">
-            <label>Estatus</label>
-
-            <select id="editEstatus" name="estatus">
-              <option value="1">Activo</option>
-              <option value="0">Inactivo</option>
-            </select>
-
           </div>
 
         </div>
@@ -866,14 +925,14 @@
   style="background-color: rgba(0,0,0,0.45);">
   <div class="bg-white rounded-2xl shadow-xl p-6 w-80 text-center">
     <div class="flex justify-center mb-3">
-      <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center" id="confirm-icon-wrap">
+        <svg class="w-6 h-6 text-red-500" id="confirm-icon-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round"
             d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
         </svg>
       </div>
     </div>
-    <h3 class="text-base font-bold text-gray-800 mb-1">Confirmar eliminación</h3>
+    <h3 class="text-base font-bold text-gray-800 mb-1">Confirmar cambio de estatus</h3>
     <p id="confirm-mensaje" class="text-sm text-gray-500 mb-5"></p>
     <div class="flex gap-2">
       <button onclick="document.getElementById('modal-confirm').classList.add('hidden')"
@@ -883,7 +942,7 @@
       <button id="confirm-btn"
         class="flex-1 px-3 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
         style="background-color: #ef4444;">
-        Eliminar
+        Confirmar
       </button>
     </div>
   </div>
@@ -894,6 +953,22 @@
 
   function openModal() {
     document.getElementById("modal").classList.add("open")
+  }
+
+  function abrirEditarCard(btn) {
+    const card = btn.closest('.um-card');
+    document.getElementById('editNombre').value = card.dataset.nombre;
+    document.getElementById('editTipo').value = card.dataset.tipo;
+    document.getElementById('editEquivalente').value = card.dataset.equivalente;
+    document.getElementById('formEditar').action = `/editar-unidad/${card.dataset.id}`;
+    document.getElementById('modalEditar').classList.add('open');
+  }
+
+  function limpiarFiltrosUnidades() {
+    document.getElementById('filtro-nombre-unidad').value = '';
+    document.getElementById('filtro-tipo-unidad').value = '';
+    document.getElementById('filtro-estatus-unidad').value = 'Activo';
+    aplicarFiltrosUnidades();
   }
 
   function cerrarModal() {
@@ -915,9 +990,6 @@
     document.getElementById("editEquivalente").value =
       row.dataset.equivalente
 
-    document.getElementById("editEstatus").value =
-      row.dataset.estatus
-
     document.getElementById("formEditar").action =
       `/editar-unidad/${row.dataset.id}`
 
@@ -931,14 +1003,25 @@
       .classList.remove("open")
   }
 
-  function confirmarEliminar(id, nombre) {
+  function confirmarCambioEstatus(id, nombre, estatus) {
 
-    document.getElementById("confirm-mensaje").textContent =
-      `¿Estás seguro de eliminar "${nombre}"? Esta acción no se puede deshacer.`
+    const btn = document.getElementById("confirm-btn");
+
+    if (estatus == 1) {
+      document.getElementById("confirm-mensaje").textContent =
+        `¿Estás seguro de desactivar "${nombre}"? Podrás volver a activarlo después.`
+      btn.textContent = "Desactivar";
+      btn.style.backgroundColor = "#ef4444";
+    } else {
+      document.getElementById("confirm-mensaje").textContent =
+        `¿Estás seguro de activar nuevamente "${nombre}"?`
+      btn.textContent = "Activar";
+      btn.style.backgroundColor = "#22c55e";
+    }
 
     document.getElementById("confirm-btn").onclick = function () {
 
-      window.location.href = `/eliminar-unidad/${id}`
+      window.location.href = `/cambiar-estatus-unidad/${id}`
 
     }
 
@@ -994,6 +1077,11 @@
       btnFiltrar.addEventListener('click', aplicarFiltrosUnidades);
     }
 
+    const btnLimpiar = document.getElementById('btn-limpiar-unidades');
+    if (btnLimpiar) {
+      btnLimpiar.addEventListener('click', limpiarFiltrosUnidades);
+    }
+
     [filtroTipo, filtroEstatus].forEach((campo) => {
       if (campo) {
         campo.addEventListener('change', aplicarFiltrosUnidades);
@@ -1007,18 +1095,19 @@
       });
     }
 
+    aplicarFiltrosUnidades();
+
     {% if form_error and form_error.modal == 'registro' %}
     const registro = {{ form_error.datos|tojson }};
     document.querySelector('#modal form[action="/registrar-unidad"] [name="nombre"]').value = registro.nombre || '';
-    document.querySelector('#modal form[action="/registrar-unidad"] [name="tipo"]').value = registro.tipo || 'Peso';
+    document.querySelector('#modal form[action="/registrar-unidad"] [name="tipo"]').value = registro.tipo || 'Solido';
     document.querySelector('#modal form[action="/registrar-unidad"] [name="equivalente"]').value = registro.equivalente || '';
     openModal();
     {% elif form_error and form_error.modal == 'edicion' %}
     const edicion = {{ form_error.datos|tojson }};
     document.getElementById("editNombre").value = edicion.nombre || '';
-    document.getElementById("editTipo").value = edicion.tipo || 'Peso';
+    document.getElementById("editTipo").value = edicion.tipo || 'Solido';
     document.getElementById("editEquivalente").value = edicion.equivalente || '';
-    document.getElementById("editEstatus").value = edicion.estatus || '1';
     document.getElementById("formEditar").action = `/editar-unidad/${edicion.id}`;
     document.getElementById("modalEditar").classList.add("open");
     {% endif %}

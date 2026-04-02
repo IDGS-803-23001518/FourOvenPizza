@@ -166,7 +166,7 @@ class Productos(db.Model):
     idProducto = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100))
     precio = db.Column(db.Numeric(10, 2))
-    tamaño = db.Column(db.String(50))
+    tamano = db.Column('tamaño', db.String(50))
     stock = db.Column(db.Numeric(10, 2))
     estatus = db.Column(db.Boolean)
 

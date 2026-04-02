@@ -356,7 +356,7 @@ BEGIN
                 idCategoria = p_idCategoria,
                 stock = p_stock,
                 stockMinimo = p_stockMinimo,
-                estatus = p_estatus
+                estatus = IFNULL(p_estatus, estatus)
             WHERE idMateriaP = p_idMateriaP;
 
             SET p_idGenerado = p_idMateriaP;
@@ -512,6 +512,11 @@ CREATE PROCEDURE sp_gestion_unidadesmedida(
 BEGIN
 
 DECLARE v_nombre VARCHAR(50);
+DECLARE v_nombre_usuario VARCHAR(100) DEFAULT 'Sistema';
+
+IF p_usuario IS NOT NULL THEN
+    SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_usuario;
+END IF;
 
 START TRANSACTION;
 
@@ -535,9 +540,9 @@ IF p_accion = 'INSERT' THEN
         SET p_resultado = 'SUCCESS: Unidad registrada correctamente';
 
         INSERT INTO bitacora_eventos
-        (usuarioId, modulo, accion, referencia, fecha, ip)
+        (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
         VALUES
-        (p_usuario,'UnidadesMedida','INSERT',p_nombre,NOW(),p_ip);
+        (p_usuario, v_nombre_usuario, 'UnidadesMedida', 'Registrar', p_nombre, NOW(), p_ip);
 
         COMMIT;
 
@@ -559,16 +564,16 @@ ELSEIF p_accion = 'UPDATE' THEN
         nombre = p_nombre,
         tipo = p_tipo,
         equivalente = p_equivalente,
-        estatus = p_estatus
+        estatus = IFNULL(p_estatus, estatus)
         WHERE idUnidadM = p_idUnidad;
 
         SET p_resultado = 'SUCCESS: Unidad actualizada';
         SET p_idGenerado = p_idUnidad;
 
         INSERT INTO bitacora_eventos
-        (usuarioId, modulo, accion, referencia, fecha, ip)
+        (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
         VALUES
-        (p_usuario,'UnidadesMedida','UPDATE',p_nombre,NOW(),p_ip);
+        (p_usuario, v_nombre_usuario, 'UnidadesMedida', 'Editar', p_nombre, NOW(), p_ip);
 
         COMMIT;
 
@@ -593,9 +598,9 @@ ELSEIF p_accion = 'DELETE' THEN
         SET p_idGenerado = p_idUnidad;
 
         INSERT INTO bitacora_eventos
-        (usuarioId, modulo, accion, referencia, fecha, ip)
+        (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
         VALUES
-        (p_usuario,'UnidadesMedida','DELETE',p_idUnidad,NOW(),p_ip);
+        (p_usuario, v_nombre_usuario, 'UnidadesMedida', 'Eliminar', p_idUnidad, NOW(), p_ip);
 
         COMMIT;
 
@@ -628,6 +633,7 @@ CREATE PROCEDURE sp_gestion_productos(
 )
 BEGIN
     DECLARE v_nombre_producto VARCHAR(100) DEFAULT '';
+    DECLARE v_nombre_usuario  VARCHAR(100) DEFAULT 'Sistema';
  
     -- ── Variables normalizadas ────────────────────────
     -- Se trabaja siempre con las mismas versiones limpias
@@ -645,6 +651,11 @@ BEGIN
                 CONCAT('Producto: ', IFNULL(p_nombre,''), ' | ID: ', IFNULL(p_idProducto,0)),
                 NOW(), p_ip, p_usuario);
     END;
+ 
+    -- Obtener nombre del ejecutor
+    IF p_usuario IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_usuario;
+    END IF;
  
     -- Normalizar entradas: sin espacios extra, en minúsculas para comparar
     SET v_nombre = LOWER(TRIM(p_nombre));
@@ -699,9 +710,9 @@ BEGIN
             SET p_resultado  = 'SUCCESS: Producto registrado correctamente';
  
             INSERT INTO bitacora_eventos
-                (usuarioId, modulo, accion, referencia, fecha, ip)
+                (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
             VALUES
-                (p_usuario, 'Productos', 'INSERT',
+                (p_usuario, v_nombre_usuario, 'Productos', 'Registrar',
                  CONCAT('ID:', p_idGenerado, ' | ', TRIM(p_nombre), ' | ', TRIM(p_tamano)),
                  NOW(), p_ip);
  
@@ -760,16 +771,16 @@ BEGIN
                 precio   = p_precio,
                 `tamaño` = TRIM(p_tamano),
                 stock    = p_stock,
-                estatus  = p_estatus
+                estatus  = IFNULL(p_estatus, estatus)
             WHERE idProducto = p_idProducto;
  
             SET p_resultado  = 'SUCCESS: Producto actualizado correctamente';
             SET p_idGenerado = p_idProducto;
  
             INSERT INTO bitacora_eventos
-                (usuarioId, modulo, accion, referencia, fecha, ip)
+                (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
             VALUES
-                (p_usuario, 'Productos', 'UPDATE',
+                (p_usuario, v_nombre_usuario, 'Productos', 'Editar',
                  CONCAT('ID:', p_idProducto, ' | ', TRIM(p_nombre), ' | ', TRIM(p_tamano)),
                  NOW(), p_ip);
  
@@ -799,9 +810,9 @@ BEGIN
             SET p_idGenerado = p_idProducto;
  
             INSERT INTO bitacora_eventos
-                (usuarioId, modulo, accion, referencia, fecha, ip)
+                (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
             VALUES
-                (p_usuario, 'Productos', 'DELETE',
+                (p_usuario, v_nombre_usuario, 'Productos', 'Eliminar',
                  CONCAT('ID:', p_idProducto, ' | ', v_nombre_producto),
                  NOW(), p_ip);
  
@@ -848,6 +859,12 @@ CREATE PROCEDURE sp_gestion_recetas(
     OUT p_idGenerado INT
 )
 BEGIN
+    DECLARE v_nombre_usuario VARCHAR(100) DEFAULT 'Sistema';
+
+    IF p_usuario IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_usuario;
+    END IF;
+
     START TRANSACTION;
 
     IF p_accion = 'INSERT' THEN
@@ -880,11 +897,12 @@ BEGIN
             SET p_idGenerado = LAST_INSERT_ID();
             SET p_resultado = 'SUCCESS: Receta registrada correctamente';
 
-            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
             VALUES (
                 p_usuario,
+                v_nombre_usuario,
                 'Recetas',
-                'INSERT',
+                'Registrar',
                 CONCAT('Receta ID:', p_idGenerado, ' | Producto ID:', p_idProducto),
                 NOW(),
                 p_ip
@@ -915,11 +933,12 @@ BEGIN
             SET p_resultado = 'SUCCESS: Receta actualizada correctamente';
             SET p_idGenerado = p_idReceta;
 
-            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
             VALUES (
                 p_usuario,
+                v_nombre_usuario,
                 'Recetas',
-                'UPDATE',
+                'Editar',
                 CONCAT('Receta ID:', p_idReceta),
                 NOW(),
                 p_ip
@@ -952,11 +971,12 @@ BEGIN
             SET p_resultado = 'SUCCESS: Receta eliminada correctamente';
             SET p_idGenerado = p_idReceta;
 
-            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
             VALUES (
                 p_usuario,
+                v_nombre_usuario,
                 'Recetas',
-                'DELETE',
+                'Eliminar',
                 CONCAT('Receta ID:', p_idReceta),
                 NOW(),
                 p_ip
@@ -995,6 +1015,12 @@ CREATE PROCEDURE sp_gestion_detalle_receta(
     OUT p_idGenerado INT
 )
 BEGIN
+    DECLARE v_nombre_usuario VARCHAR(100) DEFAULT 'Sistema';
+
+    IF p_usuario IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_usuario;
+    END IF;
+
     START TRANSACTION;
 
     IF p_accion = 'INSERT' THEN
@@ -1044,11 +1070,12 @@ BEGIN
             SET p_idGenerado = LAST_INSERT_ID();
             SET p_resultado = 'SUCCESS: Detalle de receta registrado correctamente';
 
-            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
             VALUES (
                 p_usuario,
+                v_nombre_usuario,
                 'DetalleReceta',
-                'INSERT',
+                'Registrar',
                 CONCAT('Detalle ID:', p_idGenerado, ' | Receta ID:', p_idReceta, ' | MateriaPrima ID:', p_idMateriaP),
                 NOW(),
                 p_ip
@@ -1085,11 +1112,12 @@ BEGIN
             SET p_resultado = 'SUCCESS: Detalle de receta actualizado correctamente';
             SET p_idGenerado = p_idDetalleR;
 
-            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
             VALUES (
                 p_usuario,
+                v_nombre_usuario,
                 'DetalleReceta',
-                'UPDATE',
+                'Editar',
                 CONCAT('Detalle ID:', p_idDetalleR),
                 NOW(),
                 p_ip
@@ -1119,11 +1147,12 @@ BEGIN
             SET p_resultado = 'SUCCESS: Detalle de receta eliminado correctamente';
             SET p_idGenerado = p_idDetalleR;
 
-            INSERT INTO bitacora_eventos (usuarioId, modulo, accion, referencia, fecha, ip)
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
             VALUES (
                 p_usuario,
+                v_nombre_usuario,
                 'DetalleReceta',
-                'DELETE',
+                'Eliminar',
                 CONCAT('Detalle ID:', p_idDetalleR),
                 NOW(),
                 p_ip
@@ -1142,5 +1171,150 @@ BEGIN
     END IF;
 
 END $$
+
+DELIMITER ;
+
+
+-- =============================================
+-- SPs adicionales
+-- =============================================
+
+-- SP para cambiar estatus de productos (lee estatus actual internamente)
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_cambiar_estatus_producto$$
+CREATE PROCEDURE sp_cambiar_estatus_producto(
+    IN  p_idProducto   INT,
+    IN  p_ip           VARCHAR(50),
+    IN  p_usuario      INT,
+    OUT p_resultado    VARCHAR(255),
+    OUT p_nuevoEstatus TINYINT
+)
+BEGIN
+    DECLARE v_estatus_actual  TINYINT       DEFAULT NULL;
+    DECLARE v_nombre_producto VARCHAR(100)  DEFAULT '';
+    DECLARE v_nombre_usuario  VARCHAR(100)  DEFAULT 'Sistema';
+
+    IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = p_idProducto) THEN
+        SET p_resultado = 'ERROR: Producto no encontrado';
+        SET p_nuevoEstatus = 0;
+    ELSE
+        SELECT estatus, nombre INTO v_estatus_actual, v_nombre_producto
+        FROM productos WHERE idProducto = p_idProducto;
+
+        SET p_nuevoEstatus = IF(v_estatus_actual = 1, 0, 1);
+
+        UPDATE productos SET estatus = p_nuevoEstatus WHERE idProducto = p_idProducto;
+
+        IF p_usuario IS NOT NULL THEN
+            SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_usuario;
+        END IF;
+
+        INSERT INTO bitacora_eventos
+            (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+        VALUES
+            (p_usuario, v_nombre_usuario, 'Productos',
+             IF(p_nuevoEstatus = 1, 'ACTIVAR', 'DESACTIVAR'),
+             CONCAT('ID:', p_idProducto, ' | ', v_nombre_producto),
+             NOW(), p_ip);
+
+        SET p_resultado = IF(p_nuevoEstatus = 1,
+            'SUCCESS: Producto activado correctamente',
+            'SUCCESS: Producto desactivado correctamente');
+    END IF;
+END$$
+
+DELIMITER ;
+
+
+-- SP para obtener alertas de stock de materias primas activas
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_obtener_alertas_stock_mp$$
+CREATE PROCEDURE sp_obtener_alertas_stock_mp()
+BEGIN
+    SELECT
+        idMateriaP,
+        nombre,
+        stock,
+        stockMinimo,
+        tipo
+    FROM materiasprimas
+    WHERE estatus = 1
+      AND stockMinimo > 0
+      AND stock <= stockMinimo
+    ORDER BY nombre ASC;
+END$$
+
+DELIMITER ;
+
+
+-- SP para obtener alertas de stock de una receta especifica
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_obtener_alertas_stock_receta$$
+CREATE PROCEDURE sp_obtener_alertas_stock_receta(
+    IN p_idReceta INT
+)
+BEGIN
+    SELECT
+        mp.nombre    AS materia_prima,
+        mp.stock     AS stock,
+        mp.stockMinimo AS stock_minimo,
+        dr.cantidad  AS requerido,
+        CASE
+            WHEN mp.stock < dr.cantidad THEN 'insuficiente'
+            WHEN mp.stockMinimo > 0 AND mp.stock <= mp.stockMinimo THEN 'bajo'
+            ELSE 'ok'
+        END AS tipo_alerta
+    FROM detalleReceta dr
+    INNER JOIN materiasPrimas mp ON mp.idMateriaP = dr.idMateriaP
+    WHERE dr.idReceta = p_idReceta
+    ORDER BY mp.nombre ASC;
+END$$
+
+DELIMITER ;
+
+
+-- SP para listar productos con filtros
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_listar_productos$$
+CREATE PROCEDURE sp_listar_productos(
+    IN p_nombre         VARCHAR(100),
+    IN p_precio_inicio  DECIMAL(10,2),
+    IN p_precio_fin     DECIMAL(10,2),
+    IN p_estatus        VARCHAR(10),
+    IN p_tamano         VARCHAR(50),
+    IN p_estatus_receta VARCHAR(10)
+)
+BEGIN
+    SELECT
+        p.idProducto,
+        p.nombre,
+        p.precio,
+        p.`tamaño` AS tamano,
+        p.stock,
+        p.estatus,
+        CASE WHEN EXISTS (SELECT 1 FROM recetas r WHERE r.idProducto = p.idProducto)
+             THEN 1 ELSE 0 END AS receta_activa
+    FROM productos p
+    WHERE (p_nombre IS NULL OR p.nombre LIKE CONCAT('%', p_nombre, '%'))
+      AND (p_precio_inicio IS NULL OR p.precio >= p_precio_inicio)
+      AND (p_precio_fin IS NULL OR p.precio <= p_precio_fin)
+      AND (p_tamano IS NULL OR p.`tamaño` = p_tamano)
+      AND (
+            p_estatus IS NULL
+            OR p_estatus = 'todos'
+            OR p.estatus = CAST(p_estatus AS UNSIGNED)
+          )
+      AND (
+            p_estatus_receta IS NULL
+            OR p_estatus_receta = 'todos'
+            OR (p_estatus_receta = '1' AND EXISTS (SELECT 1 FROM recetas r2 WHERE r2.idProducto = p.idProducto))
+            OR (p_estatus_receta = '0' AND NOT EXISTS (SELECT 1 FROM recetas r3 WHERE r3.idProducto = p.idProducto))
+          )
+    ORDER BY p.nombre ASC;
+END$$
 
 DELIMITER ;

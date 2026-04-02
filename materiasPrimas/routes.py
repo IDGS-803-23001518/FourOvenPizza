@@ -71,6 +71,21 @@ def _parsear_entero_positivo(valor, etiqueta):
     return int(numero)
 
 
+def _parsear_entero_no_negativo(valor, etiqueta):
+    try:
+        numero = Decimal(str(valor))
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValueError(f"{etiqueta} debe ser un numero valido.")
+
+    if numero < 0:
+        raise ValueError(f"{etiqueta} no puede ser negativo.")
+
+    if numero != numero.to_integral_value():
+        raise ValueError(f"{etiqueta} debe ser un numero entero.")
+
+    return int(numero)
+
+
 def _existe_materia_prima_duplicada(nombre, id_materia_prima=None):
     materias = MateriasPrimas.query.all()
     nombre_normalizado = _normalizar_nombre_catalogo(nombre)
@@ -86,21 +101,20 @@ def _existe_materia_prima_duplicada(nombre, id_materia_prima=None):
 
 def _obtener_alertas_stock_materias():
     alertas = []
-
-    for materia in MateriasPrimas.query.filter_by(estatus=1).order_by(MateriasPrimas.nombre.asc()).all():
-        stock_actual = Decimal(str(materia.stock or 0))
-        stock_minimo = Decimal(str(materia.stockMinimo or 0))
-
-        if stock_minimo > 0 and stock_actual <= stock_minimo:
-            alertas.append(
-                {
-                    "idMateriaP": materia.idMateriaP,
-                    "nombre": materia.nombre,
-                    "stock": stock_actual,
-                    "stock_minimo": stock_minimo,
-                }
-            )
-
+    registros = db.session.execute(text("CALL sp_obtener_alertas_stock_mp()")).mappings().all()
+    for r in registros:
+        stock_actual = Decimal(str(r["stock"] or 0))
+        stock_minimo = Decimal(str(r["stockMinimo"] or 0))
+        unidad = "g" if r["tipo"] == "Solido" else "ml"
+        alertas.append(
+            {
+                "idMateriaP": r["idMateriaP"],
+                "nombre": r["nombre"],
+                "stock": stock_actual,
+                "stock_minimo": stock_minimo,
+                "unidad": unidad,
+            }
+        )
     return alertas
 
 
@@ -108,7 +122,7 @@ def _obtener_alertas_stock_materias():
 @rol_requerido("Administrador")
 def listadoMaterias():
     create_form = forms.MateriaPrimaForm(request.form)
-    lista_materias = MateriasPrimas.query.all()
+    lista_materias = MateriasPrimas.query.order_by(MateriasPrimas.nombre.asc()).all()
     categorias = Categorias.query.filter_by(estatus=1).all()
     form_error = session.pop("materias_form_error", None)
     alertas_stock = _obtener_alertas_stock_materias()
@@ -129,8 +143,8 @@ def registrar_materia_prima():
         nombre = _validar_nombre_catalogo(request.form.get("nombre"), "El nombre de la materia prima")
         tipo = request.form.get("tipo")
         id_categoria = int(request.form.get("idCategoria"))
-        stock = _parsear_entero_positivo(request.form.get("stock"), "El stock")
-        stock_minimo = _parsear_entero_positivo(request.form.get("stockMinimo"), "El stock minimo")
+        stock = _parsear_entero_no_negativo(request.form.get("stock"), "El stock")
+        stock_minimo = _parsear_entero_no_negativo(request.form.get("stockMinimo"), "El stock minimo")
         datos_formulario = {
             "nombre": nombre,
             "tipo": tipo,
@@ -201,9 +215,8 @@ def editar_materia_prima(id):
         nombre = _validar_nombre_catalogo(request.form.get("nombre"), "El nombre de la materia prima")
         tipo = request.form.get("tipo")
         id_categoria = int(request.form.get("idCategoria"))
-        stock = _parsear_entero_positivo(request.form.get("stock"), "El stock")
-        stock_minimo = _parsear_entero_positivo(request.form.get("stockMinimo"), "El stock minimo")
-        estatus = 1 if str(request.form.get("estatus", "1")) == "1" else 0
+        stock = _parsear_entero_no_negativo(request.form.get("stock"), "El stock")
+        stock_minimo = _parsear_entero_no_negativo(request.form.get("stockMinimo"), "El stock minimo")
         datos_formulario = {
             "id": id,
             "nombre": nombre,
@@ -211,7 +224,6 @@ def editar_materia_prima(id):
             "idCategoria": id_categoria,
             "stock": str(stock),
             "stockMinimo": str(stock_minimo),
-            "estatus": estatus,
         }
 
         if _existe_materia_prima_duplicada(nombre, id):
@@ -245,7 +257,7 @@ def editar_materia_prima(id):
                 "idCategoria": id_categoria,
                 "stock": stock,
                 "stockMinimo": stock_minimo,
-                "estatus": estatus,
+                "estatus": None,
                 "ip": request.remote_addr,
                 "usuario": session["usuario_id"],
             },
@@ -267,10 +279,11 @@ def editar_materia_prima(id):
     return redirect(url_for("materiasPrimas.listadoMaterias"))
 
 
-@materiasPrimas.route("/eliminar-materia-prima/<int:id>")
+@materiasPrimas.route("/cambiar-estatus-materia-prima/<int:id>/<int:estatus>")
 @rol_requerido("Administrador")
-def eliminar_materia_prima(id):
+def cambiar_estatus_materia_prima(id, estatus):
     try:
+        nuevo_estatus = 0 if estatus == 1 else 1
 
         db.session.execute(
             text(
@@ -292,21 +305,20 @@ def eliminar_materia_prima(id):
             """
             ),
             {
-                "accion": "DELETE",
+                "accion": "CHANGE_STATUS",
                 "idMateriaP": id,
                 "nombre": None,
                 "tipo": None,
                 "idCategoria": None,
                 "stock": None,
                 "stockMinimo": None,
-                "estatus": None,
+                "estatus": nuevo_estatus,
                 "ip": request.remote_addr,
                 "usuario": session["usuario_id"],
             },
         )
 
         resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
-
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
         flash(mensaje, categoria)
@@ -330,10 +342,33 @@ def ver_materia_prima(id):
 def registrar_unidad_medida():
     create_form = forms.UnidadMedidaForm(request.form)
     if create_form.validate_on_submit():
-        unidad_medida = UnidadesMedida(
-            nombre=create_form.nombre.data, simbolo=create_form.simbolo.data
-        )
-        db.session.add(unidad_medida)
-        db.session.commit()
-        flash("Unidad de medida registrada exitosamente.", "success")
-    return redirect(url_for("materiasPrimas.listadoUnidades"))
+        try:
+            db.session.execute(
+                text("""
+                    CALL sp_gestion_unidadesmedida(
+                        :accion, :id, :nombre, :tipo, :equivalente,
+                        :estatus, :ip, :usuario, @p_resultado, @p_id
+                    )
+                """),
+                {
+                    "accion": "INSERT",
+                    "id": None,
+                    "nombre": create_form.nombre.data,
+                    "tipo": create_form.simbolo.data or "",
+                    "equivalente": 1,
+                    "estatus": 1,
+                    "ip": request.remote_addr,
+                    "usuario": session["usuario_id"],
+                },
+            )
+            resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
+            db.session.commit()
+            if resultado and resultado.startswith("SUCCESS"):
+                flash("Unidad de medida registrada exitosamente.", "success")
+            else:
+                mensaje = resultado.split(":", 1)[1].strip() if resultado and ":" in resultado else "Error al registrar unidad"
+                flash(mensaje, "danger")
+        except Exception as e:
+            db.session.rollback()
+            flash(str(e), "danger")
+    return redirect(url_for("materiasPrimas.listadoMaterias"))

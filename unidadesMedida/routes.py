@@ -173,7 +173,6 @@ def editar_unidad(id):
             "nombre": nombre,
             "tipo": tipo,
             "equivalente": str(equivalente),
-            "estatus": request.form["estatus"],
         }
 
         if _existe_unidad_duplicada(nombre, id):
@@ -203,7 +202,7 @@ def editar_unidad(id):
                 "nombre": nombre,
                 "tipo": tipo,
                 "equivalente": equivalente,
-                "estatus": request.form["estatus"],
+                "estatus": None,
                 "ip": request.remote_addr,
                 "usuario": session["usuario_id"],
             },
@@ -226,32 +225,28 @@ def editar_unidad(id):
     return redirect(url_for("unidadesMedida.listado_unidades"))
 
 
-@unidadesMedida.route("/eliminar-unidad/<int:id>")
+@unidadesMedida.route("/cambiar-estatus-unidad/<int:id>")
 @rol_requerido("Administrador")
-def eliminar_unidad(id):
+def cambiar_estatus_unidad(id):
 
     try:
+        unidad = db.session.execute(
+            text("SELECT estatus FROM unidadesmedida WHERE idUnidadM = :id"),
+            {"id": id},
+        ).fetchone()
+
+        if not unidad:
+            flash("Unidad de medida no encontrada.", "danger")
+            return redirect(url_for("unidadesMedida.listado_unidades"))
+
+        nuevo_estatus = 0 if unidad[0] == 1 else 1
 
         db.session.execute(
-            text(
-                """
-            CALL sp_gestion_unidadesmedida(
-                :accion,
-                :id,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                :ip,
-                :usuario,
-                @p_resultado,
-                @p_id
-            )
-        """
-            ),
+            text("CALL sp_gestion_unidadesmedida(:accion,:id,NULL,NULL,NULL,:estatus,:ip,:usuario,@p_resultado,@p_id)"),
             {
-                "accion": "DELETE",
+                "accion": "DELETE" if nuevo_estatus == 0 else "UPDATE",
                 "id": id,
+                "estatus": nuevo_estatus,
                 "ip": request.remote_addr,
                 "usuario": session["usuario_id"],
             },
