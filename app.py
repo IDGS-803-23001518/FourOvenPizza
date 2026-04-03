@@ -12,6 +12,7 @@ from unidadesMedida.routes import unidadesMedida
 from recetas.routes import recetas
 from models import db
 from productos.routes import productos
+
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=10)

@@ -228,7 +228,6 @@ def editar_unidad(id):
 @unidadesMedida.route("/cambiar-estatus-unidad/<int:id>")
 @rol_requerido("Administrador")
 def cambiar_estatus_unidad(id):
-
     try:
         unidad = db.session.execute(
             text("SELECT estatus FROM unidadesmedida WHERE idUnidadM = :id"),
@@ -244,7 +243,7 @@ def cambiar_estatus_unidad(id):
         db.session.execute(
             text("CALL sp_gestion_unidadesmedida(:accion,:id,NULL,NULL,NULL,:estatus,:ip,:usuario,@p_resultado,@p_id)"),
             {
-                "accion": "DELETE" if nuevo_estatus == 0 else "UPDATE",
+                "accion": "CHANGE_STATUS",
                 "id": id,
                 "estatus": nuevo_estatus,
                 "ip": request.remote_addr,
@@ -253,13 +252,11 @@ def cambiar_estatus_unidad(id):
         )
 
         resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
-
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
         flash(mensaje, categoria)
 
     except Exception as e:
-
         db.session.rollback()
         flash(str(e), "danger")
 
