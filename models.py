@@ -140,8 +140,7 @@ class Compras(db.Model):
     idProveedor = db.Column(db.Integer, db.ForeignKey('proveedores.idProveedor'), nullable=False)
     idUsuario = db.Column(db.Integer, db.ForeignKey('usuarios.idUsuario'), nullable=False)
     fecha = db.Column(db.DateTime, default=datetime.datetime.now)
-    estado = db.Column(db.String(50))
-
+    estatus = db.Column(db.String(30))
     proveedor = db.relationship('Proveedores', back_populates='compras')
     usuario = db.relationship('Usuarios', back_populates='compras')
     detalle_compras = db.relationship('DetalleCompra', back_populates='compra', cascade='all, delete-orphan')
@@ -152,7 +151,7 @@ class DetalleCompra(db.Model):
     idDetalleC = db.Column(db.Integer, primary_key=True)
     idCompra = db.Column(db.Integer, db.ForeignKey('compras.idCompra'), nullable=False)
     idMateriaP = db.Column(db.Integer, db.ForeignKey('materiasPrimas.idMateriaP'), nullable=False)
-    idUnidadM = db.Column(db.Integer, db.ForeignKey('unidadesMedida.idUnidadM'), nullable=False)
+    idUnidadM = db.Column(db.Integer, db.ForeignKey('unidadesMedida.idUnidadM'), nullable=True)
     cantidad = db.Column(db.Numeric(10, 2))
     precio = db.Column(db.Numeric(10, 2))
 
@@ -173,6 +172,7 @@ class Productos(db.Model):
     detalle_ventas = db.relationship('DetalleVenta', back_populates='producto')
     detalle_produccion = db.relationship('DetalleProduccion', back_populates='producto')
     recetas = db.relationship('Recetas', back_populates='producto')
+    ventas_stock_reservado = db.relationship('VentaStockReservado', back_populates='producto')
 
 
 class Ventas(db.Model):
@@ -187,6 +187,7 @@ class Ventas(db.Model):
 
     usuario = db.relationship('Usuarios', back_populates='ventas')
     detalle_ventas = db.relationship('DetalleVenta', back_populates='venta', cascade='all, delete-orphan')
+    stock_reservado = db.relationship('VentaStockReservado', back_populates='venta', cascade='all, delete-orphan')
 
 
 class DetalleVenta(db.Model):
@@ -199,6 +200,30 @@ class DetalleVenta(db.Model):
 
     venta = db.relationship('Ventas', back_populates='detalle_ventas')
     producto = db.relationship('Productos', back_populates='detalle_ventas')
+
+
+# ===================================================================
+# NUEVA TABLA: Stock reservado temporalmente por ventas activas
+# (Esto reemplaza el CREATE TABLE del SP)
+# ===================================================================
+class VentaStockReservado(db.Model):
+    __tablename__ = "ventaStockReservado"
+    idReserva = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    idVenta = db.Column(db.Integer, db.ForeignKey('ventas.idVenta'), nullable=False)
+    idProducto = db.Column(db.Integer, db.ForeignKey('productos.idProducto'), nullable=False)
+    cantidadReservada = db.Column(db.Integer, nullable=False, default=0)  # tomado del stock actual
+    cantidadFaltante = db.Column(db.Integer, nullable=False, default=0)   # enviado a producción
+    idOrdenProduccion = db.Column(db.Integer, db.ForeignKey('ordenesProduccion.idOrden'), nullable=True)
+
+    # Relaciones
+    venta = db.relationship('Ventas', back_populates='stock_reservado')
+    producto = db.relationship('Productos', back_populates='ventas_stock_reservado')
+    orden_produccion = db.relationship('OrdenesProduccion', back_populates='ventas_reservadas')
+
+    # Restricción única por venta+producto (evita duplicados)
+    __table_args__ = (
+        db.UniqueConstraint('idVenta', 'idProducto', name='uk_venta_producto'),
+    )
 
 
 class TicketVenta(db.Model):
@@ -254,15 +279,26 @@ class DetalleReceta(db.Model):
     materia_prima = db.relationship('MateriasPrimas', back_populates='detalle_recetas')
 
 
+# ===================================================================
+# TABLA MODIFICADA: OrdenesProduccion con columnas de origen
+# (Esto reemplaza el ALTER TABLE del SP)
+# ===================================================================
 class OrdenesProduccion(db.Model):
     __tablename__ = "ordenesProduccion"
     idOrden = db.Column(db.Integer, primary_key=True)
     idUsuario = db.Column(db.Integer, db.ForeignKey('usuarios.idUsuario'), nullable=False)
     estado = db.Column(db.String(50))
     fecha = db.Column(db.DateTime, default=datetime.datetime.now)
+    
+    # NUEVAS COLUMNAS (reemplazan el ALTER TABLE)
+    origen = db.Column(db.String(20), default='Manual', nullable=True)  # 'Manual' | 'Venta'
+    idVentaOrigen = db.Column(db.Integer, db.ForeignKey('ventas.idVenta'), nullable=True)
 
+    # Relaciones
     usuario = db.relationship('Usuarios', back_populates='ordenes_produccion')
     detalle_produccion = db.relationship('DetalleProduccion', back_populates='orden', cascade='all, delete-orphan')
+    ventas_reservadas = db.relationship('VentaStockReservado', back_populates='orden_produccion')
+    venta_origen = db.relationship('Ventas', foreign_keys=[idVentaOrigen], backref='ordenes_produccion_relacionadas')
 
 
 class DetalleProduccion(db.Model):

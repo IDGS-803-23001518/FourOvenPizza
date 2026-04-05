@@ -1,12 +1,15 @@
 from decimal import Decimal, InvalidOperation
 
-from flask import redirect, render_template, request, session, url_for
+from flask import redirect, render_template, request, session, url_for, flash
 from sqlalchemy import text
 
 from autentificacion.routes import rol_requerido
 from models import BitacoraEventos, DetalleReceta, MateriasPrimas, Productos, Recetas, Usuarios, db
 
 from . import recetas
+
+# Mínimo de insumos recomendado por receta
+MINIMO_INSUMOS_RECETA = 4
 
 
 def _guardar_error_formulario(seccion, mensaje, datos=None):
@@ -102,6 +105,18 @@ def _asegurar_receta_por_sp(id_producto, descripcion=""):
     return _obtener_receta_producto(id_producto)
 
 
+def _obtener_alertas_ingredientes_desactivados(detalles_receta):
+    """
+    Retorna la lista de nombres de materias primas desactivadas presentes en la receta.
+    """
+    desactivadas = []
+    for detalle in detalles_receta:
+        mp = detalle.materia_prima
+        if mp and not mp.estatus:
+            desactivadas.append(mp.nombre)
+    return desactivadas
+
+
 @recetas.route("/recetas/producto/<int:id_producto>")
 @rol_requerido("Administrador")
 def ver_receta_producto(id_producto):
@@ -115,12 +130,22 @@ def ver_receta_producto(id_producto):
     form_error = session.pop("recetas_form_error", None)
     mensaje_receta = session.pop("recetas_mensaje", None)
     alertas_stock = _obtener_alertas_stock_receta(receta.idReceta) if receta else []
+
+    # ── NUEVA LÓGICA: Alertas de ingredientes desactivados ──
+    ingredientes_desactivados = _obtener_alertas_ingredientes_desactivados(detalles_receta)
+
+    # ── NUEVA LÓGICA: Alerta de receta corta (menos de 4 insumos) ──
+    receta_corta = receta is not None and len(detalles_receta) < MINIMO_INSUMOS_RECETA
+
     return render_template(
         "recetas/detalle.html",
         producto=producto, receta=receta, detalles_receta=detalles_receta,
         tamano_producto=_obtener_tamano_producto(producto),
         materias_primas=materias_primas, form_error=form_error,
         mensaje_receta=mensaje_receta, alertas_stock=alertas_stock,
+        ingredientes_desactivados=ingredientes_desactivados,
+        receta_corta=receta_corta,
+        minimo_insumos=MINIMO_INSUMOS_RECETA,
     )
 
 
@@ -181,6 +206,18 @@ def agregar_detalle_receta(id_producto):
                                 mp.nombre if mp else str(id_materia_prima))
             db.session.commit()
             _guardar_mensaje_receta(mensaje, categoria)
+
+            # ── Alerta de receta corta tras agregar insumo ──
+            receta_actualizada = _obtener_receta_producto(id_producto)
+            if receta_actualizada:
+                total_insumos = DetalleReceta.query.filter_by(idReceta=receta_actualizada.idReceta).count()
+                if total_insumos < MINIMO_INSUMOS_RECETA:
+                    flash(
+                        f"Aviso: la receta tiene solo {total_insumos} insumo(s). "
+                        f"Se recomienda incluir al menos {MINIMO_INSUMOS_RECETA} para una receta completa.",
+                        "warning",
+                    )
+
     except Exception as exc:
         db.session.rollback()
         _guardar_error_formulario("detalle", str(exc), datos_formulario)
@@ -237,6 +274,18 @@ def eliminar_detalle_receta(id_detalle):
             _registrar_bitacora("Detalle Receta", "Eliminar insumo", "Materia Prima", nombre_mp)
             db.session.commit()
         _guardar_mensaje_receta(mensaje, categoria)
+
+        # ── Alerta de receta corta tras eliminar insumo ──
+        receta_actualizada = _obtener_receta_producto(id_producto)
+        if receta_actualizada and categoria == "success":
+            total_insumos = DetalleReceta.query.filter_by(idReceta=receta_actualizada.idReceta).count()
+            if total_insumos < MINIMO_INSUMOS_RECETA:
+                flash(
+                    f"Aviso: la receta ahora tiene solo {total_insumos} insumo(s). "
+                    f"Se recomienda incluir al menos {MINIMO_INSUMOS_RECETA} para una receta completa.",
+                    "warning",
+                )
+
     except Exception as exc:
         db.session.rollback()
         _guardar_mensaje_receta(str(exc), "danger")

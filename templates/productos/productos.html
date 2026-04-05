@@ -1,1084 +1,593 @@
 {% extends "layoutAdmin.html" %}
 {% block container %}
+
+<nav
+  class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
+  style="border-bottom: 3px solid #f29f05;">
+  <div class="container flex flex-wrap items-center justify-between mx-auto">
+    <div class="flex-1 flex justify-center">
+      <div class="flex items-center space-x-2 sm:space-x-3 bg-opacity-20 px-3 sm:px-6 py-2 rounded-full">
+        <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Gestión de</span>
+        <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap"
+          style="color: #f29f05;">Productos</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container mx-auto px-4 sm:px-6 max-w-6xl">
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-4 space-y-2">
+        {% for category, message in messages %}
+          <div class="px-4 py-3 rounded-xl text-sm font-semibold shadow-md
+            {% if category == 'success' %}bg-green-100 text-green-700 border border-green-300
+            {% else %}bg-red-100 text-red-700 border border-red-300{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="flex justify-end mb-4">
+    <button onclick="abrirModal('modalRegistro')"
+      class="text-white font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-md transition-all duration-300 hover:brightness-110 hover:shadow-lg text-sm sm:text-base"
+      style="background-color: #f29f05;">
+      Registrar Producto
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
+    <div class="px-4 sm:px-5 py-3 rounded-t-2xl" style="background-color: #38230f;">
+      <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">FILTROS DE BUSQUEDA</h2>
+    </div>
+    <form method="GET" action="{{ url_for('productos.listado_productos') }}" id="productosFiltrosForm"
+      class="flex flex-wrap gap-3 sm:gap-4 items-end p-4 sm:p-5">
+      <div class="flex flex-col flex-1 min-w-[140px]">
+        <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Nombre</label>
+        <input type="text" name="nombre" value="{{ filtros.nombre }}" placeholder="Ingresa el nombre..."
+          class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition" />
+      </div>
+      <div class="flex flex-col min-w-[110px]">
+        <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Precio inicio</label>
+        <input type="number" step="0.01" min="0" name="precio_inicio" value="{{ filtros.precio_inicio }}"
+          placeholder="0.00"
+          class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition" />
+      </div>
+      <div class="flex flex-col min-w-[110px]">
+        <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Precio fin</label>
+        <input type="number" step="0.01" min="0" name="precio_fin" value="{{ filtros.precio_fin }}" placeholder="0.00"
+          class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition" />
+      </div>
+      <div class="flex flex-col min-w-[120px]">
+        <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Estatus receta</label>
+        <select name="estatus_receta"
+          class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+          <option value="" {% if not filtros.estatus_receta %}selected{% endif %}>Todos</option>
+          <option value="1" {% if filtros.estatus_receta == '1' %}selected{% endif %}>Activa</option>
+          <option value="0" {% if filtros.estatus_receta == '0' %}selected{% endif %}>Inactiva</option>
+        </select>
+      </div>
+      <div class="flex flex-col min-w-[120px]">
+        <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Estatus</label>
+        <select name="estatus"
+          class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+          <option value="todos" {% if filtros.estatus == 'todos' %}selected{% endif %}>Todos</option>
+          <option value="1" {% if filtros.estatus == '1' or not filtros.estatus %}selected{% endif %}>Activo</option>
+          <option value="0" {% if filtros.estatus == '0' %}selected{% endif %}>Inactivo</option>
+        </select>
+      </div>
+      <div class="flex flex-col min-w-[110px]">
+        <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Tamaño</label>
+        <select name="tamano"
+          class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+          <option value="" {% if not filtros.tamano %}selected{% endif %}>Todos</option>
+          {% for t in tamanos_filtro %}
+          <option value="{{ t }}" {% if filtros.tamano == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex flex-col justify-end">
+        <button type="submit"
+          class="text-white font-semibold px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg shadow transition-all duration-300 hover:brightness-110 text-xs sm:text-sm"
+          style="background-color: #f29f05;">
+          Filtrar
+        </button>
+      </div>
+      <div class="flex flex-col justify-end">
+        <a href="{{ url_for('productos.listado_productos') }}"
+          class="text-white font-semibold px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg shadow transition-all duration-300 hover:brightness-110 text-xs sm:text-sm text-center"
+          style="background-color: #6b7280;">
+          Limpiar
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Grid de cards -->
+  {% if productos %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-6">
+    {% for p in productos %}
+    <article
+      class="producto-card bg-white rounded-2xl overflow-hidden shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl"
+      data-id="{{ p.idProducto }}"
+      data-nombre="{{ p.nombre }}"
+      data-precio="{{ p.precio }}"
+      data-tamano="{{ p.tamano }}"
+      data-stock="{{ p.stock }}"
+      data-estatus="{{ 1 if p.estatus == 1 else 0 }}"
+      style="animation: fadeUp .35s ease both; animation-delay: {{ loop.index0 * 0.05 }}s">
+
+      <!-- Card header -->
+      <div class="px-4 py-2.5 text-center" style="background-color: #38230f;">
+        <span class="text-xs font-bold text-white tracking-widest uppercase">Producto</span>
+      </div>
+
+      <!-- Card body -->
+      <div class="p-4 flex flex-col items-center">
+        <!-- Imagen -->
+        <div class="mb-3 flex items-center justify-center">
+          {% if p.imagen %}
+          <img style="width: 120px; height: 120px;" src="{{ url_for('static', filename=p.imagen) }}">
+          {% else %}
+          <div
+            class="w-24 h-24 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center text-3xl font-black"
+            style="color: #38230f;">PZ</div>
+          {% endif %}
+        </div>
+
+        <!-- Nombre -->
+        <h3 class="text-base font-black mb-2 text-left w-full" style="color: #38230f;">{{ p.nombre }}</h3>
+
+        <!-- Datos -->
+        <div class="w-full space-y-1 mb-3">
+          <div class="flex justify-between text-sm">
+            <span class="font-bold" style="color: #f29f05;">Precio:</span>
+            <span class="font-semibold text-gray-800">${{ p.precio }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="font-bold" style="color: #f29f05;">Tamaño:</span>
+            <span class="font-semibold text-gray-800">{{ p.tamano }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="font-bold" style="color: #f29f05;">Stock:</span>
+            <span class="font-semibold text-gray-800">{{ p.stock }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="font-bold" style="color: #f29f05;">Receta:</span>
+            <span class="font-semibold" style="color: {{ '#16a34a' if p.receta_activa == 1 else '#ef4444' }};">
+              {{ 'Activa' if p.receta_activa == 1 else 'Inactiva' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Badge estatus -->
+        <div class="flex items-center gap-1.5 w-full mb-3">
+          <span class="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0
+            {% if p.estatus == 1 %}bg-green-500{% else %}bg-red-500{% endif %}"></span>
+          <span class="text-sm font-bold
+            {% if p.estatus == 1 %}text-green-600{% else %}text-red-500{% endif %}">
+            {{ 'Activo' if p.estatus == 1 else 'Inactivo' }}
+          </span>
+        </div>
+
+        <!-- Acciones -->
+        <div class="flex gap-2 w-full justify-center">
+          <!-- Editar -->
+          <button type="button" onclick="abrirEditar(this.closest('.producto-card'))"
+            class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+            style="background-color: #f29f05;" title="Editar">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
+          <!-- Ver -->
+          <button type="button" onclick="abrirVer(this.closest('.producto-card'))"
+            class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+            style="background-color: #2563eb;" title="Ver detalle">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+              <path fill-rule="evenodd"
+                d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z"
+                clip-rule="evenodd" />
+            </svg>
+          </button>
+          <!-- Cambiar estatus: link directo como en materias primas -->
+          <a href="#"
+            onclick="confirmarCambioEstatus(event, {{ p.idProducto }}, '{{ p.nombre }}', {{ 1 if p.estatus == 1 else 0 }})"
+            class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+            style="background-color: {% if p.estatus == 1 %}#e53e3e{% else %}#48bb78{% endif %};"
+            title="{% if p.estatus == 1 %}Desactivar{% else %}Activar{% endif %}">
+            {% if p.estatus == 1 %}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6" />
+            </svg>
+            {% else %}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5v14" />
+            </svg>
+            {% endif %}
+          </a>
+          <!-- Ver receta -->
+          <a href="{{ url_for('recetas.ver_receta_producto', id_producto=p.idProducto) }}"
+            class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+            style="background-color: #38230f;" title="Ver receta">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                d="M5.75 2A2.75 2.75 0 0 0 3 4.75v10.5A2.75 2.75 0 0 0 5.75 18h8.5A2.75 2.75 0 0 0 17 15.25V6.56a2.75 2.75 0 0 0-.805-1.945l-1.81-1.81A2.75 2.75 0 0 0 12.44 2H5.75Zm0 1.5h6.19c.331 0 .649.132.883.366l1.81 1.81c.234.234.367.552.367.884v8.69a1.25 1.25 0 0 1-1.25 1.25h-8.5A1.25 1.25 0 0 1 4 15.25V4.75A1.25 1.25 0 0 1 5.75 3.5Zm1.5 4a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Zm0 3a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Z" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div
+    class="text-center py-16 text-gray-400 text-sm font-semibold bg-white rounded-2xl shadow-md border-2 border-dashed border-amber-200 mb-6">
+    No se encontraron productos con esos filtros.
+  </div>
+  {% endif %}
+
+</div>
+
 <style>
-  :root {
-    --brown: #3d1f0a;
-    --brown2: #38230f;
-    --orange: #f3a515;
-    --orange2: #e79a07;
-    --white: #ffffff;
-    --border: #d7d7d7;
-    --green: #22c55e;
-    --red: #ef4444;
-  }
-
-  .productos-shell {
-    min-height: 100vh;
-    padding: 0 0 2rem;
-  }
-
-  .productos-header {
-    background: var(--brown);
-    border-bottom: 3px solid var(--orange);
-    box-shadow: 0 3px 14px rgba(74, 43, 18, .25);
-    padding: 0.85rem 1.5rem 0.85rem 5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .productos-header h1 {
-    color: var(--white);
-    font-family: 'Trebuchet MS', sans-serif;
-    font-size: clamp(1.4rem, 2vw, 2.1rem);
-    font-weight: 900;
-    letter-spacing: .04em;
-    margin: 0;
-  }
-
-  .productos-header h1 span {
-    color: var(--orange);
-  }
-
-  .flash-stack,
-  .productos-board {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 0 1.25rem;
-  }
-
-  .flash-stack {
-    margin-bottom: 1rem;
-  }
-
-  .flash-item {
-    border-radius: 14px;
-    padding: .85rem 1rem;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, .08);
-    margin-bottom: .65rem;
-  }
-
-  .flash-item.success {
-    background: #dcfce7;
-    color: #166534;
-    border: 1px solid #86efac;
-  }
-
-  .flash-item.danger {
-    background: #fee2e2;
-    color: #991b1b;
-    border: 1px solid #fca5a5;
-  }
-
-  .toolbar {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 1rem;
-  }
-
-  .register-btn {
-    background: linear-gradient(180deg, #f7b21c, #e79a07);
-    color: var(--brown);
-    border: none;
-    border-radius: 999px;
-    padding: .75rem 1.4rem;
-    font-weight: 900;
-    font-family: 'Nunito', sans-serif;
-    font-size: .95rem;
-    cursor: pointer;
-    box-shadow: 0 8px 20px rgba(231, 154, 7, .35);
-    transition: filter .2s, transform .15s;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .register-btn:hover {
-    filter: brightness(1.08);
-    transform: translateY(-2px);
-  }
-
-  .filters {
-    background: var(--white);
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: 0 10px 22px rgba(93, 56, 18, .12);
-    margin-bottom: 1.2rem;
-  }
-
-  .filters-title {
-    background: var(--brown);
-    color: var(--white);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: .95rem;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    padding: .75rem 1.1rem;
-  }
-
-  .filters form {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: .85rem;
-    padding: .95rem 1rem 1rem;
-    align-items: end;
-  }
-
-  .filters label {
-    display: block;
-    color: var(--brown);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: .84rem;
-    margin-bottom: .3rem;
-  }
-
-  .filters input,
-  .filters select,
-  .field input,
-  .field select {
-    width: 100%;
-    border: 1.6px solid var(--border);
-    border-radius: 10px;
-    background: var(--white);
-    padding: .55rem .7rem;
-    font-size: .82rem;
-    color: #333;
-    outline: none;
-    transition: border-color .2s, box-shadow .2s;
-  }
-
-  .filters input:focus,
-  .filters select:focus,
-  .field input:focus,
-  .field select:focus {
-    border-color: var(--orange);
-    box-shadow: 0 0 0 3px rgba(243, 165, 21, .15);
-  }
-
-  .filter-actions {
-    display: flex;
-    gap: .5rem;
-    align-items: flex-end;
-    flex-wrap: nowrap;
-  }
-
-  .filter-btn,
-  .clear-btn,
-  .btn-cancel,
-  .btn-save,
-  .btn-delete-confirm {
-    border-radius: 999px;
-    font-weight: 800;
-    font-family: 'Nunito', sans-serif;
-    font-size: .85rem;
-    cursor: pointer;
-    text-decoration: none;
-    text-align: center;
-  }
-
-  .filter-btn,
-  .clear-btn {
-    border: none;
-    padding: .6rem 1.1rem;
-  }
-
-  .filter-btn {
-    background: var(--orange);
-    color: var(--brown);
-  }
-
-  .clear-btn {
-    background: #ede7de;
-    color: #5b3a1e;
-  }
-
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 1rem;
-  }
-
-  .producto-card {
-    background: var(--white);
-    border-radius: 22px;
-    overflow: hidden;
-    box-shadow: 0 12px 24px rgba(93, 56, 18, .14);
-    transition: transform .2s, box-shadow .2s;
-    animation: fadeUp .35s ease both;
-  }
-
-  .producto-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 18px 32px rgba(93, 56, 18, .2);
-  }
-
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .producto-card-top {
-    background: var(--brown);
-    color: var(--white);
-    text-align: center;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: .85rem;
-    letter-spacing: .1em;
-    padding: .5rem 1rem;
-  }
-
-  .producto-card-body {
-    padding: .85rem 1rem .75rem;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .producto-image,
-  .producto-image-placeholder {
-    width: 96px;
-    height: 96px;
-    margin-bottom: .75rem;
-  }
-
-  .producto-image {
-    object-fit: contain;
-    filter: drop-shadow(0 8px 10px rgba(145, 78, 9, .2));
-  }
-
-  .producto-image-placeholder {
-    border-radius: 50%;
-    background: linear-gradient(135deg, #f5e6d3, #edd9b8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    color: var(--brown2);
-    font-weight: 900;
-  }
-
-  .producto-nombre {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: 1.15rem;
-    color: var(--brown);
-    margin-bottom: 8px;
-    text-align: left;
-  }
-
-  .producto-line {
-    font-family: 'Nunito', sans-serif;
-    font-size: .88rem;
-    font-weight: 700;
-    color: #1e1e1e;
-    line-height: 1.5;
-    margin-bottom: 2px;
-  }
-
-  .producto-line .label {
-    color: var(--orange);
-    font-weight: 800;
-  }
-
-  .estado-line {
-    display: flex;
-    align-items: center;
-    gap: .4rem;
-    font-family: 'Nunito', sans-serif;
-    font-size: .92rem;
-    font-weight: 800;
-    color: var(--brown);
-    margin-top: .05rem;
-  }
-
-  .estado-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--green);
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, .15);
-    flex-shrink: 0;
-  }
-
-  .estado-dot.inactive {
-    background: var(--red);
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, .15);
-  }
-
-  .card-actions {
-    display: flex;
-    justify-content: center;
-    gap: .45rem;
-    margin-top: .9rem;
-  }
-
-  .card-action {
-    width: 30px;
-    height: 30px;
-    border: none;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: var(--white);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, .14);
-    transition: transform .15s, filter .15s;
-    text-decoration: none;
-  }
-
-  .card-action:hover {
-    transform: scale(1.12);
-    filter: brightness(.9);
-  }
-
-  .card-action svg {
-    width: 14px;
-    height: 14px;
-    fill: currentColor;
-  }
-
-  .action-edit { background: var(--orange); }
-  .action-view { background: #2563eb; }
-  .action-activate { background: var(--green); }
-  .action-deactivate { background: var(--red); }
-  .action-stock { background: var(--brown); }
-
-  .empty-state {
-    background: rgba(255, 255, 255, .88);
-    border: 2px dashed #d9b693;
-    border-radius: 20px;
-    padding: 2rem 1rem;
-    text-align: center;
-    color: #6e4a2f;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: 1rem;
-  }
-
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, .52);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .25s ease;
-  }
-
-  .modal-overlay.open {
-    opacity: 1;
-    pointer-events: all;
-  }
-
-  .modal,
-  .confirm-box {
-    background: var(--white);
-    border-radius: 18px;
-    overflow: hidden;
-    width: 100%;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, .38);
-    transform: translateY(24px) scale(.97);
-    transition: transform .28s ease, opacity .25s ease;
-    opacity: 0;
-  }
-
-  .modal {
-    max-width: 520px;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-
-  .confirm-box {
-    max-width: 360px;
-  }
-
-  .modal-overlay.open .modal,
-  .modal-overlay.open .confirm-box {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-
-  .modal-header {
-    background: var(--brown);
-    color: var(--white);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: 1rem;
-    letter-spacing: .08em;
-    padding: 15px 22px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .modal-close {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    border: none;
-    background: rgba(255, 255, 255, .12);
-    color: var(--white);
-    cursor: pointer;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .modal-body {
-    padding: 24px 26px 28px;
-  }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px 20px;
-  }
-
-  .full {
-    grid-column: 1 / -1;
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .field label {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: .84rem;
-    color: var(--brown);
-  }
-
-  .field label .req {
-    color: var(--red);
-  }
-
-  .field-hint {
-    font-size: .71rem;
-    color: #9a7a5a;
-    font-family: 'Poppins', sans-serif;
-  }
-
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 22px;
-    padding-top: 16px;
-    border-top: 1.5px solid #f5e6d3;
-  }
-
-  .btn-cancel,
-  .btn-save,
-  .btn-delete-confirm {
-    padding: 9px 20px;
-    border: none;
-  }
-
-  .btn-cancel {
-    border: 1.5px solid var(--border);
-    background: var(--white);
-    color: var(--brown);
-  }
-
-  .btn-save {
-    background: var(--orange);
-    color: var(--brown);
-    box-shadow: 0 4px 12px rgba(243, 165, 21, .4);
-  }
-
-  .btn-delete-confirm {
-    background: var(--red);
-    color: var(--white);
-  }
-
-  .detail-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid #f5e6d3;
-    font-family: 'Poppins', sans-serif;
-    font-size: .84rem;
-  }
-
-  .detail-row:last-child {
-    border-bottom: none;
-  }
-
-  .detail-label {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    color: var(--orange);
-    min-width: 110px;
-  }
-
-  .detail-value {
-    color: #1e1e1e;
-    font-weight: 500;
-  }
-
-  .confirm-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: #fee2e2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 12px;
-  }
-
-  @media (max-width: 900px) {
-    .filters form {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 640px) {
-    .filters form,
-    .form-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .full {
-      grid-column: 1;
-    }
-
-    .filter-actions,
-    .modal-actions {
-      flex-direction: column;
-    }
-
-    .filter-btn,
-    .clear-btn,
-    .btn-cancel,
-    .btn-save,
-    .btn-delete-confirm {
-      width: 100%;
-    }
+    to   { opacity: 1; transform: translateY(0); }
   }
 </style>
 
-<div class="productos-shell">
-  <div class="productos-header">
-    <h1>Gestion de <span>Productos</span></h1>
-  </div>
 
-  <div class="productos-board">
-    <div class="toolbar">
-      <button class="register-btn" onclick="abrirModal('modalRegistro')">
-        <img src="{{ url_for('static', filename='img/IconosTable/icons8-más-100.png') }}" style="width:16px;height:16px">
-        Registrar Producto
+<!-- ══════════════ MODAL REGISTRO ══════════════ -->
+<div id="modalRegistro" tabindex="-1"
+  class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+  style="background-color: rgba(0,0,0,0.3);">
+  <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 my-8 overflow-hidden">
+    <div class="flex justify-between items-center px-6 py-4" style="background-color: #38230f;">
+      <h3 class="text-base font-bold text-white tracking-wide">REGISTRAR PRODUCTO</h3>
+      <button type="button" onclick="cerrarModal('modalRegistro')" class="text-white hover:text-gray-300 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
       </button>
     </div>
-
-    <div class="filters">
-      <div class="filters-title">Filtros de busqueda</div>
-      <form method="GET" action="{{ url_for('productos.listado_productos') }}" id="productosFiltrosForm">
-        <div>
-          <label>Nombre</label>
-          <input type="text" name="nombre" value="{{ filtros.nombre }}" placeholder="Ingresa el nombre...">
-        </div>
-        <div>
-          <label>Precio inicio</label>
-          <input type="number" step="0.01" min="0" name="precio_inicio" value="{{ filtros.precio_inicio }}">
-        </div>
-        <div>
-          <label>Precio fin</label>
-          <input type="number" step="0.01" min="0" name="precio_fin" value="{{ filtros.precio_fin }}">
-        </div>
-        <div>
-          <label>Estatus receta</label>
-          <select name="estatus_receta">
-            <option value="" {% if not filtros.estatus_receta %}selected{% endif %}>Todos</option>
-            <option value="1" {% if filtros.estatus_receta == '1' %}selected{% endif %}>Activa</option>
-            <option value="0" {% if filtros.estatus_receta == '0' %}selected{% endif %}>Inactiva</option>
-          </select>
-        </div>
-        <div>
-          <label>Estatus</label>
-          <select name="estatus">
-            <option value="todos" {% if filtros.estatus == 'todos' %}selected{% endif %}>Todos</option>
-            <option value="1" {% if filtros.estatus == '1' or not filtros.estatus %}selected{% endif %}>Activo</option>
-            <option value="0" {% if filtros.estatus == '0' %}selected{% endif %}>Inactivo</option>
-          </select>
-        </div>
-        <div>
-          <label>Tamaño</label>
-          <select name="tamano">
-            <option value="" {% if not filtros.tamano %}selected{% endif %}>Todos</option>
-            {% for t in tamanos_filtro %}
-            <option value="{{ t }}" {% if filtros.tamano == t %}selected{% endif %}>{{ t }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="filter-actions">
-          <button type="submit" class="filter-btn">Filtrar</button>
-          <a href="{{ url_for('productos.listado_productos') }}" class="clear-btn" style="white-space:nowrap;">Limpiar</a>
-        </div>
-      </form>
-    </div>
-
-    {% if productos %}
-    <div class="cards-grid">
-      {% for p in productos %}
-      <article class="producto-card" data-id="{{ p.idProducto }}" data-nombre="{{ p.nombre }}"
-        data-precio="{{ p.precio }}" data-tamano="{{ p.tamano }}" data-stock="{{ p.stock }}"
-        data-estatus="{{ 1 if p.estatus == 1 else 0 }}" style="animation-delay: {{ loop.index0 * 0.05 }}s">
-        <div class="producto-card-top">PRODUCTO</div>
-        <div class="producto-card-body">
-          <div style="display:flex;justify-content:center;margin-bottom:.6rem;">
-          {% if p.imagen %}
-          <img class="producto-image" src="{{ url_for('static', filename=p.imagen) }}" alt="{{ p.nombre }}"
-            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-          <div class="producto-image-placeholder" style="display:none">PZ</div>
-          {% else %}
-          <div class="producto-image-placeholder">PZ</div>
-          {% endif %}
-          </div>
-
-          <div class="producto-nombre">{{ p.nombre }}</div>
-          <div class="producto-line"><span class="label">Precio:</span> ${{ p.precio }}</div>
-          <div class="producto-line"><span class="label">Tamaño:</span> {{ p.tamano }}</div>
-          <div class="producto-line"><span class="label">Stock:</span> {{ p.stock }}</div>
-          <div class="estado-line" style="margin-top:4px;">
-            <span class="estado-dot {% if p.estatus != 1 %}inactive{% endif %}"></span>
-            {{ 'Activo' if p.estatus == 1 else 'Inactivo' }}
-          </div>
-          <div class="producto-line" style="margin-top:4px;"><span class="label">Receta:</span>
-            <span style="color:{{ '#16a34a' if p.receta_activa == 1 else '#ef4444' }};font-weight:700;">{{ 'Activa' if p.receta_activa == 1 else 'Inactiva' }}</span>
-          </div>
-
-          <div class="card-actions">
-            <button type="button" class="card-action action-edit" onclick="abrirEditar(this.closest('.producto-card'))" title="Editar">
-              <img src="{{ url_for('static', filename='img/IconosTable/icons8-lápiz-96.png') }}" style="width:14px;height:14px">
-            </button>
-            <button type="button" class="card-action action-view" onclick="abrirVer(this.closest('.producto-card'))" title="Ver">
-              <svg viewBox="0 0 20 20">
-                <path d="M10 4.5c-4.5 0-7.8 4.1-8.8 5.5 1 1.4 4.3 5.5 8.8 5.5s7.8-4.1 8.8-5.5c-1-1.4-4.3-5.5-8.8-5.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" />
-              </svg>
-            </button>
-            <button type="button" class="card-action {% if p.estatus == 1 %}action-deactivate{% else %}action-activate{% endif %}" onclick="abrirConfirm(this.closest('.producto-card'))" title="{% if p.estatus == 1 %}Desactivar{% else %}Activar{% endif %}">
-              {% if p.estatus == 1 %}
-              <img src="{{ url_for('static', filename='img/IconosTable/icons8-basura-100.png') }}" style="width:14px;height:14px;filter:brightness(0) invert(1)">
-              {% else %}
-              <img src="{{ url_for('static', filename='img/IconosTable/icons8-de-acuerdo-144.png') }}" style="width:14px;height:14px">
-              {% endif %}
-            </button>
-            <a class="card-action action-stock" href="{{ url_for('recetas.ver_receta_producto', id_producto=p.idProducto) }}" title="Receta">
-              <svg viewBox="0 0 20 20">
-                <path d="M5.75 2A2.75 2.75 0 0 0 3 4.75v10.5A2.75 2.75 0 0 0 5.75 18h8.5A2.75 2.75 0 0 0 17 15.25V6.56a2.75 2.75 0 0 0-.805-1.945l-1.81-1.81A2.75 2.75 0 0 0 12.44 2H5.75Zm0 1.5h6.19c.331 0 .649.132.883.366l1.81 1.81c.234.234.367.552.367.884v8.69a1.25 1.25 0 0 1-1.25 1.25h-8.5A1.25 1.25 0 0 1 4 15.25V4.75A1.25 1.25 0 0 1 5.75 3.5Zm1.5 4a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Zm0 3a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Z" />
-              </svg>
-            </a>
-          </div>
-        </div>
-      </article>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state">No se encontraron productos con esos filtros.</div>
-    {% endif %}
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalRegistro" onclick="handleOverlay(event,'modalRegistro')">
-  <div class="modal">
-    <div class="modal-header">
-      <span>REGISTRAR PRODUCTO</span>
-      <button type="button" class="modal-close" onclick="cerrarModal('modalRegistro')">X</button>
-    </div>
-    <div class="modal-body">
+    <div class="p-6">
       <form method="POST" action="{{ url_for('productos.registrar_producto') }}" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div id="error-registro" class="{% if not form_error or form_error.modal != 'registro' %}hidden{% endif %} full"
-          style="margin-bottom:8px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">
+
+        <div id="error-registro"
+          class="{% if not form_error or form_error.modal != 'registro' %}hidden{% endif %} mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm">
           {{ form_error.mensaje if form_error and form_error.modal == 'registro' else '' }}
         </div>
-        <div class="form-grid">
-          <div class="field full">
-            <label>Nombre <span class="req">*</span></label>
-            <input name="nombre" required maxlength="100" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+" title="Solo letras, numeros y espacios" placeholder="Ej: Pizza Pepperoni" value="{{ form_error.datos.nombre if form_error and form_error.modal == 'registro' else '' }}">
+
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre <span class="text-red-500">*</span></label>
+          <input name="nombre" required maxlength="100" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+"
+            title="Solo letras, números y espacios" placeholder="Ej: Pizza Pepperoni"
+            value="{{ form_error.datos.nombre if form_error and form_error.modal == 'registro' else '' }}"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Precio <span class="text-red-500">*</span></label>
+            <input type="number" step="0.01" min="0.01" name="precio" required placeholder="0.00"
+              value="{{ form_error.datos.precio if form_error and form_error.modal == 'registro' else '' }}"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
           </div>
-          <div class="field">
-            <label>Precio <span class="req">*</span></label>
-            <input type="number" step="0.01" min="0.01" name="precio" required placeholder="0.00" value="{{ form_error.datos.precio if form_error and form_error.modal == 'registro' else '' }}">
-          </div>
-          <div class="field">
-            <label>Tamano <span class="req">*</span></label>
-            <select name="tamano" required>
-              <option value="">Selecciona un tamano</option>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Tamaño <span class="text-red-500">*</span></label>
+            <select name="tamano" required
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+              <option value="">Selecciona un tamaño</option>
               {% for tamano_opcion in tamanos_producto %}
-              <option value="{{ tamano_opcion }}" {% if form_error and form_error.modal == 'registro' and form_error.datos.tamano == tamano_opcion %}selected{% endif %}>{{ tamano_opcion }}</option>
+              <option value="{{ tamano_opcion }}"
+                {% if form_error and form_error.modal == 'registro' and form_error.datos.tamano == tamano_opcion %}selected{% endif %}>
+                {{ tamano_opcion }}
+              </option>
               {% endfor %}
             </select>
           </div>
-          <div class="field">
-            <label>Stock <span class="req">*</span></label>
-            <input type="number" step="1" min="0" name="stock" required placeholder="0" value="{{ form_error.datos.stock if form_error and form_error.modal == 'registro' else '' }}">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Stock <span class="text-red-500">*</span></label>
+            <input type="number" step="1" min="0" name="stock" required placeholder="0"
+              value="{{ form_error.datos.stock if form_error and form_error.modal == 'registro' else '' }}"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
           </div>
-          <div class="field full">
-            <label>Imagen</label>
-            <input type="file" name="imagen" accept=".png,.jpg,.jpeg,.webp,.gif,image/*">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Imagen</label>
+            <input type="file" name="imagen" accept=".png,.jpg,.jpeg,.webp,.gif,image/*"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
           </div>
         </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel" onclick="cerrarModal('modalRegistro')">Cancelar</button>
-          <button type="submit" class="btn-save">Guardar</button>
+
+        <div class="flex gap-3">
+          <button type="button" onclick="cerrarModal('modalRegistro')"
+            class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+            Cancelar
+          </button>
+          <button type="submit"
+            class="flex-1 px-4 py-2 rounded-lg text-white font-semibold transition hover:brightness-110"
+            style="background-color: #f29f05;">
+            Guardar
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modalEditar" onclick="handleOverlay(event,'modalEditar')">
-  <div class="modal">
-    <div class="modal-header">
-      <span>EDITAR PRODUCTO</span>
-      <button type="button" class="modal-close" onclick="cerrarModal('modalEditar')">X</button>
+
+<!-- ══════════════ MODAL EDICIÓN ══════════════ -->
+<div id="modalEditar" tabindex="-1"
+  class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+  style="background-color: rgba(0,0,0,0.3);">
+  <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 my-8 overflow-hidden">
+    <div class="flex justify-between items-center px-6 py-4" style="background-color: #38230f;">
+      <h3 class="text-base font-bold text-white tracking-wide">EDITAR PRODUCTO</h3>
+      <button type="button" onclick="cerrarModal('modalEditar')" class="text-white hover:text-gray-300 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
-    <div class="modal-body">
+    <div class="p-6">
       <form method="POST" id="formEditar" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div id="error-edicion" class="{% if not form_error or form_error.modal != 'edicion' %}hidden{% endif %} full"
-          style="margin-bottom:8px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">
+
+        <div id="error-edicion"
+          class="{% if not form_error or form_error.modal != 'edicion' %}hidden{% endif %} mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm">
           {{ form_error.mensaje if form_error and form_error.modal == 'edicion' else '' }}
         </div>
-        <div class="form-grid">
-          <div class="field full">
-            <label>Nombre <span class="req">*</span></label>
-            <input id="editNombre" name="nombre" required maxlength="100" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+" title="Solo letras, numeros y espacios">
+
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre <span class="text-red-500">*</span></label>
+          <input id="editNombre" name="nombre" required maxlength="100" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+"
+            title="Solo letras, números y espacios"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Precio <span class="text-red-500">*</span></label>
+            <input id="editPrecio" type="number" step="0.01" min="0.01" name="precio" required
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
           </div>
-          <div class="field">
-            <label>Precio <span class="req">*</span></label>
-            <input id="editPrecio" type="number" step="0.01" min="0.01" name="precio" required>
-          </div>
-          <div class="field">
-            <label>Tamano <span class="req">*</span></label>
-            <select id="editTamano" name="tamano" required>
-              <option value="">Selecciona un tamano</option>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Tamaño <span class="text-red-500">*</span></label>
+            <select id="editTamano" name="tamano" required
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+              <option value="">Selecciona un tamaño</option>
               {% for tamano_opcion in tamanos_producto %}
               <option value="{{ tamano_opcion }}">{{ tamano_opcion }}</option>
               {% endfor %}
             </select>
           </div>
-          <div class="field">
-            <label>Stock <span class="req">*</span></label>
-            <input id="editStock" type="number" step="1" min="0" name="stock" required>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Stock <span class="text-red-500">*</span></label>
+            <input id="editStock" type="number" step="1" min="0" name="stock" required
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
           </div>
-          <div class="field">
-            <label>Nueva imagen</label>
-            <input type="file" name="imagen" accept=".png,.jpg,.jpeg,.webp,.gif,image/*">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Nueva imagen</label>
+            <input type="file" name="imagen" accept=".png,.jpg,.jpeg,.webp,.gif,image/*"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
           </div>
         </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel" onclick="cerrarModal('modalEditar')">Cancelar</button>
-          <button type="submit" class="btn-save">Actualizar</button>
+
+        <div class="flex gap-3">
+          <button type="button" onclick="cerrarModal('modalEditar')"
+            class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+            Cancelar
+          </button>
+          <button type="submit"
+            class="flex-1 px-4 py-2 rounded-lg text-white font-semibold transition hover:brightness-110"
+            style="background-color: #f29f05;">
+            Actualizar
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modalVer" onclick="handleOverlay(event,'modalVer')">
-  <div class="modal" style="max-width:440px">
-    <div class="modal-header">
-      <span>DETALLE DEL PRODUCTO</span>
-      <button type="button" class="modal-close" onclick="cerrarModal('modalVer')">X</button>
+
+<!-- ══════════════ MODAL VER ══════════════ -->
+<div id="modalVer" tabindex="-1"
+  class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+  style="background-color: rgba(0,0,0,0.3);">
+  <div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 my-8 overflow-hidden">
+    <div class="flex justify-between items-center px-6 py-4" style="background-color: #38230f;">
+      <h3 class="text-base font-bold text-white tracking-wide">DETALLE DEL PRODUCTO</h3>
+      <button type="button" onclick="cerrarModal('modalVer')" class="text-white hover:text-gray-300 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
-    <div class="modal-body">
-      <div id="verImgWrap" style="text-align:center;margin-bottom:1rem"></div>
-      <div class="detail-row">
-        <span class="detail-label">Nombre</span>
-        <span class="detail-value" id="verNombre">-</span>
+    <div class="p-6">
+      <div id="verImgWrap" class="flex justify-center mb-4"></div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between border-b border-gray-100 pb-2">
+          <span class="font-semibold text-gray-500">Nombre</span>
+          <span id="verNombre" class="font-semibold text-gray-800"></span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-2">
+          <span class="font-semibold text-gray-500">Precio</span>
+          <span id="verPrecio" class="text-gray-800"></span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-2">
+          <span class="font-semibold text-gray-500">Tamaño</span>
+          <span id="verTamano" class="text-gray-800"></span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-2">
+          <span class="font-semibold text-gray-500">Stock</span>
+          <span id="verStock" class="text-gray-800"></span>
+        </div>
+        <div class="flex justify-between pb-2">
+          <span class="font-semibold text-gray-500">Estatus</span>
+          <span id="verEstatus" class="font-semibold"></span>
+        </div>
       </div>
-      <div class="detail-row">
-        <span class="detail-label">Precio</span>
-        <span class="detail-value" id="verPrecio">-</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Tamano</span>
-        <span class="detail-value" id="verTamano">-</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Stock</span>
-        <span class="detail-value" id="verStock">-</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Estatus</span>
-        <span class="detail-value" id="verEstatus">-</span>
-      </div>
-      <div class="modal-actions" style="margin-top:16px;padding-top:12px">
-        <button type="button" class="btn-cancel" onclick="cerrarModal('modalVer')">Cerrar</button>
+      <div class="pt-4 mt-2">
+        <button type="button" onclick="cerrarModal('modalVer')"
+          class="w-full px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+          Cerrar
+        </button>
       </div>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modalConfirm" onclick="handleOverlay(event,'modalConfirm')">
-  <div class="confirm-box">
-    <div class="modal-header">
-      <span>CONFIRMAR CAMBIO DE ESTATUS</span>
-      <button type="button" class="modal-close" onclick="cerrarModal('modalConfirm')">X</button>
-    </div>
-    <div class="modal-body" style="text-align:center">
-      <div class="confirm-icon" id="confirmIconWrap">
-        <svg style="width:26px;height:26px;color:#ef4444" id="confirmIcon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+
+<!-- ══════════════ MODAL CONFIRMACIÓN ESTATUS ══════════════ -->
+<div id="modalConfirm" class="hidden fixed inset-0 z-50 flex items-center justify-center"
+  style="background-color: rgba(0,0,0,0.3);">
+  <div class="bg-white rounded-2xl shadow-xl p-5 w-72 text-center">
+    <div class="flex justify-center mb-3">
+      <div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
         </svg>
       </div>
-      <p id="confirmMensaje" style="font-family:'Poppins',sans-serif;font-size:.85rem;color:#555;margin-bottom:1.2rem"></p>
-      <div style="display:flex;gap:10px;justify-content:center">
-        <button type="button" class="btn-cancel" onclick="cerrarModal('modalConfirm')">Cancelar</button>
-        <a id="confirmUrl" href="#" class="btn-delete-confirm">Confirmar</a>
-      </div>
+    </div>
+    <h3 class="text-base font-bold text-gray-800 mb-1">Confirmar acción</h3>
+    <p id="confirmMensaje" class="text-sm text-gray-500 mb-5"></p>
+    <div class="flex gap-2">
+      <button type="button" onclick="cerrarModal('modalConfirm')"
+        class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition">
+        Cancelar
+      </button>
+      <a id="confirmBtn" href="#"
+        class="flex-1 px-3 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110 text-center"
+        style="background-color: #f29f05;">
+        Confirmar
+      </a>
     </div>
   </div>
 </div>
 
-<script>
-  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
+<script>
+  /* ── Modales ─────────────────────────────── */
   function abrirModal(id) {
-    document.getElementById(id).classList.add('open');
+    document.getElementById(id).classList.remove('hidden');
     document.body.style.overflow = 'hidden';
   }
 
   function cerrarModal(id) {
-    document.getElementById(id).classList.remove('open');
+    document.getElementById(id).classList.add('hidden');
     document.body.style.overflow = '';
   }
 
-  function handleOverlay(e, id) {
-    if (e.target === document.getElementById(id)) {
-      cerrarModal(id);
-    }
-  }
+  /* ── Cerrar al click fuera ───────────────── */
+  ['modalRegistro', 'modalEditar', 'modalVer', 'modalConfirm'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function (e) {
+      if (e.target === this) cerrarModal(id);
+    });
+  });
 
+  /* ── Escape ─────────────────────────────── */
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       ['modalRegistro', 'modalEditar', 'modalVer', 'modalConfirm'].forEach(cerrarModal);
+      document.body.style.overflow = '';
     }
   });
 
-  function mostrarToast(mensaje, tipo) {
-    const stack = document.querySelector('.flash-stack') || crearFlashStack();
-    const item = document.createElement('div');
-    item.className = 'flash-item ' + (tipo === 'success' ? 'success' : 'danger');
-    item.textContent = mensaje;
-    stack.appendChild(item);
-    setTimeout(() => item.remove(), 4000);
-  }
-
-  function crearFlashStack() {
-    const stack = document.createElement('div');
-    stack.className = 'flash-stack';
-    document.querySelector('.productos-board').prepend(stack);
-    return stack;
-  }
-
+  /* ── Editar: poblar modal con datos de la card ── */
   function abrirEditar(card) {
     document.getElementById('editNombre').value = card.dataset.nombre;
-    document.getElementById('editPrecio').value = card.dataset.precio;
-    document.getElementById('editTamano').value = card.dataset.tamano;
-    document.getElementById('editStock').value = card.dataset.stock;
-    document.getElementById('formEditar').dataset.id = card.dataset.id;
+    document.getElementById('editPrecio').value  = card.dataset.precio;
+    document.getElementById('editTamano').value  = card.dataset.tamano;
+    document.getElementById('editStock').value   = card.dataset.stock;
+    document.getElementById('formEditar').action =
+      `/editar-producto/${card.dataset.id}`;
     document.getElementById('error-edicion').classList.add('hidden');
     abrirModal('modalEditar');
   }
 
+  /* ── Ver: mostrar detalle en modal ──────── */
   function abrirVer(card) {
     document.getElementById('verNombre').textContent = card.dataset.nombre;
-    document.getElementById('verPrecio').textContent = card.dataset.precio + '$';
+    document.getElementById('verPrecio').textContent = '$' + card.dataset.precio;
     document.getElementById('verTamano').textContent = card.dataset.tamano || '-';
-    document.getElementById('verStock').textContent = card.dataset.stock || '-';
-    document.getElementById('verEstatus').textContent = card.dataset.estatus == 1 ? 'Activo' : 'Inactivo';
-    document.getElementById('verEstatus').style.color = card.dataset.estatus == 1 ? '#16a34a' : '#ef4444';
+    document.getElementById('verStock').textContent  = card.dataset.stock  || '-';
 
-    const img = card.querySelector('.producto-image');
+    const estatusEl = document.getElementById('verEstatus');
+    estatusEl.textContent = card.dataset.estatus == 1 ? 'Activo' : 'Inactivo';
+    estatusEl.className   = card.dataset.estatus == 1
+      ? 'font-semibold text-green-600'
+      : 'font-semibold text-red-500';
+
+    const img  = card.querySelector('img');
     const wrap = document.getElementById('verImgWrap');
     wrap.innerHTML = img
-      ? `<img src="${img.src}" style="width:90px;height:90px;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(145,78,9,.2))">`
-      : '<div class="producto-image-placeholder" style="margin:0 auto">PZ</div>';
+      ? `<img src="${img.src}" class="w-24 h-24 object-contain drop-shadow-md">`
+      : `<div class="w-24 h-24 rounded-full bg-gradient-to-br from-amber-100 to-amber-200
+           flex items-center justify-center text-3xl font-black" style="color:#38230f">PZ</div>`;
 
     abrirModal('modalVer');
   }
 
-  function abrirConfirm(card) {
-    const activo = card.dataset.estatus == 1;
-    const nombre = card.dataset.nombre;
-    const btn = document.getElementById('confirmUrl');
+  /* ── Confirmar cambio de estatus (igual que materias primas) ── */
+  function confirmarCambioEstatus(e, id, nombre, estatus) {
+    e.preventDefault();
+    const btn = document.getElementById('confirmBtn');
 
-    if (activo) {
+    if (estatus == 1) {
       document.getElementById('confirmMensaje').textContent =
         `¿Estás seguro de desactivar "${nombre}"? Podrás volver a activarlo después.`;
       btn.textContent = 'Desactivar';
-      btn.style.background = '#ef4444';
+      btn.style.backgroundColor = '#e53e3e';
     } else {
       document.getElementById('confirmMensaje').textContent =
         `¿Estás seguro de activar nuevamente "${nombre}"?`;
       btn.textContent = 'Activar';
-      btn.style.background = '#22c55e';
+      btn.style.backgroundColor = '#48bb78';
     }
 
-    btn.dataset.id = card.dataset.id;
-    btn.dataset.nombre = nombre;
-    btn.dataset.nuevoEstatus = activo ? 0 : 1;
+    /* Navega directo a la ruta GET, igual que materias primas */
+    btn.href = `/cambiar-estatus-producto/${id}/${estatus}`;
     abrirModal('modalConfirm');
   }
 
-  function cambiarEstatus(btn) {
-    const id = btn.dataset.id;
-    const nuevoEstatus = btn.dataset.nuevoEstatus;
-    cerrarModal('modalConfirm');
-
-    fetch(`/cambiar-estatus-producto/${id}`, {
-      method: 'POST',
-      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        const card = document.querySelector(`.producto-card[data-id="${id}"]`);
-        if (card) {
-          card.dataset.estatus = nuevoEstatus;
-          const dot = card.querySelector('.estado-dot');
-          const estadoText = card.querySelector('.estado-line');
-          if (dot) dot.classList.toggle('inactive', nuevoEstatus == 0);
-          if (estadoText) estadoText.lastChild.textContent = nuevoEstatus == 1 ? ' Activo' : ' Inactivo';
-          const actionBtn = card.querySelector('.card-action:nth-child(3)');
-          if (actionBtn) {
-            actionBtn.className = 'card-action ' + (nuevoEstatus == 1 ? 'action-deactivate' : 'action-activate');
-            actionBtn.title = nuevoEstatus == 1 ? 'Desactivar' : 'Activar';
-          }
-
-          const filtroEstatus = document.querySelector('select[name="estatus"]')?.value || '';
-          if (filtroEstatus === '1' && nuevoEstatus == 0) {
-            card.style.transition = 'opacity .3s, transform .3s';
-            card.style.opacity = '0';
-            card.style.transform = 'scale(0.9)';
-            setTimeout(() => card.remove(), 300);
-          } else if (filtroEstatus === '0' && nuevoEstatus == 1) {
-            card.style.transition = 'opacity .3s, transform .3s';
-            card.style.opacity = '0';
-            card.style.transform = 'scale(0.9)';
-            setTimeout(() => card.remove(), 300);
-          }
-        }
-        mostrarToast(data.message, 'success');
-      } else {
-        mostrarToast(data.message, 'danger');
-      }
-    })
-    .catch(() => mostrarToast('Error de conexión', 'danger'));
-  }
-
-  document.getElementById('formRegistro')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const form = e.target;
-    const formData = new FormData(form);
-    const errorDiv = document.getElementById('error-registro');
-
-    fetch(form.action, {
-      method: 'POST',
-      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken },
-      body: formData
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        cerrarModal('modalRegistro');
-        form.reset();
-        mostrarToast(data.message, 'success');
-        setTimeout(() => location.reload(), 800);
-      } else {
-        errorDiv.textContent = data.message;
-        errorDiv.classList.remove('hidden');
-      }
-    })
-    .catch(() => {
-      errorDiv.textContent = 'Error de conexión';
-      errorDiv.classList.remove('hidden');
-    });
-  });
-
-  document.getElementById('formEditar')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const form = e.target;
-    const formData = new FormData(form);
-    const id = form.dataset.id;
-    const errorDiv = document.getElementById('error-edicion');
-
-    fetch(`/editar-producto/${id}`, {
-      method: 'POST',
-      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken },
-      body: formData
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        cerrarModal('modalEditar');
-        mostrarToast(data.message, 'success');
-        setTimeout(() => location.reload(), 800);
-      } else {
-        errorDiv.textContent = data.message;
-        errorDiv.classList.remove('hidden');
-      }
-    })
-    .catch(() => {
-      errorDiv.textContent = 'Error de conexión';
-      errorDiv.classList.remove('hidden');
-    });
-  });
-
-  document.getElementById('confirmUrl').addEventListener('click', function(e) {
-    e.preventDefault();
-    cambiarEstatus(this);
-  });
-
+  /* ── Filtros auto-submit ─────────────────── */
   document.addEventListener('DOMContentLoaded', function () {
     const filtrosForm = document.getElementById('productosFiltrosForm');
-    const filtrosAuto = filtrosForm ? filtrosForm.querySelectorAll('input[name], select[name]') : [];
-    let filtrosTimer = null;
+    let filtrosTimer  = null;
 
-    function enviarFiltrosProductos() {
-      if (filtrosForm) {
-        filtrosForm.submit();
-      }
-    }
-
-    filtrosAuto.forEach((campo) => {
+    filtrosForm?.querySelectorAll('input[name], select[name]').forEach(campo => {
       if (campo.type === 'text' || campo.type === 'number') {
-        campo.addEventListener('input', function () {
+        campo.addEventListener('input', () => {
           clearTimeout(filtrosTimer);
-          filtrosTimer = setTimeout(enviarFiltrosProductos, 350);
+          filtrosTimer = setTimeout(() => filtrosForm.submit(), 350);
         });
       } else {
-        campo.addEventListener('change', enviarFiltrosProductos);
+        campo.addEventListener('change', () => filtrosForm.submit());
       }
     });
 
+    /* Re-abrir modal si hubo error en el servidor */
     {% if form_error and form_error.modal == 'registro' %}
     abrirModal('modalRegistro');
     {% elif form_error and form_error.modal == 'edicion' %}
-    const data = {{ form_error.datos|tojson }};
+    const data = {{ form_error.datos | tojson }};
     document.getElementById('editNombre').value = data.nombre || '';
-    document.getElementById('editPrecio').value = data.precio || '';
-    document.getElementById('editTamano').value = data.tamano || '';
-    document.getElementById('editStock').value = data.stock || '';
-    document.getElementById('formEditar').dataset.id = data.id;
+    document.getElementById('editPrecio').value  = data.precio  || '';
+    document.getElementById('editTamano').value  = data.tamano  || '';
+    document.getElementById('editStock').value   = data.stock   || '';
+    document.getElementById('formEditar').action = `/editar-producto/${data.id}`;
     abrirModal('modalEditar');
     {% endif %}
   });
 </script>
+
 {% endblock %}

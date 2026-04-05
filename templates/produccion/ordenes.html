@@ -1,0 +1,640 @@
+{% extends "layoutAdmin.html" %}
+{% block container %}
+
+<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
+  style="border-bottom: 3px solid #f29f05;">
+  <div class="container flex flex-wrap items-center justify-between mx-auto">
+    <div class="flex-1 flex justify-center">
+      <div class="flex items-center space-x-2 sm:space-x-3 bg-opacity-20 px-3 sm:px-6 py-2 rounded-full">
+        <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Órdenes de</span>
+        <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap" style="color:#f29f05;">Producción</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container mx-auto px-4 sm:px-6 max-w-7xl">
+
+  <!-- Flash -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-4 space-y-2">
+        {% for category, message in messages %}
+          <div class="px-4 py-3 rounded-xl text-sm font-semibold shadow-md
+            {% if category == 'success' %}bg-green-100 text-green-700 border border-green-300
+            {% else %}bg-red-100 text-red-700 border border-red-300{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Botón registrar -->
+  <div class="flex justify-end mb-4">
+    <button onclick="abrirModal('modalRegistro')"
+      class="text-white font-semibold px-5 py-2.5 rounded-full shadow-md transition-all duration-300 hover:brightness-110 hover:shadow-lg text-sm"
+      style="background-color:#f29f05;">
+      + Nueva Orden
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
+    <div class="px-5 py-3 rounded-t-2xl" style="background-color:#38230f;">
+      <h2 class="text-sm font-bold text-white tracking-wide">FILTROS DE BÚSQUEDA</h2>
+    </div>
+    <form method="GET" action="{{ url_for('produccion.listado_ordenes') }}" id="filtrosForm"
+      class="flex flex-wrap gap-3 items-end p-4 sm:p-5">
+      <div class="flex flex-col min-w-[140px]">
+        <label class="text-xs font-semibold text-gray-700 mb-1">Estado</label>
+        <select name="estado"
+          class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+          <option value=""           {% if not filtros.estado %}selected{% endif %}>Todos</option>
+          <option value="En proceso" {% if filtros.estado == 'En proceso' %}selected{% endif %}>En proceso</option>
+          <option value="Terminada"  {% if filtros.estado == 'Terminada'  %}selected{% endif %}>Terminada</option>
+          <option value="Cancelada"  {% if filtros.estado == 'Cancelada'  %}selected{% endif %}>Cancelada</option>
+        </select>
+      </div>
+      <div class="flex flex-col min-w-[140px]">
+        <label class="text-xs font-semibold text-gray-700 mb-1">Fecha inicio</label>
+        <input type="date" name="fecha_ini" value="{{ filtros.fecha_ini }}"
+          class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+      </div>
+      <div class="flex flex-col min-w-[140px]">
+        <label class="text-xs font-semibold text-gray-700 mb-1">Fecha fin</label>
+        <input type="date" name="fecha_fin" value="{{ filtros.fecha_fin }}"
+          class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+      </div>
+      <div class="flex flex-col justify-end">
+        <button type="submit"
+          class="text-white font-semibold px-6 py-2 rounded-lg shadow transition hover:brightness-110 text-sm"
+          style="background-color:#f29f05;">Filtrar</button>
+      </div>
+      <div class="flex flex-col justify-end">
+        <a href="{{ url_for('produccion.listado_ordenes') }}"
+          class="text-white font-semibold px-6 py-2 rounded-lg shadow transition hover:brightness-110 text-sm text-center"
+          style="background-color:#6b7280;">Limpiar</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabla de órdenes -->
+  <div class="rounded-2xl overflow-hidden shadow-md mb-8">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead>
+          <tr style="background-color:#38230f;">
+            <th class="px-5 py-3 text-white font-bold uppercase tracking-wide"># Orden</th>
+            <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Fecha</th>
+            <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Registrada por</th>
+            <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Productos</th>
+            <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Unidades</th>
+            <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Estado</th>
+            <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in ordenes %}
+          <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150">
+            <td class="px-5 py-3 font-bold" style="color:#38230f;">#{{ o.idOrden }}</td>
+            <td class="px-5 py-3 text-gray-700">{{ o.fecha.strftime('%d/%m/%Y %H:%M') if o.fecha else '—' }}</td>
+            <td class="px-5 py-3 text-gray-700">{{ o.nombre_usuario }}</td>
+            <td class="px-5 py-3 text-gray-700">{{ o.total_productos }}</td>
+            <td class="px-5 py-3 text-gray-700">{{ o.total_unidades | int }}</td>
+            <td class="px-5 py-3">
+              {% if o.estado == 'En proceso' %}
+                <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
+                  <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block"></span>En proceso
+                </span>
+              {% elif o.estado == 'Terminada' %}
+                <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
+                  <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>Terminada
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+                  <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>Cancelada
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-5 py-3">
+              <div class="flex gap-2 items-center">
+
+                <!-- Ver -->
+                <button type="button" onclick="abrirVer({{ o.idOrden }})"
+                  class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
+                  style="background-color:#2563eb;" title="Ver detalle">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
+                    <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clip-rule="evenodd"/>
+                  </svg>
+                </button>
+
+                {# Botón editar:
+                   - Solo visible si la orden está En proceso Y quedan segundos.
+                   - data-ts-creacion: timestamp Unix (segundos) de la fecha de creación.
+                     El JS calcula el tiempo restante como: 60 - (Date.now()/1000 - ts_creacion)
+                     Esto garantiza que el timer NO se reinicia al abrir/cerrar el modal. #}
+                {% if o.estado == 'En proceso' and o.segundos_desde_creacion <= 60 %}
+                <button type="button"
+                  class="btn-editar flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
+                  style="background-color:#f29f05;" title="Editar orden"
+                  data-id="{{ o.idOrden }}"
+                  data-ts-creacion="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}"
+                  onclick="abrirEditar(this)">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                {% endif %}
+
+                <!-- Cancelar -->
+                {% if o.estado == 'En proceso' %}
+                <button type="button" onclick="abrirCancelar({{ o.idOrden }})"
+                  class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
+                  style="background-color:#e53e3e;" title="Cancelar orden">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+                {% endif %}
+
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-12 text-gray-400 text-sm font-semibold bg-white">
+              No se encontraron órdenes con los filtros seleccionados.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════ MODAL REGISTRAR ══════════════ -->
+<div id="modalRegistro" class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+  style="background-color:rgba(0,0,0,0.35);">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 my-8 overflow-hidden">
+    <div class="flex justify-between items-center px-6 py-4" style="background-color:#38230f;">
+      <h3 class="text-base font-bold text-white tracking-wide">NUEVA ORDEN DE PRODUCCIÓN</h3>
+      <button onclick="cerrarModal('modalRegistro')" class="text-white hover:text-gray-300 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="p-6">
+      <div id="errorRegistro" class="hidden mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm font-semibold"></div>
+
+      <!-- Selector -->
+      <div class="grid grid-cols-1 sm:grid-cols-[1fr_120px_auto] gap-3 items-end mb-4 pb-4 border-b border-gray-100">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Producto <span class="text-red-500">*</span></label>
+          <select id="selProducto"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+            <option value="">Selecciona un producto...</option>
+            {% for p in productos_disponibles %}
+            <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}">
+              {{ p.nombre }} — {{ p.tamano }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Cantidad <span class="text-red-500">*</span></label>
+          <input type="number" id="inputCantidad" min="1" step="1" value="1"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+        </div>
+        <div class="flex items-end">
+          <button type="button" onclick="agregarProductoOrden()"
+            class="w-full text-white font-bold px-4 py-2 rounded-lg transition hover:brightness-110 text-sm"
+            style="background-color:#f29f05;">+ Agregar</button>
+        </div>
+      </div>
+
+      <!-- Tabla productos de la orden -->
+      <div class="mb-4">
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Productos en la orden</p>
+        <div class="rounded-xl overflow-hidden border border-gray-200">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50">
+                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Producto</th>
+                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Tamaño</th>
+                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Cantidad</th>
+                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Quitar</th>
+              </tr>
+            </thead>
+            <tbody id="tablaOrdenBody">
+              <tr id="filaVaciaOrden">
+                <td colspan="4" class="text-center py-6 text-gray-400 text-xs font-semibold">
+                  No hay productos añadidos aún.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <form id="formRegistrarOrden" method="POST" action="{{ url_for('produccion.registrar_orden') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="detalles_json" id="hiddenDetallesRegistro" value="[]">
+        <div class="flex gap-3">
+          <button type="button" onclick="cerrarModal('modalRegistro')"
+            class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+            Cancelar
+          </button>
+          <button type="button" onclick="enviarOrdenRegistro()"
+            class="flex-1 px-4 py-2 rounded-lg text-white font-bold transition hover:brightness-110"
+            style="background-color:#38230f;">
+            Enviar Orden
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════ MODAL VER ══════════════ -->
+<div id="modalVer" class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+  style="background-color:rgba(0,0,0,0.35);">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 my-8 overflow-hidden">
+    <div class="flex justify-between items-center px-6 py-4" style="background-color:#38230f;">
+      <h3 class="text-base font-bold text-white tracking-wide" id="verTitulo">DETALLE DE ORDEN</h3>
+      <button onclick="cerrarModal('modalVer')" class="text-white hover:text-gray-300 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div id="verContenido" class="p-6 min-h-[120px]">
+      <p class="text-center text-gray-400">Cargando...</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════ MODAL EDITAR ══════════════ -->
+<div id="modalEditar" class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+  style="background-color:rgba(0,0,0,0.35);">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 my-8 overflow-hidden">
+    <div class="flex justify-between items-center px-6 py-4" style="background-color:#38230f;">
+      <div>
+        <h3 class="text-base font-bold text-white tracking-wide">
+          EDITAR ORDEN <span id="editOrdenNum" class="font-normal opacity-80"></span>
+        </h3>
+        <!-- El timer muestra segundos reales calculados desde ts_creacion del servidor,
+             no desde cuando se abrió el modal. -->
+        <p class="text-xs text-amber-300 mt-0.5">
+          Tiempo restante: <span id="timerDisplay" class="font-bold tabular-nums">--</span>
+        </p>
+      </div>
+      <button onclick="cerrarModal('modalEditar')" class="text-white hover:text-gray-300 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="p-6">
+      <div id="errorEditar" class="hidden mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm font-semibold"></div>
+
+      <!-- Selector -->
+      <div class="grid grid-cols-1 sm:grid-cols-[1fr_120px_auto] gap-3 items-end mb-4 pb-4 border-b border-gray-100">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Producto</label>
+          <select id="editSelProducto"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+            <option value="">Selecciona un producto...</option>
+            {% for p in productos_disponibles %}
+            <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}">
+              {{ p.nombre }} — {{ p.tamano }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Cantidad</label>
+          <input type="number" id="editInputCantidad" min="1" step="1" value="1"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+        </div>
+        <div class="flex items-end">
+          <button type="button" onclick="agregarProductoEditar()"
+            class="w-full text-white font-bold px-4 py-2 rounded-lg transition hover:brightness-110 text-sm"
+            style="background-color:#f29f05;">+ Agregar</button>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Productos en la orden</p>
+        <div class="rounded-xl overflow-hidden border border-gray-200">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50">
+                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Producto</th>
+                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Tamaño</th>
+                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Cantidad</th>
+                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Quitar</th>
+              </tr>
+            </thead>
+            <tbody id="tablaEditarBody">
+              <tr id="filaVaciaEditar">
+                <td colspan="4" class="text-center py-6 text-gray-400 text-xs font-semibold">No hay productos añadidos.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <form id="formEditarOrden" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="detalles_json" id="hiddenDetallesEditar" value="[]">
+        <div class="flex gap-3">
+          <button type="button" onclick="cerrarModal('modalEditar')"
+            class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+            Cancelar
+          </button>
+          <button type="button" onclick="enviarOrdenEditar()"
+            class="flex-1 px-4 py-2 rounded-lg text-white font-bold transition hover:brightness-110"
+            style="background-color:#38230f;">
+            Guardar cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════ MODAL CANCELAR ══════════════ -->
+<div id="modalCancelar" class="hidden fixed inset-0 z-50 flex items-center justify-center"
+  style="background-color:rgba(0,0,0,0.35);">
+  <div class="bg-white rounded-2xl shadow-xl p-6 w-80 text-center">
+    <div class="flex justify-center mb-3">
+      <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </div>
+    </div>
+    <h3 class="text-base font-bold text-gray-800 mb-1">Cancelar orden</h3>
+    <p id="cancelarMensaje" class="text-sm text-gray-500 mb-5"></p>
+    <div class="flex gap-3">
+      <button type="button" onclick="cerrarModal('modalCancelar')"
+        class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition">
+        Volver
+      </button>
+      <form id="formCancelar" method="POST" class="flex-1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit"
+          class="w-full px-3 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110 bg-red-500">
+          Cancelar orden
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* ════════════════════════════════════════════════
+   ESTADO GLOBAL
+════════════════════════════════════════════════ */
+let ordenItems   = [];   // productos del modal Registro
+let editarItems  = [];   // productos del modal Editar
+let timerInterval = null;
+let _tsCreacionEditar = 0;  // timestamp Unix de creación de la orden que se edita
+
+/* ════════════════════════════════════════════════
+   MODALES
+════════════════════════════════════════════════ */
+function abrirModal(id) {
+  document.getElementById(id).classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarModal(id) {
+  document.getElementById(id).classList.add('hidden');
+  document.body.style.overflow = '';
+  // Al cerrar el modal Editar, limpiar timer sin tocar ts ni items
+  if (id === 'modalEditar' && timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+['modalRegistro','modalVer','modalEditar','modalCancelar'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) cerrarModal(id);
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['modalRegistro','modalVer','modalEditar','modalCancelar'].forEach(cerrarModal);
+  }
+});
+
+/* ════════════════════════════════════════════════
+   REGISTRO
+════════════════════════════════════════════════ */
+function agregarProductoOrden() {
+  const sel = document.getElementById('selProducto');
+  const qty = parseInt(document.getElementById('inputCantidad').value, 10);
+  if (!sel.value)      { mostrarError('errorRegistro', 'Selecciona un producto.'); return; }
+  if (!qty || qty < 1) { mostrarError('errorRegistro', 'La cantidad debe ser mayor a 0.'); return; }
+
+  const idP    = parseInt(sel.value, 10);
+  const nombre = sel.options[sel.selectedIndex].dataset.nombre;
+  const tamano = sel.options[sel.selectedIndex].dataset.tamano;
+  const existe = ordenItems.find(i => i.idProducto === idP);
+  if (existe) { existe.cantidad += qty; }
+  else        { ordenItems.push({ idProducto: idP, nombre, tamano, cantidad: qty }); }
+
+  renderTabla('tablaOrdenBody', 'filaVaciaOrden', ordenItems, 'registro');
+  ocultarError('errorRegistro');
+}
+function enviarOrdenRegistro() {
+  if (ordenItems.length === 0) { mostrarError('errorRegistro', 'Agrega al menos un producto.'); return; }
+  document.getElementById('hiddenDetallesRegistro').value = JSON.stringify(ordenItems);
+  document.getElementById('formRegistrarOrden').submit();
+}
+
+/* ════════════════════════════════════════════════
+   EDITAR — Timer basado en ts_creacion del servidor
+   El tiempo restante siempre es: 60 - (ahora_unix - ts_creacion)
+   Así, abrir/cerrar el modal no reinicia el contador.
+════════════════════════════════════════════════ */
+function abrirEditar(btn) {
+  const idOrden    = parseInt(btn.dataset.id, 10);
+  const tsCreacion = parseInt(btn.dataset.tsCreacion, 10); // Unix segundos
+
+  // Guardar para el ticker
+  _tsCreacionEditar = tsCreacion;
+
+  document.getElementById('editOrdenNum').textContent = '#' + idOrden;
+  document.getElementById('formEditarOrden').action   = `/produccion/editar/${idOrden}`;
+  ocultarError('errorEditar');
+
+  // Iniciar / reiniciar el timer tick
+  if (timerInterval) clearInterval(timerInterval);
+  actualizarTimerDisplay(idOrden);
+  timerInterval = setInterval(() => actualizarTimerDisplay(idOrden), 1000);
+
+  abrirModal('modalEditar');
+}
+
+function actualizarTimerDisplay(idOrden) {
+  const ahoraUnix  = Math.floor(Date.now() / 1000);
+  const transcurridos = ahoraUnix - _tsCreacionEditar;
+  const restantes     = 60 - transcurridos;
+  const el            = document.getElementById('timerDisplay');
+
+  if (restantes <= 0) {
+    // Tiempo expirado: cerrar modal, limpiar timer, ocultar botón
+    clearInterval(timerInterval);
+    timerInterval = null;
+    cerrarModal('modalEditar');
+    // Ocultar el botón editar de esa orden en la tabla
+    document.querySelectorAll('.btn-editar').forEach(b => {
+      if (parseInt(b.dataset.id, 10) === idOrden) b.style.display = 'none';
+    });
+    return;
+  }
+
+  el.textContent    = restantes + 's';
+  el.style.color    = restantes <= 15 ? '#fc8181' : '#fbd38d';
+}
+
+function agregarProductoEditar() {
+  const sel = document.getElementById('editSelProducto');
+  const qty = parseInt(document.getElementById('editInputCantidad').value, 10);
+  if (!sel.value)      { mostrarError('errorEditar', 'Selecciona un producto.'); return; }
+  if (!qty || qty < 1) { mostrarError('errorEditar', 'La cantidad debe ser mayor a 0.'); return; }
+
+  const idP    = parseInt(sel.value, 10);
+  const nombre = sel.options[sel.selectedIndex].dataset.nombre;
+  const tamano = sel.options[sel.selectedIndex].dataset.tamano;
+  const existe = editarItems.find(i => i.idProducto === idP);
+  if (existe) { existe.cantidad += qty; }
+  else        { editarItems.push({ idProducto: idP, nombre, tamano, cantidad: qty }); }
+
+  renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar');
+  ocultarError('errorEditar');
+}
+function enviarOrdenEditar() {
+  if (editarItems.length === 0) { mostrarError('errorEditar', 'Agrega al menos un producto.'); return; }
+  document.getElementById('hiddenDetallesEditar').value = JSON.stringify(editarItems);
+  document.getElementById('formEditarOrden').submit();
+}
+
+/* ════════════════════════════════════════════════
+   VER DETALLE
+════════════════════════════════════════════════ */
+function abrirVer(idOrden) {
+  document.getElementById('verTitulo').textContent = 'DETALLE ORDEN #' + idOrden;
+  document.getElementById('verContenido').innerHTML =
+    '<p class="text-center text-gray-400 py-6">Cargando...</p>';
+  abrirModal('modalVer');
+  fetch(`/produccion/ver/${idOrden}`)
+    .then(r => r.text())
+    .then(html => { document.getElementById('verContenido').innerHTML = html; })
+    .catch(() => {
+      document.getElementById('verContenido').innerHTML =
+        '<p class="text-red-500 text-sm text-center py-6">Error al cargar el detalle.</p>';
+    });
+}
+
+/* ════════════════════════════════════════════════
+   CANCELAR
+════════════════════════════════════════════════ */
+function abrirCancelar(idOrden) {
+  document.getElementById('cancelarMensaje').textContent =
+    `¿Confirmas cancelar la orden #${idOrden}? Esta acción no se puede deshacer.`;
+  document.getElementById('formCancelar').action = `/produccion/cancelar/${idOrden}`;
+  abrirModal('modalCancelar');
+}
+
+/* ════════════════════════════════════════════════
+   RENDER TABLA DE PRODUCTOS (registro / editar)
+════════════════════════════════════════════════ */
+function renderTabla(tbodyId, filaVaciaId, items, modo) {
+  const tbody     = document.getElementById(tbodyId);
+  const filaVacia = document.getElementById(filaVaciaId);
+  tbody.querySelectorAll('tr.fila-producto').forEach(r => r.remove());
+
+  if (items.length === 0) { filaVacia.classList.remove('hidden'); return; }
+  filaVacia.classList.add('hidden');
+
+  const fnCambiar = modo === 'registro' ? 'cambiarCantidadOrden'  : 'cambiarCantidadEditar';
+  const fnQuitar  = modo === 'registro' ? 'quitarItemOrden'        : 'quitarItemEditar';
+
+  items.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = 'fila-producto border-b border-gray-100 hover:bg-amber-50 transition';
+    tr.innerHTML = `
+      <td class="px-4 py-2 font-semibold text-gray-800">${item.nombre}</td>
+      <td class="px-4 py-2 text-gray-600">${item.tamano}</td>
+      <td class="px-4 py-2 text-center">
+        <div class="flex items-center justify-center gap-1">
+          <button type="button" onclick="${fnCambiar}(${idx},-1)"
+            class="w-6 h-6 rounded bg-gray-200 text-gray-700 text-xs font-bold hover:bg-gray-300 transition">−</button>
+          <span class="font-bold text-gray-800 min-w-[24px] text-center">${item.cantidad}</span>
+          <button type="button" onclick="${fnCambiar}(${idx},1)"
+            class="w-6 h-6 rounded bg-gray-200 text-gray-700 text-xs font-bold hover:bg-gray-300 transition">+</button>
+        </div>
+      </td>
+      <td class="px-4 py-2 text-center">
+        <button type="button" onclick="${fnQuitar}(${idx})"
+          class="w-7 h-7 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition flex items-center justify-center mx-auto">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function cambiarCantidadOrden(idx, d)  { ordenItems[idx].cantidad  = Math.max(1, ordenItems[idx].cantidad  + d); renderTabla('tablaOrdenBody',  'filaVaciaOrden',  ordenItems,  'registro'); }
+function cambiarCantidadEditar(idx, d) { editarItems[idx].cantidad = Math.max(1, editarItems[idx].cantidad + d); renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar'); }
+function quitarItemOrden(idx)          { ordenItems.splice(idx, 1);  renderTabla('tablaOrdenBody',  'filaVaciaOrden',  ordenItems,  'registro'); }
+function quitarItemEditar(idx)         { editarItems.splice(idx, 1); renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar'); }
+
+function mostrarError(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.classList.remove('hidden'); }
+function ocultarError(id)      { document.getElementById(id).classList.add('hidden'); }
+
+/* ════════════════════════════════════════════════
+   INIT — reapertura de modales por error de sesión
+════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function () {
+  {% if form_error and form_error.modal == 'registro' %}
+  mostrarError('errorRegistro', {{ form_error.mensaje | tojson }});
+  {% if form_error.detalles %}
+  ordenItems = {{ form_error.detalles | tojson }};
+  renderTabla('tablaOrdenBody', 'filaVaciaOrden', ordenItems, 'registro');
+  {% endif %}
+  abrirModal('modalRegistro');
+  {% endif %}
+
+  {% if form_error and form_error.modal == 'edicion' and detalle_editar %}
+  mostrarError('errorEditar', {{ form_error.mensaje | tojson }});
+  editarItems = {{ detalle_editar.detalles | tojson }};
+  renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar');
+  document.getElementById('formEditarOrden').action = `/produccion/editar/{{ detalle_editar.id_orden }}`;
+  abrirModal('modalEditar');
+  {% endif %}
+
+  /* Auto-submit del filtro de estado */
+  document.getElementById('filtrosForm')?.querySelectorAll('select').forEach(s => {
+    s.addEventListener('change', () => document.getElementById('filtrosForm').submit());
+  });
+});
+</script>
+
+{% endblock %}

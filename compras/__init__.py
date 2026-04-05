@@ -1,7 +1,7 @@
 from flask import Blueprint
 
-compras = Blueprint(
-    'compras',
+comprass = Blueprint(
+    'comprass',
     __name__
 )
 

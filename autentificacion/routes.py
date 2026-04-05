@@ -186,9 +186,11 @@ def registrar_acceso(usuario_id, nombre_usuario, evento, resultado):
         )
         db.session.add(entrada)
         db.session.commit()
+        return True
     except Exception as e:
         db.session.rollback()
         print(f"Error registrando acceso en bitácora: {e}")
+        return False
 
 
 def registrar_error(modulo, mensaje, detalles=None):
@@ -288,6 +290,14 @@ def login():
 
 @autentificacion.route("/logout")
 def logout():
+    if session.get('usuario_id'):
+        registrar_acceso(
+            session.get('usuario_id'),
+            session.get('usuario_nombre'),
+            'LOGOUT_MANUAL',
+            'EXITOSO'
+        )
+    
     session.clear()
     flash('Sesión cerrada exitosamente.', 'success')
     return redirect(url_for('autentificacion.login'))
@@ -597,3 +607,16 @@ def cambiar_contrasena():
         db.session.rollback()
         registrar_error('Usuarios', 'Error al cambiar contraseña', str(e))
         return jsonify({'success': False, 'message': f'Error inesperado: {str(e)}'})
+    
+@autentificacion.route("/logout-beacon", methods=['POST'])
+def logout_beacon():
+    # Similar al logout normal pero sin flash messages
+    if session.get('usuario_id'):
+        registrar_acceso(
+            session.get('usuario_id'),
+            session.get('usuario_nombre'),
+            'LOGOUT_CIERRE_NAVEGADOR',
+            'EXITOSO'
+        )
+        session.clear()
+    return '', 204  # Sin contenido

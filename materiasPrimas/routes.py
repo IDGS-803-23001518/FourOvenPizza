@@ -6,7 +6,7 @@ from sqlalchemy import extract, func, text
 
 import forms
 from autentificacion.routes import rol_requerido
-from models import Categorias, MateriasPrimas, UnidadesMedida, db
+from models import Categorias, MateriasPrimas, Productos, Recetas, DetalleReceta, UnidadesMedida, db
 
 from . import materiasPrimas
 
@@ -116,6 +116,59 @@ def _obtener_alertas_stock_materias():
             }
         )
     return alertas
+
+
+def _desactivar_productos_por_materia_prima(id_materia_prima, ip, usuario_id):
+    """
+    Desactiva todos los productos cuyas recetas contengan la materia prima dada.
+    Retorna la lista de nombres de productos desactivados.
+    """
+    productos_desactivados = []
+
+    # Buscar todos los detalles de receta que usen esta materia prima
+    detalles = DetalleReceta.query.filter_by(idMateriaP=id_materia_prima).all()
+
+    # Obtener las recetas únicas afectadas
+    ids_recetas = list({d.idReceta for d in detalles})
+
+    if not ids_recetas:
+        return productos_desactivados
+
+    # Obtener los productos vinculados a esas recetas
+    recetas = Recetas.query.filter(Recetas.idReceta.in_(ids_recetas)).all()
+    ids_productos = list({r.idProducto for r in recetas})
+
+    if not ids_productos:
+        return productos_desactivados
+
+    # Desactivar solo los productos que estén activos
+    productos_activos = Productos.query.filter(
+        Productos.idProducto.in_(ids_productos),
+        Productos.estatus == True
+    ).all()
+
+    for producto in productos_activos:
+        db.session.execute(
+            text(
+                "CALL sp_gestion_productos("
+                ":accion,:idProducto,:nombre,:precio,:tamano,:stock,:estatus,:ip,:usuario,"
+                "@p_resultado,@p_idGenerado)"
+            ),
+            {
+                "accion": "UPDATE",
+                "idProducto": producto.idProducto,
+                "nombre": producto.nombre,
+                "precio": producto.precio,
+                "tamano": getattr(producto, "tamano", "") or "",
+                "stock": producto.stock,
+                "estatus": 0,
+                "ip": ip,
+                "usuario": usuario_id,
+            },
+        )
+        productos_desactivados.append(producto.nombre)
+
+    return productos_desactivados
 
 
 @materiasPrimas.route("/materiasPrimas", methods=["GET", "POST"])
@@ -285,43 +338,110 @@ def cambiar_estatus_materia_prima(id, estatus):
     try:
         nuevo_estatus = 0 if estatus == 1 else 1
 
-        db.session.execute(
-            text(
-                """
-                CALL sp_gestion_materiasprimas(
-                    :accion,
-                    :idMateriaP,
-                    :nombre,
-                    :tipo,
-                    :idCategoria,
-                    :stock,
-                    :stockMinimo,
-                    :estatus,
-                    :ip,
-                    :usuario,
-                    @p_resultado,
-                    @p_idGenerado
-                )
-            """
-            ),
-            {
-                "accion": "CHANGE_STATUS",
-                "idMateriaP": id,
-                "nombre": None,
-                "tipo": None,
-                "idCategoria": None,
-                "stock": None,
-                "stockMinimo": None,
-                "estatus": nuevo_estatus,
-                "ip": request.remote_addr,
-                "usuario": session["usuario_id"],
-            },
-        )
+        # ── NUEVA LÓGICA: Si se va a DESACTIVAR, verificar productos afectados ──
+        if nuevo_estatus == 0:
+            # Obtener el nombre de la materia prima para el mensaje
+            materia = MateriasPrimas.query.get(id)
+            nombre_materia = materia.nombre if materia else str(id)
 
-        resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
-        db.session.commit()
-        mensaje, categoria = _texto_resultado(resultado)
-        flash(mensaje, categoria)
+            # Desactivar la materia prima primero
+            db.session.execute(
+                text(
+                    """
+                    CALL sp_gestion_materiasprimas(
+                        :accion,
+                        :idMateriaP,
+                        :nombre,
+                        :tipo,
+                        :idCategoria,
+                        :stock,
+                        :stockMinimo,
+                        :estatus,
+                        :ip,
+                        :usuario,
+                        @p_resultado,
+                        @p_idGenerado
+                    )
+                """
+                ),
+                {
+                    "accion": "CHANGE_STATUS",
+                    "idMateriaP": id,
+                    "nombre": None,
+                    "tipo": None,
+                    "idCategoria": None,
+                    "stock": None,
+                    "stockMinimo": None,
+                    "estatus": nuevo_estatus,
+                    "ip": request.remote_addr,
+                    "usuario": session["usuario_id"],
+                },
+            )
+
+            resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
+            mensaje, categoria = _texto_resultado(resultado)
+
+            if categoria == "success":
+                # Desactivar productos afectados en cascada
+                productos_desactivados = _desactivar_productos_por_materia_prima(
+                    id,
+                    request.remote_addr,
+                    session["usuario_id"],
+                )
+                db.session.commit()
+
+                flash(mensaje, "success")
+
+                if productos_desactivados:
+                    nombres = ", ".join(productos_desactivados)
+                    flash(
+                        f"Los siguientes productos fueron desactivados automáticamente porque "
+                        f"su receta contiene la materia prima «{nombre_materia}»: {nombres}.",
+                        "danger",
+                    )
+            else:
+                db.session.rollback()
+                flash(mensaje, "danger")
+
+        else:
+            # Activar normalmente
+            db.session.execute(
+                text(
+                    """
+                    CALL sp_gestion_materiasprimas(
+                        :accion,
+                        :idMateriaP,
+                        :nombre,
+                        :tipo,
+                        :idCategoria,
+                        :stock,
+                        :stockMinimo,
+                        :estatus,
+                        :ip,
+                        :usuario,
+                        @p_resultado,
+                        @p_idGenerado
+                    )
+                """
+                ),
+                {
+                    "accion": "CHANGE_STATUS",
+                    "idMateriaP": id,
+                    "nombre": None,
+                    "tipo": None,
+                    "idCategoria": None,
+                    "stock": None,
+                    "stockMinimo": None,
+                    "estatus": nuevo_estatus,
+                    "ip": request.remote_addr,
+                    "usuario": session["usuario_id"],
+                },
+            )
+
+            resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
+            db.session.commit()
+            mensaje, categoria = _texto_resultado(resultado)
+            flash(mensaje, categoria)
 
     except Exception as e:
         db.session.rollback()
