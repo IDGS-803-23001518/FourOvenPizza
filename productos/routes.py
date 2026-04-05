@@ -93,7 +93,7 @@ def _asegurar_directorio_imagenes():
 
 def _guardar_imagen_producto(archivo, id_producto):
     if not archivo or not archivo.filename:
-        return
+        return None
     _, extension = os.path.splitext(secure_filename(archivo.filename))
     extension = extension.lower()
     if extension not in ALLOWED_IMAGE_EXTENSIONS:
@@ -102,7 +102,31 @@ def _guardar_imagen_producto(archivo, id_producto):
     for ruta in glob.glob(os.path.join(PRODUCTOS_IMG_DIR, f"producto_{id_producto}.*")):
         if os.path.isfile(ruta):
             os.remove(ruta)
-    archivo.save(os.path.join(PRODUCTOS_IMG_DIR, f"producto_{id_producto}{extension}"))
+    nombre_archivo = f"producto_{id_producto}{extension}"
+    archivo.save(os.path.join(PRODUCTOS_IMG_DIR, nombre_archivo))
+    return nombre_archivo
+
+def _leer_bytes_imagen(archivo):
+    if not archivo or not archivo.filename:
+        return None
+    try:
+        contenido = archivo.read()
+        archivo.seek(0)
+        extension = os.path.splitext(secure_filename(archivo.filename))[1].lower()
+        if extension not in ALLOWED_IMAGE_EXTENSIONS:
+            return None
+        mime_types = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.webp': 'image/webp',
+            '.gif': 'image/gif'
+        }
+        mime_type = mime_types.get(extension, 'image/jpeg')
+        base64_str = f"data:{mime_type};base64,{base64.b64encode(contenido).decode('utf-8')}"
+        return base64_str.encode('utf-8')
+    except Exception:
+        return None
 
 
 def _convertir_imagen_a_base64(archivo):
@@ -110,6 +134,7 @@ def _convertir_imagen_a_base64(archivo):
         return None
     try:
         contenido = archivo.read()
+        archivo.seek(0)
         extension = os.path.splitext(secure_filename(archivo.filename))[1].lower()
         if extension not in ALLOWED_IMAGE_EXTENSIONS:
             raise ValueError("Formato de imagen no permitido.")
@@ -121,7 +146,10 @@ def _convertir_imagen_a_base64(archivo):
             '.gif': 'image/gif'
         }
         mime_type = mime_types.get(extension, 'image/jpeg')
-        return f"data:{mime_type};base64,{base64.b64encode(contenido).decode('utf-8')}"
+        base64_str = base64.b64encode(contenido).decode('utf-8')
+        if len(base64_str) > 500000:
+            return None
+        return f"data:{mime_type};base64,{base64_str}"
     except Exception:
         return None
 
@@ -313,13 +341,15 @@ def registrar_producto():
         id_generado = id_generado[0] if id_generado else None
         archivo_imagen = request.files.get("imagen")
         if resultado and resultado.startswith("SUCCESS") and id_generado:
-            _guardar_imagen_producto(archivo_imagen, id_generado)
-            imagen_base64 = _convertir_imagen_a_base64(archivo_imagen)
-            if imagen_base64:
-                producto = Productos.query.get(id_generado)
-                if producto:
-                    producto.imagen = imagen_base64
-                    db.session.commit()
+            try:
+                imagen_base64 = _leer_bytes_imagen(archivo_imagen)
+                if imagen_base64:
+                    producto = Productos.query.get(id_generado)
+                    if producto:
+                        producto.imagen = imagen_base64
+                        db.session.commit()
+            except Exception:
+                pass
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
         if categoria == "danger":
@@ -381,12 +411,15 @@ def editar_producto(id):
         resultado = resultado[0] if resultado else None
         archivo_imagen = request.files.get("imagen")
         if resultado and resultado.startswith("SUCCESS") and archivo_imagen and archivo_imagen.filename:
-            _guardar_imagen_producto(archivo_imagen, id)
-            imagen_base64 = _convertir_imagen_a_base64(archivo_imagen)
-            if imagen_base64:
-                producto = Productos.query.get(id)
-                if producto:
-                    producto.imagen = imagen_base64
+            try:
+                imagen_base64 = _leer_bytes_imagen(archivo_imagen)
+                if imagen_base64:
+                    producto = Productos.query.get(id)
+                    if producto:
+                        producto.imagen = imagen_base64
+                        db.session.commit()
+            except Exception:
+                pass
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
         if categoria == "danger":
