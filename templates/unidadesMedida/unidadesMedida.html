@@ -1,1118 +1,996 @@
 {%extends "layoutAdmin.html"%}
 {%block container%}
+
+<!-- ── Estilos de paginación ──────────────────────────────────────── -->
 <style>
-  :root {
-    --brown: #3d1f0a;
-    --orange: rgb(244, 158, 18);
-    --amber: #f59e0b;
-    --green: #22c55e;
-    --red: #ef4444;
-    --white: #ffffff;
-    --border: #c97b3a;
-  }
-
-  /* ── HEADER ─────────────────────────────── */
-  .page-header {
-    background: var(--brown);
-    padding: 18px 28px;
-    margin-bottom: 24px;
-    border-radius: 4px;
-  }
-
-  .page-header h1 {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: 1.7rem;
-    color: var(--white);
-    margin: 0;
-    margin-left: 60px;
-  }
-
-  .page-header h1 span {
-    color: var(--orange);
-  }
-
-  /* ── TOP BAR ─────────────────────────────── */
-  .top-bar {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 18px;
-  }
-
-  .btn-register {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--orange);
-    color: var(--brown);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: 0.9rem;
-    padding: 10px 22px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(244, 158, 18, .4);
-    transition: background .2s, transform .15s;
-    text-decoration: none;
-  }
-
-  .btn-register:hover {
-    background: rgb(220, 140, 10);
-    transform: translateY(-2px);
-  }
-
-  /* ── PANEL DE FILTROS ────────────────────── */
-  .filter-panel {
-    background: var(--white);
-    border-radius: 14px;
-    overflow: hidden;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, .12);
-  }
-
-  .filter-title {
-    background: var(--brown);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: 1rem;
-    color: var(--white);
-    letter-spacing: .08em;
-    padding: 12px 24px;
-  }
-
-  .filter-body {
-    padding: 16px 24px;
-  }
-
-  .filter-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    align-items: flex-end;
-  }
-
-  .filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: 1;
-    min-width: 120px;
-  }
-
-  .filter-group label {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 700;
-    font-size: 0.82rem;
-    color: var(--brown);
-  }
-
-  .filter-group input,
-  .filter-group select {
-    background: var(--white);
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.82rem;
-    color: #333;
-    outline: none;
-    transition: border-color .2s, box-shadow .2s;
-    width: 100%;
-  }
-
-  .filter-group input:focus,
-  .filter-group select:focus {
-    border-color: var(--orange);
-    box-shadow: 0 0 0 3px rgba(244, 158, 18, .15);
-  }
-
-  .btn-filter {
-    background: var(--orange);
-    color: var(--brown);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: 0.88rem;
-    padding: 9px 26px;
-    border-radius: 9px;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 3px 10px rgba(244, 158, 18, .35);
-    transition: background .2s, transform .15s;
-    align-self: flex-end;
-    white-space: nowrap;
-  }
-
-  .btn-filter:hover {
-    background: rgb(220, 140, 10);
-    transform: translateY(-1px);
-  }
-
-  /* ── TABLA ───────────────────────────────── */
-  .table-wrapper {
-    background: var(--white);
-    border-radius: 14px;
-    overflow: hidden;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, .12);
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  thead tr {
-    background: var(--brown);
-  }
-
-  thead th {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: 0.82rem;
-    color: var(--white);
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    padding: 13px 18px;
-    text-align: left;
-    white-space: nowrap;
-  }
-
-  thead th:last-child {
-    text-align: center;
-  }
-
-  tbody tr {
-    border-bottom: 1px solid #f0e4d4;
-    transition: background .15s;
-  }
-
-  tbody tr:last-child {
-    border-bottom: none;
-  }
-
-  tbody tr:hover {
-    background: #fdf6ee;
-  }
-
-  tbody td {
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.84rem;
-    color: #1e1e1e;
-    padding: 12px 18px;
-    vertical-align: middle;
-  }
-
-  .td-nombre {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    color: var(--brown);
-  }
-
-  .td-valor {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 700;
-    color: #444;
-  }
-
-  .td-tipo {
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.82rem;
-    color: #555;
-  }
-
-  /* badge estatus */
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 700;
-    font-size: 0.8rem;
-  }
-
-  .badge .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--green);
-    box-shadow: 0 0 5px var(--green);
-    flex-shrink: 0;
-  }
-
-  .badge .dot.inactive {
-    background: var(--red);
-    box-shadow: 0 0 5px var(--red);
-  }
-
-  /* acciones */
-  .td-acciones {
-    text-align: center;
-  }
-
-  .actions-wrap {
-    display: flex;
-    gap: 7px;
-    justify-content: center;
-  }
-
-  .action-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 7px;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: opacity .18s, transform .15s;
-    text-decoration: none;
-    flex-shrink: 0;
-  }
-
-  .action-btn:hover {
-    opacity: .82;
-    transform: scale(1.08);
-  }
-
-  .action-btn:active {
-    transform: scale(.95);
-  }
-
-  .action-btn.edit {
-    background: var(--amber);
-  }
-
-  .action-btn.activate {
-    background: var(--green);
-  }
-
-  .action-btn.deactivate {
-    background: var(--red);
-  }
-
-  .action-btn svg {
-    width: 15px;
-    height: 15px;
-    fill: white;
-  }
-
-  .empty-row td {
-    text-align: center;
-    padding: 48px 0;
-    color: #aaa;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 700;
-  }
-
-  /* ── MODAL ───────────────────────────────── */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, .52);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .25s ease;
-  }
-
-  .modal-overlay.open {
-    opacity: 1;
-    pointer-events: all;
-  }
-
-  .modal {
-    background: var(--white);
-    border-radius: 18px;
-    overflow: hidden;
-    width: 100%;
-    max-width: 480px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, .38);
-    transform: translateY(24px) scale(.97);
-    transition: transform .28s ease, opacity .25s ease;
-    opacity: 0;
-  }
-
-  .modal-overlay.open .modal {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-
-  .modal-header {
-    background: var(--brown);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: 1rem;
-    color: var(--white);
-    letter-spacing: .08em;
-    padding: 12px 24px;
-    padding: 15px 22px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .modal-header-left {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-  }
-
-  .modal-header-left span {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: 0.95rem;
-    color: var(--white);
-    letter-spacing: .1em;
-  }
-
-  .modal-close {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    border: none;
-    background: rgba(255, 255, 255, .12);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background .2s;
-  }
-
-  .modal-close:hover {
-    background: rgba(255, 255, 255, .25);
-  }
-
-  .modal-close svg {
-    width: 16px;
-    height: 16px;
-    fill: white;
-  }
-
-  .modal-body {
-    padding: 24px 26px 28px;
-  }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px 20px;
-  }
-
-  .form-grid .full {
-    grid-column: 1 / -1;
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .field label {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: 0.81rem;
-    color: var(--brown);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .field label .req {
-    color: var(--red);
-  }
-
-  .field input,
-  .field select {
-    background: var(--white);
-    border: 1.5px solid var(--border);
-    border-radius: 9px;
-    padding: 9px 13px;
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.82rem;
-    color: #1e1e1e;
-    outline: none;
-    transition: border-color .2s, box-shadow .2s;
-    width: 100%;
-  }
-
-  .field input:focus,
-  .field select:focus {
-    border-color: var(--orange);
-    box-shadow: 0 0 0 3px rgba(244, 158, 18, .18);
-  }
-
-  .hint {
-    font-size: 0.71rem;
-    color: #9a7a5a;
-    font-family: 'Poppins', sans-serif;
-  }
-
-  /* input con sufijo */
-  .input-suffix {
-    display: flex;
-    align-items: stretch;
-    border: 1.5px solid var(--border);
-    border-radius: 9px;
-    overflow: hidden;
-    transition: border-color .2s, box-shadow .2s;
-  }
-
-  .input-suffix:focus-within {
-    border-color: var(--orange);
-    box-shadow: 0 0 0 3px rgba(244, 158, 18, .18);
-  }
-
-  .input-suffix input {
-    border: none;
-    border-radius: 0;
-    flex: 1;
-    box-shadow: none !important;
-  }
-
-  .input-suffix input:focus {
-    box-shadow: none !important;
-    border: none;
-  }
-
-  .suffix-tag {
-    background: #f5e6d3;
-    color: var(--brown);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: 0.75rem;
-    padding: 0 11px;
-    display: flex;
-    align-items: center;
-    border-left: 1.5px solid var(--border);
-    white-space: nowrap;
-  }
-
-  /* Toggle */
-  .toggle-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 5px 0;
-  }
-
-  .toggle-wrap input[type="checkbox"] {
-    display: none;
-  }
-
-  .toggle {
-    width: 42px;
-    height: 23px;
-    background: #d1d5db;
-    border-radius: 999px;
-    position: relative;
-    cursor: pointer;
-    transition: background .25s;
-    flex-shrink: 0;
-  }
-
-  .toggle::after {
-    content: '';
-    position: absolute;
-    width: 17px;
-    height: 17px;
-    background: white;
-    border-radius: 50%;
-    top: 3px;
-    left: 3px;
-    transition: left .25s;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, .2);
-  }
-
-  input[type="checkbox"]:checked+.toggle {
-    background: var(--green);
-  }
-
-  input[type="checkbox"]:checked+.toggle::after {
-    left: 22px;
-  }
-
-  .toggle-text {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 700;
-    font-size: 0.84rem;
-    color: #16a34a;
-  }
-
-  /* Acciones modal */
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 22px;
-    padding-top: 16px;
-    border-top: 1.5px solid #f5e6d3;
-  }
-
-  .btn-cancel {
-    padding: 9px 20px;
-    border-radius: 9px;
-    border: 1.5px solid var(--border);
-    background: var(--white);
-    color: var(--brown);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: background .2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .btn-cancel:hover {
-    background: #f5e6d3;
-  }
-
-  .btn-save {
-    padding: 9px 24px;
-    border-radius: 9px;
-    border: none;
-    background: var(--orange);
-    color: var(--brown);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: 0.85rem;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(244, 158, 18, .4);
-    transition: background .2s, transform .15s;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .btn-save:hover {
-    background: rgb(220, 140, 10);
-    transform: translateY(-1px);
-  }
-
-  @media (max-width: 640px) {
-    .filter-row {
-      flex-direction: column;
+    .pag-hidden {
+        display: none !important;
     }
 
-    .btn-filter {
-      width: 100%;
+    .pag-wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.85rem 1.25rem;
+        background: #fff;
+        border-top: 1px solid #f0e8dc;
+        border-radius: 0 0 1rem 1rem;
     }
 
-    /* Cards en móvil en lugar de tabla */
-    .table-wrapper { display: none; }
-    .cards-mobile { display: grid; grid-template-columns: 1fr; gap: 14px; }
-
-    .um-card {
-      background: var(--white);
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 4px 18px rgba(0,0,0,.12);
+    .pag-info {
+        font-size: 0.78rem;
+        color: #6b7280;
     }
 
-    .um-card-header {
-      background: var(--brown);
-      padding: 10px 16px;
-      font-family: 'Nunito', sans-serif;
-      font-weight: 900;
-      font-size: 0.85rem;
-      color: var(--white);
-      letter-spacing: .1em;
+    .pag-info strong {
+        color: #38230f;
     }
 
-    .um-card-body {
-      padding: 14px 16px 10px;
+    .pag-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
     }
 
-    .um-card-nombre {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 900;
-      font-size: 1.15rem;
-      color: var(--brown);
-      margin-bottom: 8px;
+    .pag-por-pagina {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.78rem;
+        color: #6b7280;
     }
 
-    .um-card-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.84rem;
-      margin-bottom: 4px;
+    .pag-select {
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #38230f;
+        background-color: #fff;
+        cursor: pointer;
+        outline: none;
+        font-family: inherit;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2338230f' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+        background-size: 1.2em;
+        padding-right: 2rem;
     }
 
-    .um-card-row .lbl { font-family: 'Nunito', sans-serif; font-weight: 700; color: var(--orange); }
-    .um-card-row .val { font-family: 'Poppins', sans-serif; font-weight: 600; color: #1e1e1e; }
-
-    .um-card-actions {
-      display: flex;
-      gap: 8px;
-      padding: 10px 16px 14px;
-      justify-content: center;
+    .pag-select:focus {
+        box-shadow: 0 0 0 2px rgba(242, 159, 5, 0.35);
+        border-color: #f29f05;
     }
 
-    .page-header h1 { font-size: 1.2rem; }
-
-    .form-grid {
-      grid-template-columns: 1fr;
+    .pag-select option {
+        font-weight: normal;
+        font-size: 0.85rem;
+        padding: 0.5rem;
     }
 
-    .form-grid .full {
-      grid-column: 1;
+    .pag-botones {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
     }
 
-    .modal-actions {
-      flex-direction: column-reverse;
+    .pag-btn {
+        min-width: 2rem;
+        height: 2rem;
+        border-radius: 0.4rem;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        color: #38230f;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        padding: 0 0.4rem;
     }
 
-    .btn-cancel,
-    .btn-save {
-      width: 100%;
-      justify-content: center;
+    .pag-btn:hover:not(:disabled) {
+        background: #f29f05;
+        color: #fff;
+        border-color: #f29f05;
     }
-  }
 
-  @media (min-width: 641px) {
-    .cards-mobile { display: none; }
-  }
+    .pag-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
+
+    .pag-btn-active {
+        background: #38230f !important;
+        color: #fff !important;
+        border-color: #38230f !important;
+    }
+
+    .pag-ellipsis {
+        padding: 0 0.2rem;
+        color: #9ca3af;
+        font-size: 0.78rem;
+        user-select: none;
+    }
+
+    /* Ocultar paginación según dispositivo */
+    @media (min-width: 768px) {
+        #pag-um-cards {
+            display: none !important;
+        }
+    }
+
+    @media (max-width: 767px) {
+        #pag-um-desktop {
+            display: none !important;
+        }
+    }
+
+    /* Control de visibilidad para paginación */
+    #pag-um-desktop,
+    #pag-um-cards {
+        transition: display 0.3s ease;
+    }
+
+    /* Asegurar que los elementos ocultos no ocupen espacio */
+    .filtro-hidden,
+    .pag-hidden {
+        display: none !important;
+    }
+
+    /* ── Mejoras para desktop ── */
+    @media (min-width: 768px) {
+        .pag-select {
+            font-size: 0.8rem;
+            padding: 0.3rem 2rem 0.3rem 0.75rem;
+            font-weight: 500;
+        }
+
+        .pag-btn {
+            min-width: 2.2rem;
+            height: 2.2rem;
+            font-size: 0.85rem;
+        }
+
+        .pag-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    }
+
+    /* ── Estilos específicos para móvil ── */
+    @media (max-width: 767px) {
+        #pag-um-cards {
+            position: sticky;
+            bottom: 0;
+            background: #fff;
+            z-index: 10;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            margin-top: 0.5rem;
+            padding: 0.75rem 1rem;
+        }
+
+        #pag-um-cards .pag-info {
+            font-size: 0.7rem;
+            text-align: center;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        #pag-um-cards .pag-controls {
+            flex-direction: column;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        #pag-um-cards .pag-por-pagina {
+            width: 100%;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        #pag-um-cards .pag-select {
+            font-size: 0.85rem;
+            padding: 0.5rem 2rem 0.5rem 0.75rem;
+            min-width: 70px;
+        }
+
+        #pag-um-cards .pag-botones {
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        #pag-um-cards .pag-btn {
+            min-width: 2.5rem;
+            height: 2.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            padding: 0 0.6rem;
+            touch-action: manipulation;
+        }
+
+        #pag-um-cards .pag-botones .pag-btn:first-child,
+        #pag-um-cards .pag-botones .pag-btn:last-child {
+            min-width: 3rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        #pag-um-cards .pag-btn-active {
+            background: #f29f05 !important;
+            border-color: #f29f05 !important;
+            color: #fff !important;
+            transform: scale(1.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #pag-um-cards .pag-btn:active {
+            transform: scale(0.95);
+            transition: transform 0.05s;
+        }
+
+        #pag-um-cards .pag-ellipsis {
+            padding: 0 0.3rem;
+            font-size: 0.9rem;
+        }
+    }
+
+    /* ── Animación suave para cambios de página ── */
+    .unidad-row,
+    .unidad-card {
+        transition: opacity 0.2s ease;
+    }
+
+    .pag-hidden {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
 </style>
 
-<!-- Header -->
-<div class="page-header">
-  <h1>Gestión de <span>Unidades de medida</span></h1>
-</div>
-
-<div style="padding: 24px 60px;">
-  <!-- Botón registrar -->
-  <div class="top-bar">
-    <button class="btn-register" onclick="openModal()">
-      <img src="{{ url_for('static', filename='img/IconosTable/icons8-más-100.png') }}" style="width:16px;height:16px">
-      Registrar Unidad de medida
-    </button>
-  </div>
-
-  <!-- Panel de filtros -->
-  <div class="filter-panel">
-    <div class="filter-title">FILTROS DE BUSQUEDA</div>
-    <div class="filter-body">
-      <div class="filter-row">
-        <div class="filter-group">
-          <label>Nombre</label>
-          <input type="text" name="nombre" id="filtro-nombre-unidad" placeholder="Ingresa el nombre...">
-        </div>
-        <div class="filter-group" style="max-width: 180px">
-          <label>Tipo de conversión</label>
-          <select name="tipo" id="filtro-tipo-unidad">
-            <option value="">Todos</option>
-            <option value="Solido">Sólido (Gramos)</option>
-            <option value="Liquido">Líquido (Mililitros)</option>
-          </select>
-        </div>
-        <div class="filter-group" style="max-width: 150px">
-          <label>Estatus</label>
-          <select name="estatus" id="filtro-estatus-unidad">
-            <option value="">Todos</option>
-            <option value="Activo" selected>Activo</option>
-            <option value="Inactivo">Inactivo</option>
-          </select>
-        </div>
-        <button class="btn-filter" type="button" id="btn-filtrar-unidades">Filtrar</button>
-        <button class="btn-filter" type="button" id="btn-limpiar-unidades" style="background:#6b7280;box-shadow:none;">Limpiar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tabla -->
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Tipo de conversión</th>
-          <th>Equivalente</th>
-          <th>Estatus</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for um in unidades %}
-        <tr data-id="{{ um.idUnidadM }}" data-nombre="{{ um.nombre }}" data-tipo="{{ um.tipo }}"
-          data-equivalente="{{ um.equivalente }}" data-estatus="{{ 1 if um.estatus == 1 else 0 }}">
-          <td class="td-nombre">{{ um.nombre }}</td>
-          <td class="td-tipo">{{ 'Sólido (Gramos)' if um.tipo == 'Solido' else ('Líquido (Mililitros)' if um.tipo == 'Liquido' else um.tipo) }}</td>
-          <td class="td-valor">{{ um.equivalente }}</td>
-          <td>
-            <span class="badge">
-              <span class="dot {% if um.estatus != 1 %}inactive{% endif %}"></span>
-              {{ 'Activo' if um.estatus == 1 else 'Inactivo' }}
-            </span>
-          </td>
-          <td class="td-acciones">
-            <div class="actions-wrap">
-              <button onclick="abrirEditar(this)" class="action-btn edit" title="Editar">
-                <img src="{{ url_for('static', filename='img/IconosTable/icons8-lápiz-96.png') }}" style="width:15px;height:15px">
-              </button>
-              <button onclick="confirmarCambioEstatus({{ um.idUnidadM }}, '{{ um.nombre }}', {{ 1 if um.estatus == 1 else 0 }})" class="action-btn {% if um.estatus == 1 %}deactivate{% else %}activate{% endif %}"
-          title="{% if um.estatus == 1 %}Desactivar{% else %}Activar{% endif %}">
-          {% if um.estatus == 1 %}
-          <img src="{{ url_for('static', filename='img/IconosTable/icons8-basura-100.png') }}" style="width:15px;height:15px;filter:brightness(0) invert(1)">
-          {% else %}
-                <img src="{{ url_for('static', filename='img/IconosTable/icons8-de-acuerdo-144.png') }}" style="width:15px;height:15px">
-                {% endif %}
-              </button>
+<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
+    style="border-bottom: 3px solid #f29f05;">
+    <div class="container flex flex-wrap items-center justify-between mx-auto">
+        <div class="flex-1 flex justify-center">
+            <div class="flex items-center space-x-2 sm:space-x-3 bg-opacity-20 px-3 sm:px-6 py-2 rounded-full">
+                <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Gestión de</span>
+                <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap"
+                    style="color: #f29f05;">Unidades de Medida</span>
             </div>
-          </td>
-        </tr>
-        {% else %}
-        <tr class="empty-row">
-          <td colspan="5">No se encontraron unidades de medida.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+        </div>
+    </div>
+</nav>
 
-  <!-- Cards móvil -->
-  <div class="cards-mobile">
-    {% for um in unidades %}
-    <div class="um-card" data-id="{{ um.idUnidadM }}" data-nombre="{{ um.nombre }}" data-tipo="{{ um.tipo }}" data-equivalente="{{ um.equivalente }}" data-estatus="{{ 1 if um.estatus == 1 else 0 }}">
-      <div class="um-card-header">UNIDAD DE MEDIDA</div>
-      <div class="um-card-body">
-        <div class="um-card-nombre">{{ um.nombre }}</div>
-        <div class="um-card-row"><span class="lbl">Tipo:</span><span class="val">{{ 'Sólido (g)' if um.tipo == 'Solido' else ('Líquido (ml)' if um.tipo == 'Liquido' else um.tipo) }}</span></div>
-        <div class="um-card-row"><span class="lbl">Equivalente:</span><span class="val">{{ um.equivalente }}</span></div>
-        <div class="um-card-row"><span class="lbl">Estatus:</span><span class="val" style="color:{{ '#16a34a' if um.estatus == 1 else '#ef4444' }}">{{ 'Activo' if um.estatus == 1 else 'Inactivo' }}</span></div>
-      </div>
-      <div class="um-card-actions">
-        <button onclick="abrirEditarCard(this)" class="action-btn edit" title="Editar">
-          <img src="{{ url_for('static', filename='img/IconosTable/icons8-lápiz-96.png') }}" style="width:15px;height:15px">
+<div class="container mx-auto px-4 sm:px-6 max-w-6xl">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for category, message in messages %}
+    <div id="flash-msg"
+        class="mb-4 p-4 rounded-lg {% if category=='success' %}bg-green-100 text-green-700{% elif category=='danger' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="flex justify-end mb-4">
+        <button onclick="openModal()"
+            class="text-white font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-md transition-all duration-300 hover:brightness-110 hover:shadow-lg text-sm sm:text-base"
+            style="background-color: #f29f05;">
+            Registrar Unidad de Medida
         </button>
-        <button onclick="confirmarCambioEstatus({{ um.idUnidadM }}, '{{ um.nombre }}', {{ 1 if um.estatus == 1 else 0 }})" class="action-btn {% if um.estatus == 1 %}deactivate{% else %}activate{% endif %}" title="{% if um.estatus == 1 %}Desactivar{% else %}Activar{% endif %}">
-          {% if um.estatus == 1 %}
-          <img src="{{ url_for('static', filename='img/IconosTable/icons8-basura-100.png') }}" style="width:15px;height:15px;filter:brightness(0) invert(1)">
-          {% else %}
-          <img src="{{ url_for('static', filename='img/IconosTable/icons8-de-acuerdo-144.png') }}" style="width:15px;height:15px">
-          {% endif %}
-        </button>
-      </div>
     </div>
-    {% else %}
-    <p style="text-align:center;color:#888;font-family:'Nunito',sans-serif;font-weight:700;padding:32px 0;">No se encontraron unidades de medida.</p>
-    {% endfor %}
-  </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
+        <div class="px-4 sm:px-5 py-3 rounded-t-2xl" style="background-color: #38230f;">
+            <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">FILTROS DE BUSQUEDA</h2>
+        </div>
+        <div class="flex flex-wrap gap-3 sm:gap-4 items-end p-4 sm:p-5">
+            <div class="flex flex-col flex-1 min-w-[160px] sm:min-w-[180px]">
+                <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Nombre</label>
+                <input type="text" id="filtro-nombre-unidad" placeholder="Ingresa el nombre..."
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition" />
+            </div>
+            <div class="flex flex-col min-w-[140px] sm:min-w-[180px]">
+                <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Tipo de conversión</label>
+                <select id="filtro-tipo-unidad"
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                    <option value="">Todos</option>
+                    <option value="Solido">Sólido (Gramos)</option>
+                    <option value="Liquido">Líquido (Mililitros)</option>
+                </select>
+            </div>
+            <div class="flex flex-col min-w-[120px] sm:min-w-[140px]">
+                <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Estatus</label>
+                <select id="filtro-estatus-unidad"
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                    <option value="">Todos</option>
+                    <option value="Activo" selected>Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                </select>
+            </div>
+            <div class="flex flex-col justify-end">
+                <button id="btn-filtrar-unidades"
+                    class="text-white font-semibold px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg shadow transition-all duration-300 hover:brightness-110 text-xs sm:text-sm"
+                    style="background-color: #f29f05;">
+                    Filtrar
+                </button>
+            </div>
+            <div class="flex flex-col justify-end">
+                <button id="btn-limpiar-unidades"
+                    class="text-white font-semibold px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg shadow transition-all duration-300 hover:brightness-110 text-xs sm:text-sm"
+                    style="background-color: #6b7280;">
+                    Limpiar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Desktop -->
+    <div class="rounded-2xl overflow-hidden shadow-md mb-6" id="contenedor-tabla-um">
+        <div class="overflow-x-auto" id="tabla-desktop-unidades">
+            <table class="w-full text-sm text-left">
+                <thead>
+                    <tr style="background-color: #38230f;">
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">NOMBRE</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">TIPO DE CONVERSIÓN</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">EQUIVALENTE</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">ESTATUS</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-unidades">
+                    {% for um in unidades %}
+                    <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150 unidad-row"
+                        data-id="{{ um.idUnidadM }}" data-nombre="{{ um.nombre }}" data-tipo="{{ um.tipo }}"
+                        data-equivalente="{{ um.equivalente }}"
+                        data-estatus="{{ 'Activo' if um.estatus == 1 else 'Inactivo' }}">
+                        <td class="px-5 py-3 font-semibold text-gray-800">{{ um.nombre }}</td>
+                        <td class="px-5 py-3 text-gray-700">{{ 'Sólido (Gramos)' if um.tipo == 'Solido' else ('Líquido
+                            (Mililitros)' if um.tipo == 'Liquido' else um.tipo) }}</td>
+                        <td class="px-5 py-3 text-gray-700 tabular-nums">{{ "{:,.0f}".format(um.equivalente) }}</td>
+                        <td class="px-5 py-3">
+                            {% if um.estatus == 1 %}
+                            <span class="flex items-center gap-1 font-semibold text-green-600">
+                                <span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>
+                                Activo
+                            </span>
+                            {% else %}
+                            <span class="flex items-center gap-1 font-semibold text-red-500">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                                Inactivo
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3">
+                            <div class="flex gap-2">
+                                <button onclick="abrirEditar(this)"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+                                    style="background-color: #f29f05;" title="Editar">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onclick="confirmarCambioEstatus({{ um.idUnidadM }}, '{{ um.nombre }}', {{ 1 if um.estatus == 1 else 0 }})"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+                                    style="background-color: {% if um.estatus == 1 %}#e53e3e{% else %}#48bb78{% endif %};"
+                                    title="{% if um.estatus == 1 %}Desactivar{% else %}Activar{% endif %}">
+                                    {% if um.estatus == 1 %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6" />
+                                    </svg>
+                                    {% else %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5v14" />
+                                    </svg>
+                                    {% endif %}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="px-5 py-10 text-center text-gray-400 text-sm font-medium bg-white">
+                            No se encontraron unidades de medida.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Cards Móvil -->
+        <div id="cards-unidades" class="md:hidden space-y-3 p-3">
+            {% for um in unidades %}
+            <div class="unidad-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg"
+                data-id="{{ um.idUnidadM }}" data-nombre="{{ um.nombre }}" data-tipo="{{ um.tipo }}"
+                data-equivalente="{{ um.equivalente }}"
+                data-estatus="{{ 'Activo' if um.estatus == 1 else 'Inactivo' }}">
+
+                <div class="p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1">
+                            <h3 class="text-base font-bold text-gray-800 break-words">{{ um.nombre }}</h3>
+                            <p class="text-xs text-gray-500 mt-1">{{ 'Sólido (g)' if um.tipo == 'Solido' else ('Líquido
+                                (ml)' if um.tipo == 'Liquido' else um.tipo) }}</p>
+                        </div>
+                        {% if um.estatus == 1 %}
+                        <span
+                            class="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full ml-2 whitespace-nowrap">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                            Activo
+                        </span>
+                        {% else %}
+                        <span
+                            class="flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-full ml-2 whitespace-nowrap">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                            Inactivo
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="border-t border-gray-100 my-2"></div>
+
+                    <div class="mb-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-600">Equivalente:</span>
+                            <span class="text-xs text-gray-800 font-semibold tabular-nums">{{
+                                "{:,.0f}".format(um.equivalente) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="abrirEditarCard(this)"
+                            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white transition-all duration-200 hover:scale-105 text-sm"
+                            style="background-color: #f29f05;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                            <span>Editar</span>
+                        </button>
+                        <button
+                            onclick="confirmarCambioEstatus({{ um.idUnidadM }}, '{{ um.nombre }}', {{ 1 if um.estatus == 1 else 0 }})"
+                            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white transition-all duration-200 hover:scale-105 text-sm"
+                            style="background-color: {% if um.estatus == 1 %}#e53e3e{% else %}#48bb78{% endif %};">
+                            {% if um.estatus == 1 %}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6" />
+                            </svg>
+                            <span>Desactivar</span>
+                            {% else %}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5v14" />
+                            </svg>
+                            <span>Activar</span>
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-center text-gray-400 text-sm font-medium py-10">No se encontraron unidades de medida.</p>
+            {% endfor %}
+        </div>
+
+        <div id="sin-resultados" class="hidden text-center py-10 bg-white text-gray-400 text-sm font-medium">
+            No se encontraron unidades de medida con los filtros seleccionados.
+        </div>
+    </div>
 </div>
 
-<div class="modal-overlay" id="modal">
-  <div class="modal">
-
-    <div class="modal-header">
-      <span>Registrar Unidad</span>
-
-      <button onclick="cerrarModal()" class="modal-close">
-        ✕
-      </button>
-
-    </div>
-
-    <div class="modal-body">
-
-      <form method="POST" action="/registrar-unidad">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div id="error-registro" class="{% if not form_error or form_error.modal != 'registro' %}hidden{% endif %}" style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">{{ form_error.mensaje if form_error and form_error.modal == 'registro' else '' }}</div>
-        <div class="form-grid">
-
-          <div class="field full">
-            <label>Nombre</label>
-            <input name="nombre" required pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+" title="Solo letras, numeros y espacios" value="{{ form_error.datos.nombre if form_error and form_error.modal == 'registro' else '' }}">
-          </div>
-
-          <div class="field">
-            <label>Tipo de conversión <span class="req">*</span></label>
-            <select name="tipo">
-              <option value="Solido">Sólido (Gramos)</option>
-              <option value="Liquido">Líquido (Mililitros)</option>
-            </select>
-            <span class="hint">Define la conversión automática en compras.</span>
-          </div>
-
-          <div class="field">
-            <label>Equivalente</label>
-            <input type="number" step="1" min="1" name="equivalente" value="{{ form_error.datos.equivalente if form_error and form_error.modal == 'registro' else '' }}">
-          </div>
-
+<!-- ══════════════ MODAL REGISTRO ══════════════ -->
+<div id="modal" tabindex="-1" class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+    style="background-color: rgba(0, 0, 0, 0.3);">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 my-8 overflow-hidden">
+        <div class="flex justify-between items-center px-6 py-4" style="background-color: #38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">REGISTRAR UNIDAD DE MEDIDA</h3>
+            <button onclick="cerrarModal()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
 
-        <div class="modal-actions">
+        <div class="p-6">
+            <form method="POST" action="/registrar-unidad">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div id="error-registro"
+                    class="{% if not form_error or form_error.modal != 'registro' %}hidden{% endif %} mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm">
+                    {{ form_error.mensaje if form_error and form_error.modal == 'registro' else '' }}
+                </div>
 
-          <button type="button" class="btn-cancel" onclick="cerrarModal()">
-            Cancelar
-          </button>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre *</label>
+                    <input name="nombre" required pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+"
+                        title="Solo letras, números y espacios" placeholder="Ej: Kilogramo, Litro"
+                        value="{{ form_error.datos.nombre if form_error and form_error.modal == 'registro' else '' }}"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                </div>
 
-          <button class="btn-save">
-            Guardar
-          </button>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Tipo de conversión *</label>
+                        <select name="tipo"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                            <option value="Solido">Sólido (Gramos)</option>
+                            <option value="Liquido">Líquido (Mililitros)</option>
+                        </select>
+                        <p class="text-xs text-gray-400 mt-1">Define la conversión automática en compras.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Equivalente *</label>
+                        <input type="number" step="1" min="1" name="equivalente" placeholder="Ej: 1000"
+                            value="{{ form_error.datos.equivalente if form_error and form_error.modal == 'registro' else '' }}"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                    </div>
+                </div>
 
+                <div class="flex gap-3">
+                    <button type="button" onclick="cerrarModal()"
+                        class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 rounded-lg text-white font-semibold transition hover:brightness-110"
+                        style="background-color: #f29f05;">
+                        Guardar
+                    </button>
+                </div>
+            </form>
         </div>
-
-      </form>
-
     </div>
-  </div>
 </div>
 
-
-<div class="modal-overlay" id="modalEditar">
-  <div class="modal">
-
-    <div class="modal-header">
-      <span>Editar Unidad</span>
-
-      <button onclick="cerrarEditar()" class="modal-close">
-        ✕
-      </button>
-
-    </div>
-
-    <div class="modal-body">
-
-      <form method="POST" id="formEditar">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div id="error-edicion" class="{% if not form_error or form_error.modal != 'edicion' %}hidden{% endif %}" style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">{{ form_error.mensaje if form_error and form_error.modal == 'edicion' else '' }}</div>
-        <div class="form-grid">
-
-          <div class="field full">
-            <label>Nombre</label>
-            <input id="editNombre" name="nombre" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+" title="Solo letras, numeros y espacios">
-          </div>
-
-          <div class="field">
-            <label>Tipo de conversión <span class="req">*</span></label>
-            <select id="editTipo" name="tipo">
-              <option value="Solido">Sólido (Gramos)</option>
-              <option value="Liquido">Líquido (Mililitros)</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label>Equivalente</label>
-            <input id="editEquivalente" name="equivalente" type="number" step="1" min="1">
-          </div>
-
+<!-- ══════════════ MODAL EDICIÓN ══════════════ -->
+<div id="modalEditar" tabindex="-1" class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+    style="background-color: rgba(0, 0, 0, 0.3);">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 my-8 overflow-hidden">
+        <div class="flex justify-between items-center px-6 py-4" style="background-color: #38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">EDITAR UNIDAD DE MEDIDA</h3>
+            <button onclick="cerrarEditar()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
 
-        <div class="modal-actions">
+        <div class="p-6">
+            <form method="POST" id="formEditar">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div id="error-edicion"
+                    class="{% if not form_error or form_error.modal != 'edicion' %}hidden{% endif %} mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm">
+                    {{ form_error.mensaje if form_error and form_error.modal == 'edicion' else '' }}
+                </div>
 
-          <button type="button" class="btn-cancel" onclick="cerrarEditar()">
-            Cancelar
-          </button>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre *</label>
+                    <input id="editNombre" name="nombre" required pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+"
+                        title="Solo letras, números y espacios"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                </div>
 
-          <button class="btn-save">
-            Actualizar
-          </button>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Tipo de conversión *</label>
+                        <select id="editTipo" name="tipo"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                            <option value="Solido">Sólido (Gramos)</option>
+                            <option value="Liquido">Líquido (Mililitros)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Equivalente *</label>
+                        <input id="editEquivalente" name="equivalente" type="number" step="1" min="1"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                    </div>
+                </div>
 
+                <div class="flex gap-3">
+                    <button type="button" onclick="cerrarEditar()"
+                        class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 rounded-lg text-white font-semibold transition hover:brightness-110"
+                        style="background-color: #f29f05;">
+                        Actualizar
+                    </button>
+                </div>
+            </form>
         </div>
-
-      </form>
-
     </div>
-  </div>
 </div>
 
+<!-- ══════════════ MODAL CONFIRMACIÓN ══════════════ -->
 <div id="modal-confirm" class="hidden fixed inset-0 z-50 flex items-center justify-center"
-  style="background-color: rgba(0,0,0,0.45);">
-  <div class="bg-white rounded-2xl shadow-xl p-6 w-80 text-center">
-    <div class="flex justify-center mb-3">
-      <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center" id="confirm-icon-wrap">
-        <svg class="w-6 h-6 text-red-500" id="confirm-icon-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-        </svg>
-      </div>
+    style="background-color: rgba(0, 0, 0, 0.3);">
+    <div class="bg-white rounded-2xl shadow-xl p-5 w-72 text-center">
+        <div class="flex justify-center mb-3">
+            <div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+            </div>
+        </div>
+        <h3 class="text-base font-bold text-gray-800 mb-1">Confirmar acción</h3>
+        <p id="confirm-mensaje" class="text-sm text-gray-500 mb-5"></p>
+        <div class="flex gap-2">
+            <button onclick="cerrarConfirm()"
+                class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition">
+                Cancelar
+            </button>
+            <button id="confirm-btn"
+                class="flex-1 px-3 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
+                style="background-color: #f29f05;">
+                Confirmar
+            </button>
+        </div>
     </div>
-    <h3 class="text-base font-bold text-gray-800 mb-1">Confirmar cambio de estatus</h3>
-    <p id="confirm-mensaje" class="text-sm text-gray-500 mb-5"></p>
-    <div class="flex gap-2">
-      <button onclick="document.getElementById('modal-confirm').classList.add('hidden')"
-        class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition">
-        Cancelar
-      </button>
-      <button id="confirm-btn"
-        class="flex-1 px-3 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
-        style="background-color: #ef4444;">
-        Confirmar
-      </button>
-    </div>
-  </div>
 </div>
-
 
 <script>
-
-  function openModal() {
-    document.getElementById("modal").classList.add("open")
-  }
-
-  function abrirEditarCard(btn) {
-    const card = btn.closest('.um-card');
-    document.getElementById('editNombre').value = card.dataset.nombre;
-    document.getElementById('editTipo').value = card.dataset.tipo;
-    document.getElementById('editEquivalente').value = card.dataset.equivalente;
-    document.getElementById('formEditar').action = `/editar-unidad/${card.dataset.id}`;
-    document.getElementById('modalEditar').classList.add('open');
-  }
-
-  function limpiarFiltrosUnidades() {
-    document.getElementById('filtro-nombre-unidad').value = '';
-    document.getElementById('filtro-tipo-unidad').value = '';
-    document.getElementById('filtro-estatus-unidad').value = 'Activo';
-    aplicarFiltrosUnidades();
-  }
-
-  function cerrarModal() {
-    document.getElementById("modal").classList.remove("open")
-  }
-
-
-
-  function abrirEditar(btn) {
-
-    const row = btn.closest("tr")
-
-    document.getElementById("editNombre").value =
-      row.dataset.nombre
-
-    document.getElementById("editTipo").value =
-      row.dataset.tipo
-
-    document.getElementById("editEquivalente").value =
-      row.dataset.equivalente
-
-    document.getElementById("formEditar").action =
-      `/editar-unidad/${row.dataset.id}`
-
-    document.getElementById("modalEditar")
-      .classList.add("open")
-
-  }
-
-  function cerrarEditar() {
-    document.getElementById("modalEditar")
-      .classList.remove("open")
-  }
-
-  function confirmarCambioEstatus(id, nombre, estatus) {
-
-    const btn = document.getElementById("confirm-btn");
-
-    if (estatus == 1) {
-      document.getElementById("confirm-mensaje").textContent =
-        `¿Estás seguro de desactivar "${nombre}"? Podrás volver a activarlo después.`
-      btn.textContent = "Desactivar";
-      btn.style.backgroundColor = "#ef4444";
-    } else {
-      document.getElementById("confirm-mensaje").textContent =
-        `¿Estás seguro de activar nuevamente "${nombre}"?`
-      btn.textContent = "Activar";
-      btn.style.backgroundColor = "#22c55e";
+    /* ── Formato de miles ───────────────────── */
+    function formatNum(n) {
+        const num = parseFloat(n);
+        if (isNaN(num)) return n;
+        return num % 1 === 0
+            ? num.toLocaleString('es-MX')
+            : num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    document.getElementById("confirm-btn").onclick = function () {
+    /* ── Paginación ─────────────────────────── */
+    let pagUnidades = null;
+    let pagCards = null;
 
-      window.location.href = `/cambiar-estatus-unidad/${id}`
+    function crearPaginacion(opciones) {
+        const { contenedorItems, itemsSelector, contenedorId, selectorId } = opciones;
+        let paginaActual = 1;
+        let porPagina = 10;
 
-    }
+        // Crear un nombre válido para la variable global (sin guiones)
+        const globalName = '__pag_' + selectorId.replace(/-/g, '_');
 
-    document.getElementById("modal-confirm")
-      .classList.remove("hidden")
-
-  }
-  document.getElementById("modal-confirm")
-    .addEventListener("click", function (e) {
-
-      if (e.target === this) {
-        this.classList.add("hidden")
-      }
-
-    })
-
-  document.addEventListener('DOMContentLoaded', function () {
-    const filtroNombre = document.getElementById('filtro-nombre-unidad');
-    const filtroTipo = document.getElementById('filtro-tipo-unidad');
-    const filtroEstatus = document.getElementById('filtro-estatus-unidad');
-    const btnFiltrar = document.getElementById('btn-filtrar-unidades');
-    const filasUnidades = Array.from(document.querySelectorAll('tbody tr[data-id]'));
-    const filaVacia = document.querySelector('tr.empty-row');
-    let filtroTimer = null;
-
-    function aplicarFiltrosUnidades() {
-      const nombre = (filtroNombre?.value || '').toLowerCase().trim();
-      const tipo = filtroTipo?.value || '';
-      const estatus = filtroEstatus?.value || '';
-      let visibles = 0;
-
-      filasUnidades.forEach((fila) => {
-        const nombreFila = (fila.dataset.nombre || '').toLowerCase();
-        const tipoFila = fila.dataset.tipo || '';
-        const estatusFila = fila.dataset.estatus === '1' ? 'Activo' : 'Inactivo';
-        const mostrar =
-          (!nombre || nombreFila.includes(nombre)) &&
-          (!tipo || tipoFila === tipo) &&
-          (!estatus || estatusFila === estatus);
-
-        fila.style.display = mostrar ? '' : 'none';
-        if (mostrar) {
-          visibles += 1;
+        function obtenerItems() {
+            // Obtener solo los items que NO están ocultos por filtros
+            return Array.from(contenedorItems.querySelectorAll(itemsSelector))
+                .filter(item => !item.classList.contains('filtro-hidden'));
         }
-      });
 
-      if (filaVacia) {
-        filaVacia.style.display = visibles === 0 ? '' : 'none';
-      }
+        function mostrarItems() {
+            const items = obtenerItems();
+            const total = items.length;
+            const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+
+            // Ajustar página actual si es mayor que el total
+            if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+
+            const inicio = (paginaActual - 1) * porPagina;
+            const fin = inicio + porPagina;
+
+            // Aplicar/remover clase pag-hidden
+            items.forEach((el, i) => {
+                if (i < inicio || i >= fin) {
+                    el.classList.add('pag-hidden');
+                } else {
+                    el.classList.remove('pag-hidden');
+                }
+            });
+
+            renderControles(total, totalPaginas, inicio, fin);
+        }
+
+        function renderControles(total, totalPaginas, inicio, fin) {
+            const contenedor = document.getElementById(contenedorId);
+            if (!contenedor) return;
+
+            // Buscar o crear el contenedor de paginación
+            let ctrl = document.getElementById(selectorId);
+            if (!ctrl) {
+                ctrl = document.createElement('div');
+                ctrl.id = selectorId;
+                contenedor.parentNode.insertBefore(ctrl, contenedor.nextSibling);
+            }
+
+            const mostradoIni = total === 0 ? 0 : inicio + 1;
+            const mostradoFin = Math.min(fin, total);
+
+            // Generar botones de paginación
+            let botonesHTML = '';
+            const delta = 2;
+            let rango = [];
+
+            for (let i = Math.max(1, paginaActual - delta); i <= Math.min(totalPaginas, paginaActual + delta); i++) {
+                rango.push(i);
+            }
+
+            // Botón primera página
+            if (rango[0] > 1) {
+                botonesHTML += `<button class="pag-btn" onclick="${globalName}.irA(1)">1</button>`;
+                if (rango[0] > 2) botonesHTML += `<span class="pag-ellipsis">…</span>`;
+            }
+
+            // Páginas del rango
+            rango.forEach(p => {
+                botonesHTML += `<button class="pag-btn ${p === paginaActual ? 'pag-btn-active' : ''}" onclick="${globalName}.irA(${p})">${p}</button>`;
+            });
+
+            // Botón última página
+            if (rango[rango.length - 1] < totalPaginas) {
+                if (rango[rango.length - 1] < totalPaginas - 1) botonesHTML += `<span class="pag-ellipsis">…</span>`;
+                botonesHTML += `<button class="pag-btn" onclick="${globalName}.irA(${totalPaginas})">${totalPaginas}</button>`;
+            }
+
+            ctrl.className = 'pag-wrapper';
+            ctrl.innerHTML = `
+            <div class="pag-info">Mostrando <strong>${mostradoIni}–${mostradoFin}</strong> de <strong>${total}</strong> registros</div>
+            <div class="pag-controls">
+                <div class="pag-por-pagina">
+                    Mostrar
+                    <select class="pag-select" onchange="${globalName}.cambiarPorPagina(this.value)">
+                        <option value="10" ${porPagina === 10 ? 'selected' : ''}>10</option>
+                        <option value="15" ${porPagina === 15 ? 'selected' : ''}>15</option>
+                        <option value="20" ${porPagina === 20 ? 'selected' : ''}>20</option>
+                        <option value="50" ${porPagina === 50 ? 'selected' : ''}>50</option>
+                    </select>
+                    por página
+                </div>
+                <div class="pag-botones">
+                    <button class="pag-btn" onclick="${globalName}.irA(${paginaActual - 1})" ${paginaActual <= 1 ? 'disabled' : ''}>‹</button>
+                    ${botonesHTML}
+                    <button class="pag-btn" onclick="${globalName}.irA(${paginaActual + 1})" ${paginaActual >= totalPaginas ? 'disabled' : ''}>›</button>
+                </div>
+            </div>`;
+        }
+
+        const api = {
+            refresh() {
+                paginaActual = 1;
+                mostrarItems();
+            },
+            irA(p) {
+                if (p < 1) return;
+                const items = obtenerItems();
+                const totalPaginas = Math.max(1, Math.ceil(items.length / porPagina));
+                if (p > totalPaginas) return;
+                paginaActual = p;
+                mostrarItems();
+            },
+            cambiarPorPagina(val) {
+                porPagina = parseInt(val);
+                paginaActual = 1;
+                mostrarItems();
+            }
+        };
+
+        // Guardar en window con el nombre válido
+        window[globalName] = api;
+        mostrarItems();
+        return api;
     }
 
-    if (btnFiltrar) {
-      btnFiltrar.addEventListener('click', aplicarFiltrosUnidades);
+    /* ── Modales registro / edición ─────────── */
+    function openModal() {
+        document.getElementById('modal').classList.remove('hidden');
     }
 
-    const btnLimpiar = document.getElementById('btn-limpiar-unidades');
-    if (btnLimpiar) {
-      btnLimpiar.addEventListener('click', limpiarFiltrosUnidades);
+    function cerrarModal() {
+        document.getElementById('modal').classList.add('hidden');
+        document.getElementById('error-registro').classList.add('hidden');
     }
 
-    [filtroTipo, filtroEstatus].forEach((campo) => {
-      if (campo) {
-        campo.addEventListener('change', aplicarFiltrosUnidades);
-      }
+    function abrirEditar(btn) {
+        const row = btn.closest('tr');
+        document.getElementById('editNombre').value = row.dataset.nombre;
+        document.getElementById('editTipo').value = row.dataset.tipo;
+        document.getElementById('editEquivalente').value = row.dataset.equivalente;
+        document.getElementById('formEditar').action = `/editar-unidad/${row.dataset.id}`;
+        document.getElementById('modalEditar').classList.remove('hidden');
+    }
+
+    function abrirEditarCard(btn) {
+        const card = btn.closest('.unidad-card');
+        document.getElementById('editNombre').value = card.dataset.nombre;
+        document.getElementById('editTipo').value = card.dataset.tipo;
+        document.getElementById('editEquivalente').value = card.dataset.equivalente;
+        document.getElementById('formEditar').action = `/editar-unidad/${card.dataset.id}`;
+        document.getElementById('modalEditar').classList.remove('hidden');
+    }
+
+    function cerrarEditar() {
+        document.getElementById('modalEditar').classList.add('hidden');
+        document.getElementById('error-edicion').classList.add('hidden');
+    }
+
+    /* ── Confirmar cambio de estatus ────────── */
+    function confirmarCambioEstatus(id, nombre, estatus) {
+        const btn = document.getElementById('confirm-btn');
+        if (estatus == 1) {
+            document.getElementById('confirm-mensaje').textContent = `¿Estás seguro de desactivar "${nombre}"? Podrás volver a activarlo después.`;
+            btn.textContent = 'Desactivar';
+            btn.style.backgroundColor = '#e53e3e';
+        } else {
+            document.getElementById('confirm-mensaje').textContent = `¿Estás seguro de activar nuevamente "${nombre}"?`;
+            btn.textContent = 'Activar';
+            btn.style.backgroundColor = '#48bb78';
+        }
+        btn.onclick = () => {
+            window.location.href = `/cambiar-estatus-unidad/${id}`;
+        };
+        document.getElementById('modal-confirm').classList.remove('hidden');
+    }
+
+    function cerrarConfirm() {
+        document.getElementById('modal-confirm').classList.add('hidden');
+    }
+
+    /* ── Responsive ─────────────────────────── */
+    function handleResponsive() {
+        const tablaDesktop = document.getElementById('tabla-desktop-unidades');
+        const cardsMobile = document.getElementById('cards-unidades');
+        const pagDesktop = document.getElementById('pag-um-desktop');
+        const pagCards = document.getElementById('pag-um-cards');
+
+        if (window.innerWidth >= 768) {
+            if (tablaDesktop) tablaDesktop.style.display = 'block';
+            if (cardsMobile) cardsMobile.style.display = 'none';
+            if (pagDesktop) pagDesktop.style.display = 'flex';
+            if (pagCards) pagCards.style.display = 'none';
+        } else {
+            if (tablaDesktop) tablaDesktop.style.display = 'none';
+            if (cardsMobile) cardsMobile.style.display = 'block';
+            if (pagDesktop) pagDesktop.style.display = 'none';
+            if (pagCards) pagCards.style.display = 'flex';
+        }
+    }
+
+    /* ── Cerrar modales al click fuera ──────── */
+    const modal = document.getElementById('modal');
+    const modalEditar = document.getElementById('modalEditar');
+    const modalConfirm = document.getElementById('modal-confirm');
+
+    if (modal) modal.addEventListener('click', function (e) {
+        if (e.target === this) cerrarModal();
+    });
+    if (modalEditar) modalEditar.addEventListener('click', function (e) {
+        if (e.target === this) cerrarEditar();
+    });
+    if (modalConfirm) modalConfirm.addEventListener('click', function (e) {
+        if (e.target === this) cerrarConfirm();
     });
 
-    if (filtroNombre) {
-      filtroNombre.addEventListener('input', function () {
-        clearTimeout(filtroTimer);
-        filtroTimer = setTimeout(aplicarFiltrosUnidades, 300);
-      });
-    }
+    /* ── Escape ─────────────────────────────── */
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Escape') return;
+        cerrarModal();
+        cerrarEditar();
+        cerrarConfirm();
+    });
 
-    aplicarFiltrosUnidades();
+    /* ── Filtros + Paginación ────────────────── */
+    document.addEventListener('DOMContentLoaded', function () {
+        const filtroNombre = document.getElementById('filtro-nombre-unidad');
+        const filtroTipo = document.getElementById('filtro-tipo-unidad');
+        const filtroEstatus = document.getElementById('filtro-estatus-unidad');
+        const btnFiltrar = document.getElementById('btn-filtrar-unidades');
+        const btnLimpiar = document.getElementById('btn-limpiar-unidades');
+        let filtroTimer = null;
 
-    {% if form_error and form_error.modal == 'registro' %}
-    const registro = {{ form_error.datos|tojson }};
-    document.querySelector('#modal form[action="/registrar-unidad"] [name="nombre"]').value = registro.nombre || '';
-    document.querySelector('#modal form[action="/registrar-unidad"] [name="tipo"]').value = registro.tipo || 'Solido';
-    document.querySelector('#modal form[action="/registrar-unidad"] [name="equivalente"]').value = registro.equivalente || '';
+        // Inicializar paginación escritorio
+        const tablaDesktop = document.getElementById('tabla-desktop-unidades');
+        if (tablaDesktop) {
+            pagUnidades = crearPaginacion({
+                contenedorItems: tablaDesktop,
+                itemsSelector: '.unidad-row',
+                contenedorId: 'tabla-desktop-unidades',
+                selectorId: 'pag-um-desktop',
+            });
+        }
+
+        // Inicializar paginación móvil
+        const cardsUnidades = document.getElementById('cards-unidades');
+        if (cardsUnidades) {
+            pagCards = crearPaginacion({
+                contenedorItems: cardsUnidades,
+                itemsSelector: '.unidad-card',
+                contenedorId: 'cards-unidades',
+                selectorId: 'pag-um-cards',
+            });
+        }
+
+        function aplicarFiltros() {
+            const nombre = (filtroNombre?.value || '').toLowerCase().trim();
+            const tipo = filtroTipo?.value || '';
+            const estatus = filtroEstatus?.value || '';
+            let visibles = 0;
+
+            function coincide(el) {
+                const n = (el.dataset.nombre || '').toLowerCase();
+                const t = el.dataset.tipo || '';
+                const s = el.dataset.estatus || '';
+                return (!nombre || n.includes(nombre)) &&
+                    (!tipo || t === tipo) &&
+                    (!estatus || s === estatus);
+            }
+
+            document.querySelectorAll('.unidad-row').forEach(fila => {
+                const mostrar = coincide(fila);
+                fila.classList.toggle('filtro-hidden', !mostrar);
+                if (mostrar) visibles++;
+            });
+
+            document.querySelectorAll('.unidad-card').forEach(card => {
+                const mostrar = coincide(card);
+                card.classList.toggle('filtro-hidden', !mostrar);
+                if (mostrar) visibles++;
+            });
+
+            if (pagUnidades) pagUnidades.refresh();
+            if (pagCards) pagCards.refresh();
+
+            const sinResultados = document.getElementById('sin-resultados');
+            if (sinResultados) {
+                sinResultados.classList.toggle('hidden', visibles > 0);
+            }
+        }
+
+        function limpiarFiltros() {
+            if (filtroNombre) filtroNombre.value = '';
+            if (filtroTipo) filtroTipo.value = '';
+            if (filtroEstatus) filtroEstatus.value = 'Activo';
+            aplicarFiltros();
+        }
+
+        if (btnFiltrar) btnFiltrar.addEventListener('click', aplicarFiltros);
+        if (btnLimpiar) btnLimpiar.addEventListener('click', limpiarFiltros);
+
+        if (filtroTipo) filtroTipo.addEventListener('change', aplicarFiltros);
+        if (filtroEstatus) filtroEstatus.addEventListener('change', aplicarFiltros);
+
+        if (filtroNombre) {
+            filtroNombre.addEventListener('input', function () {
+                clearTimeout(filtroTimer);
+                filtroTimer = setTimeout(aplicarFiltros, 300);
+            });
+        }
+
+        aplicarFiltros();
+        handleResponsive();
+
+        {% if form_error and form_error.modal == 'registro' %}
+        const registro = {{ form_error.datos| tojson
+    }};
+    const nombreInput = document.querySelector('#modal [name="nombre"]');
+    const tipoSelect = document.querySelector('#modal [name="tipo"]');
+    const equivalenteInput = document.querySelector('#modal [name="equivalente"]');
+    if (nombreInput) nombreInput.value = registro.nombre || '';
+    if (tipoSelect) tipoSelect.value = registro.tipo || 'Solido';
+    if (equivalenteInput) equivalenteInput.value = registro.equivalente || '';
     openModal();
     {% elif form_error and form_error.modal == 'edicion' %}
-    const edicion = {{ form_error.datos|tojson }};
-    document.getElementById("editNombre").value = edicion.nombre || '';
-    document.getElementById("editTipo").value = edicion.tipo || 'Solido';
-    document.getElementById("editEquivalente").value = edicion.equivalente || '';
-    document.getElementById("formEditar").action = `/editar-unidad/${edicion.id}`;
-    document.getElementById("modalEditar").classList.add("open");
+    const edicion = {{ form_error.datos| tojson }};
+    document.getElementById('editNombre').value = edicion.nombre || '';
+    document.getElementById('editTipo').value = edicion.tipo || 'Solido';
+    document.getElementById('editEquivalente').value = edicion.equivalente || '';
+    document.getElementById('formEditar').action = `/editar-unidad/${edicion.id}`;
+    document.getElementById('modalEditar').classList.remove('hidden');
     {% endif %}
-  });
+    });
 
+    window.addEventListener('load', handleResponsive);
+    window.addEventListener('resize', handleResponsive);
 </script>
 
 {%endblock%}

@@ -1,977 +1,1292 @@
 {%extends "layoutAdmin.html"%}
 {%block container%}
 
+<!-- ── Estilos de paginación ──────────────────────────────────────── -->
 <style>
-  :root {
-    --brown: #3d1f0a;
-    --orange: rgb(244, 158, 18);
-    --amber: #f59e0b;
-    --green: #22c55e;
-    --white: #ffffff;
-    --border: #c97b3a;
-  }
-
-  body { margin: 0; padding: 0; }  /* elimina espacio arriba del header */
-
-  /* ── HEADER ─────────────────────────────── */
-  .page-header {
-    background: var(--brown);
-    padding: 18px 28px;
-    margin-bottom: 24px;
-    border-radius: 4px;
-  }
-
-  .page-header h1 {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: 1.7rem;
-    color: var(--white);
-    margin: 0;
-    letter-spacing: .01em;
-    margin-left: 60px;
-  }
-
-  .page-header h1 span {
-    color: var(--orange);
-  }
-
-  /* ── BOTÓN REGISTRAR ─────────────────────── */
-  .btn-register {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--orange);
-    color: var(--brown);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: 0.9rem;
-    padding: 10px 22px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(244, 158, 18, .4);
-    transition: background .2s, transform .15s;
-    text-decoration: none;
-  }
-
-  .btn-register:hover {
-    background: rgb(220, 140, 10);
-    transform: translateY(-2px);
-  }
-
-  .top-bar {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 18px;
-  }
-
-  /* ── PANEL DE FILTROS ────────────────────── */
-  .filter-panel {
-    background: var(--white);
-    border-radius: 14px;
-    overflow: hidden;
-    margin-bottom: 28px;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, .12);
-  }
-
-  .filter-title {
-    background: var(--brown);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: 1rem;
-    color: var(--white);
-    letter-spacing: .08em;
-    padding: 12px 24px;
-  }
-
-  .filter-body {
-    padding: 18px 24px;
-  }
-
-  .filter-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    align-items: flex-end;
-  }
-
-  .filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: 1;
-    min-width: 120px;
-  }
-
-  .filter-group label {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 700;
-    font-size: 0.82rem;
-    color: var(--brown);
-  }
-
-  .filter-group input,
-  .filter-group select {
-    background: var(--white);
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.82rem;
-    color: #333;
-    outline: none;
-    transition: border-color .2s, box-shadow .2s;
-    width: 100%;
-  }
-
-  .filter-group input:focus,
-  .filter-group select:focus {
-    border-color: var(--orange);
-    box-shadow: 0 0 0 3px rgba(244, 158, 18, .15);
-  }
-
-  .btn-filter {
-    background: var(--orange);
-    color: var(--brown);
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: 0.88rem;
-    padding: 9px 26px;
-    border-radius: 9px;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 3px 10px rgba(244, 158, 18, .35);
-    transition: background .2s, transform .15s;
-    align-self: flex-end;
-    white-space: nowrap;
-  }
-
-  .btn-filter:hover {
-    background: rgb(220, 140, 10);
-    transform: translateY(-1px);
-  }
-
-  /* ── GRID DE CARDS ───────────────────────── */
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-  }
-
-  .mp-card {
-    background: var(--white);
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, .12);
-    transition: transform .2s, box-shadow .2s;
-    animation: fadeUp .35s ease both;
-    display: flex;
-    flex-direction: column;
-    min-height: 220px;
-  }
-
-  .mp-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, .18);
-  }
-
-  .mp-card.inactive { opacity: 0.75; }
-
-  @keyframes fadeUp {
-    from {
-      opacity: 0;
-      transform: translateY(14px);
+    .pag-hidden {
+        display: none !important;
     }
 
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .card-header {
-    background: var(--brown);
-    padding: 10px 0;
-    text-align: center;
-  }
-
-  .card-header span {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: 0.85rem;
-    color: var(--white);
-    letter-spacing: .12em;
-  }
-
-  .card-body {
-    padding: 18px 20px 12px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-
-  .card-nombre {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900;
-    font-size: 1.3rem;
-    color: var(--brown);
-    margin-bottom: 12px;
-    text-align: left;
-  }
-
-  .card-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.88rem;
-    line-height: 1.5;
-    margin-bottom: 6px;
-  }
-
-  .card-row .lbl {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 700;
-    color: var(--orange);
-  }
-
-  .card-row .val {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
-    color: #1e1e1e;
-  }
-
-  .badge-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 12px;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 700;
-    font-size: 0.82rem;
-    color: #1e1e1e;
-  }
-
-  .dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--green);
-    box-shadow: 0 0 6px var(--green);
-    flex-shrink: 0;
-  }
-
-  .dot.inactive {
-    background: #ef4444;
-    box-shadow: 0 0 6px #ef4444;
-  }
-
-  .card-actions {
-    display: flex;
-    gap: 8px;
-    padding: 12px 20px 18px;
-    justify-content: center;
-  }
-
-  .action-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: opacity .18s, transform .15s;
-    text-decoration: none;
-  }
-
-  .action-btn:hover {
-    opacity: .82;
-    transform: scale(1.08);
-  }
-
-  .action-btn:active {
-    transform: scale(.95);
-  }
-
-  .action-btn.edit {
-    background: var(--orange);
-  }
-
-  .action-btn.view {
-    background: #2563eb;
-  }
-
-  .action-btn.activate {
-    background: var(--green);
-  }
-
-  .action-btn.deactivate {
-    background: #ef4444;
-  }
-
-  .action-btn svg {
-    width: 16px;
-    height: 16px;
-    fill: white;
-  }
-
-  .empty-msg {
-    grid-column: 1/-1;
-    text-align: center;
-    color: #888;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 700;
-    padding: 48px 0;
-  }
-
-  @font-face {
-    font-family: 'Roboto';
-    src: url("{{ url_for('static', filename='fonts/Roboto-Regular.ttf') }}");
-  }
-
-
-  @media (max-width: 640px) {
-    .filter-row {
-      flex-direction: column;
-      align-items: stretch;
+    .pag-wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.85rem 1.25rem;
+        background: #fff;
+        border-top: 1px solid #f0e8dc;
+        border-radius: 0 0 1rem 1rem;
     }
 
-    .filter-group {
-      width: 100%;
-      max-width: none !important;
+    .pag-info {
+        font-size: 0.78rem;
+        color: #6b7280;
     }
 
-    .btn-filter {
-      width: 100%;
-      margin-top: 10px;
+    .pag-info strong {
+        color: #38230f;
     }
 
-    .page-header h1 {
-      font-size: 1.3rem;
+    .pag-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
     }
 
-    .cards-grid {
-      grid-template-columns: 1fr;
+    .pag-por-pagina {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.78rem;
+        color: #6b7280;
     }
 
-    .card-nombre {
-      font-size: 1.1rem;
+    .pag-select {
+        border: 1px solid #d1d5db;
+        border-radius: 0.4rem;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.78rem;
+        color: #38230f;
+        font-weight: 600;
+        cursor: pointer;
+        outline: none;
     }
 
-    .card-row {
-      font-size: 0.82rem;
+    .pag-select:focus {
+        box-shadow: 0 0 0 2px rgba(242, 159, 5, 0.35);
+        border-color: #f29f05;
     }
-  }
 
-  .hidden {
-    display: none !important;
-  }
+    .pag-botones {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
 
-  .warning-panel {
-    margin: 0 60px 18px;
-    padding: 14px 16px;
-    border-radius: 14px;
-    border: 1px solid #fcd34d;
-    background: #fffbeb;
-    color: #92400e;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 400;
-  }
+    .pag-btn {
+        min-width: 2rem;
+        height: 2rem;
+        border-radius: 0.4rem;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        color: #38230f;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        padding: 0 0.4rem;
+    }
 
-  .warning-panel strong {
-    font-weight: 600;
-  }
+    .pag-btn:hover:not(:disabled) {
+        background: #f29f05;
+        color: #fff;
+        border-color: #f29f05;
+    }
 
-  .warning-list {
-    margin: 8px 0 0;
-    padding-left: 18px;
-  }
+    .pag-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
 
-  .warning-list li + li {
-    margin-top: 4px;
-  }
+    .pag-btn-active {
+        background: #38230f !important;
+        color: #fff !important;
+        border-color: #38230f !important;
+    }
 
-  .mp-card.low-stock {
-    border: 2px solid var(--amber);
-    box-shadow: 0 10px 28px rgba(245, 158, 11, .18);
-  }
+    .pag-ellipsis {
+        padding: 0 0.2rem;
+        color: #9ca3af;
+        font-size: 0.78rem;
+        user-select: none;
+    }
 
-  .stock-warning-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 12px;
-    padding: 5px 10px;
-    border-radius: 999px;
-    background: #ffedd5;
-    color: #9a3412;
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.74rem;
-    font-weight: 400;
-    border: 1px solid #fdba74;
-  }
+    /* Ocultar paginación según dispositivo */
+    @media (min-width: 768px) {
+        #pag-mp-cards {
+            display: none !important;
+        }
+    }
+
+    @media (max-width: 767px) {
+        #pag-mp-desktop {
+            display: none !important;
+        }
+    }
+
+    /* Control de visibilidad para paginación */
+    #pag-mp-desktop,
+    #pag-mp-cards {
+        transition: display 0.3s ease;
+    }
+
+    /* Asegurar que los elementos ocultos no ocupen espacio */
+    .filtro-hidden,
+    .pag-hidden {
+        display: none !important;
+    }
+
+    /* ── Mejora del select para móvil y desktop ── */
+    .pag-select {
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #38230f;
+        background-color: #fff;
+        cursor: pointer;
+        outline: none;
+        font-family: inherit;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2338230f' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+        background-size: 1.2em;
+        padding-right: 2rem;
+    }
+
+    .pag-select option {
+        font-weight: normal;
+        font-size: 0.85rem;
+        padding: 0.5rem;
+    }
+
+    /* ── Estilos específicos para móvil ── */
+    @media (max-width: 767px) {
+
+        /* Contenedor de paginación móvil - más compacto y táctil */
+        #pag-mp-cards {
+            position: sticky;
+            bottom: 0;
+            background: #fff;
+            z-index: 10;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            margin-top: 0.5rem;
+            padding: 0.75rem 1rem;
+        }
+
+        /* Información de registros más pequeña */
+        #pag-mp-cards .pag-info {
+            font-size: 0.7rem;
+            text-align: center;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Controles en columna para móvil */
+        #pag-mp-cards .pag-controls {
+            flex-direction: column;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        /* Selector de "Mostrar por página" - más grande y táctil */
+        #pag-mp-cards .pag-por-pagina {
+            width: 100%;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        #pag-mp-cards .pag-select {
+            font-size: 0.85rem;
+            padding: 0.5rem 2rem 0.5rem 0.75rem;
+            min-width: 70px;
+        }
+
+        /* Botones de paginación - más grandes para dedos */
+        #pag-mp-cards .pag-botones {
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        #pag-mp-cards .pag-btn {
+            min-width: 2.5rem;
+            height: 2.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            padding: 0 0.6rem;
+            touch-action: manipulation;
+        }
+
+        /* Botones de navegación (‹ ›) más destacados */
+        #pag-mp-cards .pag-botones .pag-btn:first-child,
+        #pag-mp-cards .pag-botones .pag-btn:last-child {
+            min-width: 3rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        /* Página activa más visible */
+        #pag-mp-cards .pag-btn-active {
+            background: #f29f05 !important;
+            border-color: #f29f05 !important;
+            color: #fff !important;
+            transform: scale(1.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Efecto hover/active táctil */
+        #pag-mp-cards .pag-btn:active {
+            transform: scale(0.95);
+            transition: transform 0.05s;
+        }
+
+        /* Puntos suspensivos más pequeños */
+        #pag-mp-cards .pag-ellipsis {
+            padding: 0 0.3rem;
+            font-size: 0.9rem;
+        }
+    }
+
+    /* ── Mejoras para desktop también ── */
+    @media (min-width: 768px) {
+
+        /* Desktop - select más legible */
+        .pag-select {
+            font-size: 0.8rem;
+            padding: 0.3rem 2rem 0.3rem 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Botones desktop ligeramente más grandes */
+        .pag-btn {
+            min-width: 2.2rem;
+            height: 2.2rem;
+            font-size: 0.85rem;
+        }
+
+        /* Mejor contraste en hover */
+        .pag-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    }
+
+    /* ── Animación suave para cambios de página ── */
+    .materia-row,
+    .materia-card {
+        transition: opacity 0.2s ease;
+    }
+
+    .pag-hidden {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
 </style>
 
-<!-- Header -->
-<div class="page-header">
-  <h1>Gestión de <span>Materias Primas</span></h1>
-</div>
-
-{% if alertas_stock %}
-<div class="warning-panel" style="margin: 0 60px 18px;">
-  <strong>⚠ Alerta stock bajo</strong>
-  <ul class="warning-list">
-    {% for alerta in alertas_stock %}
-    <li>{{ alerta.nombre }}: {{ "%.2f"|format(alerta.stock|float) }}{{ alerta.unidad }}/{{ "%.2f"|format(alerta.stock_minimo|float) }}{{ alerta.unidad }}</li>
-    {% endfor %}
-  </ul>
-</div>
-{% endif %}
-
-<div style="padding: 24px 60px;">
-
-  <!-- Botón registrar -->
-  <div class="top-bar">
-    <button onclick="abrirModalRegistro()" class="btn-register">
-      <img src="{{ url_for('static', filename='img/IconosTable/icons8-más-100.png') }}" style="width:16px;height:16px">
-      Registrar Materia Prima
-    </button>
-  </div>
-
-  <!-- Panel de filtros -->
-  <div class="filter-panel">
-    <div class="filter-title">FILTROS DE BUSQUEDA</div>
-    <div class="filter-body">
-      <div class="filter-row">
-        <div class="filter-group">
-          <label>Nombre</label>
-          <input type="text" id="filtro-nombre" placeholder="Ingresa el nombre...">
+<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
+    style="border-bottom: 3px solid #f29f05;">
+    <div class="container flex flex-wrap items-center justify-between mx-auto">
+        <div class="flex-1 flex justify-center">
+            <div class="flex items-center space-x-2 sm:space-x-3 bg-opacity-20 px-3 sm:px-6 py-2 rounded-full">
+                <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Gestión de</span>
+                <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap"
+                    style="color: #f29f05;">Materias Primas</span>
+            </div>
         </div>
-        <div class="filter-group" style="max-width:130px">
-          <label>Tipo</label>
-          <select id="filtro-tipo">
-            <option value="">Todos</option>
-            <option value="Solido">Solido</option>
-            <option value="Liquido">Liquido</option>
-          </select>
-        </div>
-        <div class="filter-group" style="max-width:150px">
-          <label>Categoría</label>
-          <select id="filtro-categoria">
-            <option value="">Todas</option>
-            {% for cat in categorias %}
-            <option value="{{ cat.nombre }}">{{ cat.nombre }}</option>
+    </div>
+</nav>
+
+<div class="container mx-auto px-4 sm:px-6 max-w-6xl">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for category, message in messages %}
+    <div id="flash-msg"
+        class="mb-4 p-4 rounded-lg {% if category=='success' %}bg-green-100 text-green-700{% elif category=='danger' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}{% endif %}
+    {% endwith %}
+
+    {% if alertas_stock %}
+    <div class="mb-4 p-4 rounded-xl border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm">
+        <p class="font-bold mb-1">⚠ Alerta de stock bajo</p>
+        <ul class="list-disc list-inside space-y-0.5">
+            {% for alerta in alertas_stock %}
+            <li>{{ alerta.nombre }}: {{ "%.2f"|format(alerta.stock|float) }}{{ alerta.unidad }} / mín. {{
+                "%.2f"|format(alerta.stock_minimo|float) }}{{ alerta.unidad }}</li>
             {% endfor %}
-          </select>
-        </div>
-        <div class="filter-group" style="max-width:130px">
-          <label>Estatus</label>
-          <select id="filtro-estatus">
-            <option value="todos">Todos</option>
-            <option value="Activo" selected>Activo</option>
-            <option value="Inactivo">Inactivo</option>
-          </select>
-        </div>
-        <button class="btn-filter" onclick="filtrarMaterias()">Filtrar</button>
-        <button class="btn-filter" style="background:#6b7280; box-shadow:none;"
-          onclick="limpiarFiltros()">Limpiar</button>
-      </div>
+        </ul>
     </div>
-  </div>
+    {% endif %}
 
-  <!-- Grid de cards -->
-  <div class="cards-grid" id="cards-grid">
-    {% for mp in materias %}
-    <div class="mp-card materia-card {% if not mp.estatus %}inactive{% endif %} {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %}low-stock{% endif %}"
-      style="animation-delay: {{ loop.index0 * 0.06 }}s"
-      data-id="{{ mp.idMateriaP }}"
-      data-nombre="{{ mp.nombre }}"
-      data-tipo="{{ mp.tipo }}"
-      data-stock="{{ mp.stock }}"
-      data-stock-minimo="{{ mp.stockMinimo }}"
-      data-id-categoria="{{ mp.idCategoria }}"
-      data-categoria="{{ mp.categoria.nombre if mp.categoria else '' }}"
-      data-estatus="{{ 'Activo' if mp.estatus else 'Inactivo' }}"
-      data-estatus-valor="{{ 1 if mp.estatus else 0 }}">
-      <div class="card-header"><span>MATERIA PRIMA</span></div>
-      <div class="card-body">
-        <div class="card-nombre">{{ mp.nombre }}</div>
-        <div class="card-row"><span class="lbl">Tipo:</span><span class="val">{{ mp.tipo }}</span></div>
-        <div class="card-row"><span class="lbl">Stock:</span><span class="val">{{ mp.stock }} {{ 'g' if mp.tipo == 'Solido' else 'ml' }}</span></div>
-        <div class="card-row"><span class="lbl">Categoría:</span><span class="val">{{ mp.categoria.nombre if mp.categoria else '—' }}</span></div>
-        {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %}
-        <div class="stock-warning-badge">Bajo stock</div>
-        {% endif %}
-        <div class="badge-status">
-          <span class="dot {% if not mp.estatus %}inactive{% endif %}"></span>
-          {{ 'Activo' if mp.estatus else 'Inactivo' }}
-        </div>
-      </div>
-      <div class="card-actions">
-        <button onclick="abrirModalEdicion({{ mp.idMateriaP }})" class="action-btn edit" title="Editar">
-          <img src="{{ url_for('static', filename='img/IconosTable/icons8-lápiz-96.png') }}" style="width:16px;height:16px">
+    <div class="flex justify-end mb-4">
+        <button onclick="abrirModalRegistro()"
+            class="text-white font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-md transition-all duration-300 hover:brightness-110 hover:shadow-lg text-sm sm:text-base"
+            style="background-color: #f29f05;">
+            Registrar Materia Prima
         </button>
-        <a href="#" onclick="abrirModalVer({{ mp.idMateriaP }})" class="action-btn view" title="Ver">
-          <svg viewBox="0 0 20 20">
-            <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-            <path fill-rule="evenodd"
-              d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z"
-              clip-rule="evenodd" />
-          </svg>
-        </a>
-        <a href="#" onclick="confirmarCambioEstatus(event, {{ mp.idMateriaP }}, '{{ mp.nombre }}', {{ 1 if mp.estatus else 0 }})" class="action-btn {% if mp.estatus %}deactivate{% else %}activate{% endif %}"
-          title="{% if mp.estatus %}Desactivar{% else %}Activar{% endif %}">
-          {% if mp.estatus %}
-          <img src="{{ url_for('static', filename='img/IconosTable/icons8-basura-100.png') }}" style="width:16px;height:16px;filter:brightness(0) invert(1)">
-          {% else %}
-          <img src="{{ url_for('static', filename='img/IconosTable/icons8-de-acuerdo-144.png') }}" style="width:16px;height:16px">
-          {% endif %}
-        </a>
-      </div>
     </div>
-    {% endfor %}
-  </div>
 
-  <div id="sin-resultados" class="hidden"
-    style="text-align:center; padding:48px 0; color:#888; font-family:'Nunito',sans-serif; font-weight:700;">
-    No se encontraron materias primas con los filtros seleccionados.
-  </div>
+    <!-- Filtros -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
+        <div class="px-4 sm:px-5 py-3 rounded-t-2xl" style="background-color: #38230f;">
+            <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">FILTROS DE BUSQUEDA</h2>
+        </div>
+        <div class="flex flex-wrap gap-3 sm:gap-4 items-end p-4 sm:p-5">
+            <div class="flex flex-col flex-1 min-w-[160px] sm:min-w-[180px]">
+                <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Nombre</label>
+                <input type="text" id="filtro-nombre" placeholder="Ingresa el nombre..."
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition" />
+            </div>
+            <div class="flex flex-col min-w-[120px] sm:min-w-[140px]">
+                <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Tipo</label>
+                <select id="filtro-tipo"
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                    <option value="">Todos</option>
+                    <option value="Solido">Sólido</option>
+                    <option value="Liquido">Líquido</option>
+                </select>
+            </div>
+            <div class="flex flex-col min-w-[120px] sm:min-w-[160px]">
+                <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Categoría</label>
+                <select id="filtro-categoria"
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                    <option value="">Todas</option>
+                    {% for cat in categorias %}
+                    <option value="{{ cat.nombre }}">{{ cat.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex flex-col min-w-[120px] sm:min-w-[140px]">
+                <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Estatus</label>
+                <select id="filtro-estatus"
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                    <option value="todos">Todos</option>
+                    <option value="Activo" selected>Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                </select>
+            </div>
+            <div class="flex flex-col min-w-[120px] sm:min-w-[140px]">
+                <label class="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Stock</label>
+                <select id="filtro-stock"
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                    <option value="todos">Todos</option>
+                    <option value="bajo">Solo stock bajo</option>
+                    <option value="normal">Stock normal</option>
+                </select>
+            </div>
+            <div class="flex flex-col justify-end">
+                <button onclick="filtrarMaterias()"
+                    class="text-white font-semibold px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg shadow transition-all duration-300 hover:brightness-110 text-xs sm:text-sm"
+                    style="background-color: #f29f05;">
+                    Filtrar
+                </button>
+            </div>
+            <div class="flex flex-col justify-end">
+                <button onclick="limpiarFiltros()"
+                    class="text-white font-semibold px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg shadow transition-all duration-300 hover:brightness-110 text-xs sm:text-sm"
+                    style="background-color: #6b7280;">
+                    Limpiar
+                </button>
+            </div>
+        </div>
+    </div>
 
-</div><!-- /padding wrapper -->
+    <!-- Tabla Desktop -->
+    <div class="rounded-2xl overflow-hidden shadow-md mb-6" id="contenedor-tabla-mp">
+        <div class="overflow-x-auto" id="tabla-desktop">
+            <table class="w-full text-sm text-left">
+                <thead>
+                    <tr style="background-color: #38230f;">
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">NOMBRE</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">TIPO</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">STOCK</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">STOCK MÍNIMO</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">CATEGORÍA</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">ESTATUS</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-materias">
+                    {% for mp in materias %}
+                    <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150 materia-row {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %}border-l-4 border-l-yellow-400{% endif %}"
+                        data-id="{{ mp.idMateriaP }}" data-nombre="{{ mp.nombre }}" data-tipo="{{ mp.tipo }}"
+                        data-stock="{{ mp.stock }}" data-stock-minimo="{{ mp.stockMinimo }}"
+                        data-id-categoria="{{ mp.idCategoria }}"
+                        data-categoria="{{ mp.categoria.nombre if mp.categoria else '' }}"
+                        data-estatus="{{ 'Activo' if mp.estatus else 'Inactivo' }}"
+                        data-estatus-valor="{{ 1 if mp.estatus else 0 }}">
+                        <td class="px-5 py-3 font-semibold text-gray-800">
+                            {{ mp.nombre }}
+                            {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %} <span
+                                class="ml-2 text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">
+                                Bajo stock</span>
+                                {% endif %}
+                        </td>
+                        <td class="px-5 py-3 text-gray-700">{{ mp.tipo }}</td>
+                        <td class="px-5 py-3 text-gray-700 tabular-nums">{{ "{:,.0f}".format(mp.stock) }} {{ 'g' if
+                            mp.tipo == 'Solido' else 'ml' }}</td>
+                        <td class="px-5 py-3 text-gray-700 tabular-nums">{{ "{:,.0f}".format(mp.stockMinimo) }} {{ 'g'
+                            if mp.tipo == 'Solido' else 'ml' }}</td>
+                        <td class="px-5 py-3 text-gray-700">{{ mp.categoria.nombre if mp.categoria else '—' }}</td>
+                        <td class="px-5 py-3">
+                            {% if mp.estatus %}
+                            <span class="flex items-center gap-1 font-semibold text-green-600">
+                                <span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>
+                                Activo
+                            </span>
+                            {% else %}
+                            <span class="flex items-center gap-1 font-semibold text-red-500">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                                Inactivo
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3">
+                            <div class="flex gap-2">
+                                <button onclick="abrirModalEdicion({{ mp.idMateriaP }})"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+                                    style="background-color: #f29f05;" title="Editar">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                </button>
+                                <button onclick="abrirModalVer({{ mp.idMateriaP }})"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+                                    style="background-color: #2563eb;" title="Ver detalle">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                                        <path fill-rule="evenodd"
+                                            d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <a href="#"
+                                    onclick="confirmarCambioEstatus(event, {{ mp.idMateriaP }}, '{{ mp.nombre }}', {{ 1 if mp.estatus else 0 }})"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+                                    style="background-color: {% if mp.estatus %}#e53e3e{% else %}#48bb78{% endif %};"
+                                    title="{% if mp.estatus %}Desactivar{% else %}Activar{% endif %}">
+                                    {% if mp.estatus %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6" />
+                                    </svg>
+                                    {% else %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5v14" />
+                                    </svg>
+                                    {% endif %}
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Cards Móvil -->
+        <div id="cards-materias" class="md:hidden space-y-3 p-3">
+            {% for mp in materias %}
+            <div class="materia-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %}border-l-4 border-l-yellow-400{% endif %}"
+                data-id="{{ mp.idMateriaP }}" data-nombre="{{ mp.nombre }}" data-tipo="{{ mp.tipo }}"
+                data-stock="{{ mp.stock }}" data-stock-minimo="{{ mp.stockMinimo }}"
+                data-id-categoria="{{ mp.idCategoria }}"
+                data-categoria="{{ mp.categoria.nombre if mp.categoria else '' }}"
+                data-estatus="{{ 'Activo' if mp.estatus else 'Inactivo' }}"
+                data-estatus-valor="{{ 1 if mp.estatus else 0 }}">
+
+                <div class="p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1">
+                            <h3 class="text-base font-bold text-gray-800 break-words">{{ mp.nombre }}</h3>
+                            <p class="text-xs text-gray-500 mt-1">{{ mp.tipo }}</p>
+                        </div>
+                        {% if mp.estatus %}
+                        <span
+                            class="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full ml-2 whitespace-nowrap">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                            Activo
+                        </span>
+                        {% else %}
+                        <span
+                            class="flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-full ml-2 whitespace-nowrap">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                            Inactivo
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %} <span
+                        class="inline-flex items-center text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full mb-2">
+                        ⚠ Bajo stock</span>
+                        {% endif %}
+
+                        <div class="border-t border-gray-100 my-2"></div>
+
+                        <div class="space-y-1 mb-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-medium text-gray-600">Categoría:</span>
+                                <span class="text-xs text-gray-800 font-semibold">{{ mp.categoria.nombre if mp.categoria
+                                    else '—' }}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-medium text-gray-600">Stock:</span>
+                                <span class="text-xs text-gray-800 font-semibold tabular-nums">{{
+                                    "{:,.0f}".format(mp.stock) }} {{ 'g' if mp.tipo == 'Solido' else 'ml' }}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-medium text-gray-600">Stock mínimo:</span>
+                                <span class="text-xs text-gray-800 font-semibold tabular-nums">{{
+                                    "{:,.0f}".format(mp.stockMinimo) }} {{ 'g' if mp.tipo == 'Solido' else 'ml'
+                                    }}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="abrirModalEdicion({{ mp.idMateriaP }})"
+                                class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white transition-all duration-200 hover:scale-105 text-sm"
+                                style="background-color: #f29f05;">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                                <span>Editar</span>
+                            </button>
+                            <button onclick="abrirModalVer({{ mp.idMateriaP }})"
+                                class="flex items-center justify-center w-10 h-10 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+                                style="background-color: #2563eb;" title="Ver detalle">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                                    <path fill-rule="evenodd"
+                                        d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                            <a href="#"
+                                onclick="confirmarCambioEstatus(event, {{ mp.idMateriaP }}, '{{ mp.nombre }}', {{ 1 if mp.estatus else 0 }})"
+                                class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white transition-all duration-200 hover:scale-105 text-sm"
+                                style="background-color: {% if mp.estatus %}#e53e3e{% else %}#48bb78{% endif %};">
+                                {% if mp.estatus %}
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6" />
+                                </svg>
+                                <span>Desactivar</span>
+                                {% else %}
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5v14" />
+                                </svg>
+                                <span>Activar</span>
+                                {% endif %}
+                            </a>
+                        </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div id="sin-resultados" class="hidden text-center py-10 bg-white text-gray-400 text-sm font-medium">
+            No se encontraron materias primas con los filtros seleccionados.
+        </div>
+    </div>
+</div>
 
 
 <!-- ══════════════ MODAL REGISTRO ══════════════ -->
 <div id="modal-registro" tabindex="-1"
-  class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
-  style="background-color: rgba(0,0,0,0.45);">
-  <div class="bg-white rounded-2xl shadow-xl w-full mx-4 my-8 overflow-hidden" style="max-width:520px;">
-
-    <div class="flex justify-between items-center px-6 py-4" style="background-color:#3d1f0a;">
-      <h3 class="text-base font-bold text-white tracking-wide">REGISTRAR MATERIA PRIMA</h3>
-        <button onclick="cerrarModalRegistro()" class="text-white hover:text-gray-300 transition">
-          <img src="{{ url_for('static', filename='img/IconosTable/icons8-basura-100.png') }}" style="width:16px;height:16px;filter:brightness(0) invert(1)">
-        </button>
-    </div>
-
-    <div class="p-6">
-      <form id="form-registro" action="{{ url_for('materiasPrimas.registrar_materia_prima') }}" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div id="error-registro" class="{% if not form_error or form_error.modal != 'registro' %}hidden{% endif %} mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm" style="font-family:'Poppins',sans-serif;font-weight:400;">{{ form_error.mensaje if form_error and form_error.modal == 'registro' else '' }}</div>
-
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <div class="col-span-2">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Nombre <span
-                class="text-red-500">*</span></label>
-            <input type="text" name="nombre" required maxlength="100" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+" title="Solo letras, numeros y espacios" placeholder="Ej: Pepperoni Harina" value="{{ form_error.datos.nombre if form_error and form_error.modal == 'registro' else '' }}"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(244,158,18)] transition">
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo <span
-                class="text-red-500">*</span></label>
-            <select name="tipo" required
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(244,158,18)] transition">
-              <option value="" disabled selected>Selecciona</option>
-              <option value="Solido">Sólido</option>
-              <option value="Liquido">Líquido</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Categoría <span
-                class="text-red-500">*</span></label>
-            <select name="idCategoria" required
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(244,158,18)] transition">
-              <option value="" disabled selected>Selecciona</option>
-              {% for cat in categorias %}
-              <option value="{{ cat.idCategoria }}">{{ cat.nombre }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Stock inicial <span
-                class="text-red-500">*</span></label>
-            <div class="flex">
-              <input type="number" name="stock" required min="0" step="1" placeholder="0"
-                class="w-full border border-gray-300 rounded-l-lg rounded-r-none px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(244,158,18)] transition border-r-0">
-              <span id="reg-stock-unit" class="inline-flex items-center px-3 border border-l-0 border-gray-300 rounded-r-lg bg-gray-50 text-sm font-semibold text-gray-600">g</span>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Stock mínimo <span
-                class="text-red-500">*</span></label>
-            <div class="flex">
-              <input type="number" name="stockMinimo" required min="0" step="1" placeholder="0"
-                class="w-full border border-gray-300 rounded-l-lg rounded-r-none px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(244,158,18)] transition border-r-0">
-              <span id="reg-stock-minimo-unit" class="inline-flex items-center px-3 border border-l-0 border-gray-300 rounded-r-lg bg-gray-50 text-sm font-semibold text-gray-600">g</span>
-            </div>
-            <p class="text-xs text-gray-400 mt-1">Alerta si el stock baja de este valor.</p>
-          </div>
+    class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+    style="background-color: rgba(0, 0, 0, 0.3);">
+    <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 my-8 overflow-hidden">
+        <div class="flex justify-between items-center px-6 py-4" style="background-color: #38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">REGISTRAR MATERIA PRIMA</h3>
+            <button onclick="cerrarModalRegistro()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
 
-        <div class="flex gap-3 mt-2">
-          <button type="button" onclick="cerrarModalRegistro()"
-            class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition text-sm">
-            Cancelar
-          </button>
-          <button type="submit"
-            class="flex-1 px-4 py-2 rounded-lg text-white font-semibold transition hover:brightness-110 text-sm"
-            style="background-color: rgb(244,158,18); color: #3d1f0a;">
-            Guardar
-          </button>
+        <div class="p-6">
+            <form id="form-registro" action="{{ url_for('materiasPrimas.registrar_materia_prima') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div id="error-registro"
+                    class="{% if not form_error or form_error.modal != 'registro' %}hidden{% endif %} mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm">
+                    {{ form_error.mensaje if form_error and form_error.modal == 'registro' else '' }}</div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre <span
+                                class="text-red-500">*</span></label>
+                        <input type="text" name="nombre" required maxlength="100" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+"
+                            title="Solo letras, números y espacios" placeholder="Ej: Pepperoni, Harina"
+                            value="{{ form_error.datos.nombre if form_error and form_error.modal == 'registro' else '' }}"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Tipo <span
+                                class="text-red-500">*</span></label>
+                        <select name="tipo" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                            <option value="" disabled selected>Selecciona</option>
+                            <option value="Solido">Sólido</option>
+                            <option value="Liquido">Líquido</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Categoría <span
+                                class="text-red-500">*</span></label>
+                        <select name="idCategoria" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                            <option value="" disabled selected>Selecciona</option>
+                            {% for cat in categorias %}
+                            <option value="{{ cat.idCategoria }}">{{ cat.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Stock inicial <span
+                                class="text-red-500">*</span></label>
+                        <div class="flex">
+                            <input type="number" name="stock" required min="0" step="1" placeholder="0"
+                                class="w-full border border-gray-300 rounded-l-lg rounded-r-none px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition border-r-0">
+                            <span id="reg-stock-unit"
+                                class="inline-flex items-center px-3 border border-l-0 border-gray-300 rounded-r-lg bg-gray-50 text-sm font-semibold text-gray-600">g</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Stock mínimo <span
+                                class="text-red-500">*</span></label>
+                        <div class="flex">
+                            <input type="number" name="stockMinimo" required min="0" step="1" placeholder="0"
+                                class="w-full border border-gray-300 rounded-l-lg rounded-r-none px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition border-r-0">
+                            <span id="reg-stock-minimo-unit"
+                                class="inline-flex items-center px-3 border border-l-0 border-gray-300 rounded-r-lg bg-gray-50 text-sm font-semibold text-gray-600">g</span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">Alerta si el stock baja de este valor.</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="button" onclick="cerrarModalRegistro()"
+                        class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 rounded-lg text-white font-semibold transition hover:brightness-110"
+                        style="background-color: #f29f05;">
+                        Guardar
+                    </button>
+                </div>
+            </form>
         </div>
-      </form>
     </div>
-  </div>
 </div>
 
 
 <!-- ══════════════ MODAL EDICIÓN ══════════════ -->
 <div id="modal-edicion" tabindex="-1" class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
-  style="background-color: rgba(0,0,0,0.45);">
-  <div class="bg-white rounded-2xl shadow-xl w-full mx-4 my-8 overflow-hidden" style="max-width:520px;">
-
-    <div class="flex justify-between items-center px-6 py-4" style="background-color:#3d1f0a;">
-      <h3 class="text-base font-bold text-white tracking-wide">EDITAR MATERIA PRIMA</h3>
-        <button onclick="cerrarModalEdicion()" class="text-white hover:text-gray-300 transition">
-          <img src="{{ url_for('static', filename='img/IconosTable/icons8-basura-100.png') }}" style="width:16px;height:16px;filter:brightness(0) invert(1)">
-        </button>
-    </div>
-
-    <div class="p-6">
-      <form id="form-edicion" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div id="error-edicion" class="{% if not form_error or form_error.modal != 'edicion' %}hidden{% endif %} mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm" style="font-family:'Poppins',sans-serif;font-weight:400;">{{ form_error.mensaje if form_error and form_error.modal == 'edicion' else '' }}</div>
-
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <div class="col-span-2">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Nombre <span
-                class="text-red-500">*</span></label>
-            <input type="text" id="edit-nombre" name="nombre" required maxlength="100" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+" title="Solo letras, numeros y espacios"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(244,158,18)] transition">
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo <span
-                class="text-red-500">*</span></label>
-            <select id="edit-tipo" name="tipo" required
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(244,158,18)] transition">
-              <option value="Solido">Sólido</option>
-              <option value="Liquido">Líquido</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Categoría <span
-                class="text-red-500">*</span></label>
-            <select id="edit-categoria" name="idCategoria" required
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(244,158,18)] transition">
-              {% for cat in categorias %}
-              <option value="{{ cat.idCategoria }}">{{ cat.nombre }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Stock <span
-                class="text-red-500">*</span></label>
-            <div class="flex">
-              <input type="number" id="edit-stock" name="stock" required min="0" step="1"
-                class="w-full border border-gray-300 rounded-l-lg rounded-r-none px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(244,158,18)] transition border-r-0">
-              <span id="edit-stock-unit" class="inline-flex items-center px-3 border border-l-0 border-gray-300 rounded-r-lg bg-gray-50 text-sm font-semibold text-gray-600">g</span>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Stock mínimo <span
-                class="text-red-500">*</span></label>
-            <div class="flex">
-              <input type="number" id="edit-stock-minimo" name="stockMinimo" required min="0" step="1"
-                class="w-full border border-gray-300 rounded-l-lg rounded-r-none px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(244,158,18)] transition border-r-0">
-              <span id="edit-stock-minimo-unit" class="inline-flex items-center px-3 border border-l-0 border-gray-300 rounded-r-lg bg-gray-50 text-sm font-semibold text-gray-600">g</span>
-            </div>
-          </div>
-
-
+    style="background-color: rgba(0, 0, 0, 0.3);">
+    <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 my-8 overflow-hidden">
+        <div class="flex justify-between items-center px-6 py-4" style="background-color: #38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">EDITAR MATERIA PRIMA</h3>
+            <button onclick="cerrarModalEdicion()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
 
-        <div class="flex gap-3 mt-2">
-          <button type="button" onclick="cerrarModalEdicion()"
-            class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition text-sm">
-            Cancelar
-          </button>
-          <button type="submit"
-            class="flex-1 px-4 py-2 rounded-lg font-semibold transition hover:brightness-110 text-sm"
-            style="background-color: rgb(244,158,18); color: #3d1f0a;">
-            Actualizar
-          </button>
+        <div class="p-6">
+            <form id="form-edicion" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div id="error-edicion"
+                    class="{% if not form_error or form_error.modal != 'edicion' %}hidden{% endif %} mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm">
+                    {{ form_error.mensaje if form_error and form_error.modal == 'edicion' else '' }}</div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre <span
+                                class="text-red-500">*</span></label>
+                        <input type="text" id="edit-nombre" name="nombre" required maxlength="100"
+                            pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+" title="Solo letras, números y espacios"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Tipo <span
+                                class="text-red-500">*</span></label>
+                        <select id="edit-tipo" name="tipo" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                            <option value="Solido">Sólido</option>
+                            <option value="Liquido">Líquido</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Categoría <span
+                                class="text-red-500">*</span></label>
+                        <select id="edit-categoria" name="idCategoria" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
+                            {% for cat in categorias %}
+                            <option value="{{ cat.idCategoria }}">{{ cat.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Stock <span
+                                class="text-red-500">*</span></label>
+                        <div class="flex">
+                            <input type="number" id="edit-stock" name="stock" required min="0" step="1"
+                                class="w-full border border-gray-300 rounded-l-lg rounded-r-none px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition border-r-0">
+                            <span id="edit-stock-unit"
+                                class="inline-flex items-center px-3 border border-l-0 border-gray-300 rounded-r-lg bg-gray-50 text-sm font-semibold text-gray-600">g</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Stock mínimo <span
+                                class="text-red-500">*</span></label>
+                        <div class="flex">
+                            <input type="number" id="edit-stock-minimo" name="stockMinimo" required min="0" step="1"
+                                class="w-full border border-gray-300 rounded-l-lg rounded-r-none px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition border-r-0">
+                            <span id="edit-stock-minimo-unit"
+                                class="inline-flex items-center px-3 border border-l-0 border-gray-300 rounded-r-lg bg-gray-50 text-sm font-semibold text-gray-600">g</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="button" onclick="cerrarModalEdicion()"
+                        class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 rounded-lg text-white font-semibold transition hover:brightness-110"
+                        style="background-color: #f29f05;">
+                        Actualizar
+                    </button>
+                </div>
+            </form>
         </div>
-      </form>
     </div>
-  </div>
+</div>
+
+
+<!-- ══════════════ MODAL VER ══════════════ -->
+<div id="modal-ver" tabindex="-1" class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+    style="background-color: rgba(0, 0, 0, 0.3);">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 my-8 overflow-hidden">
+        <div class="flex justify-between items-center px-6 py-4" style="background-color: #38230f;">
+            <h3 class="text-base font-bold text-white tracking-wide">DETALLE MATERIA PRIMA</h3>
+            <button onclick="cerrarModalVer()" class="text-white hover:text-gray-300 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 space-y-3 text-sm text-gray-700">
+            <div class="flex justify-between border-b border-gray-100 pb-2">
+                <span class="font-semibold text-gray-500">Nombre</span>
+                <span id="ver-nombre" class="font-semibold text-gray-800"></span>
+            </div>
+            <div class="flex justify-between border-b border-gray-100 pb-2">
+                <span class="font-semibold text-gray-500">Tipo</span>
+                <span id="ver-tipo" class="text-gray-800"></span>
+            </div>
+            <div class="flex justify-between border-b border-gray-100 pb-2">
+                <span class="font-semibold text-gray-500">Categoría</span>
+                <span id="ver-categoria" class="text-gray-800"></span>
+            </div>
+            <div class="flex justify-between border-b border-gray-100 pb-2">
+                <span class="font-semibold text-gray-500">Stock</span>
+                <span id="ver-stock" class="text-gray-800 tabular-nums"></span>
+            </div>
+            <div class="flex justify-between border-b border-gray-100 pb-2">
+                <span class="font-semibold text-gray-500">Stock mínimo</span>
+                <span id="ver-stock-minimo" class="text-gray-800 tabular-nums"></span>
+            </div>
+            <div class="flex justify-between pb-2">
+                <span class="font-semibold text-gray-500">Estatus</span>
+                <span id="ver-estatus" class="font-semibold"></span>
+            </div>
+            <div class="pt-2">
+                <button onclick="cerrarModalVer()"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 
 <!-- ══════════════ MODAL CONFIRMACIÓN ══════════════ -->
 <div id="modal-confirm" class="hidden fixed inset-0 z-50 flex items-center justify-center"
-  style="background-color: rgba(0,0,0,0.45);">
-  <div class="bg-white rounded-2xl shadow-xl p-6 w-80 text-center" onclick="event.stopPropagation()">
-    <div class="flex justify-center mb-3">
-      <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-        </svg>
-      </div>
+    style="background-color: rgba(0, 0, 0, 0.3);">
+    <div class="bg-white rounded-2xl shadow-xl p-5 w-72 text-center">
+        <div class="flex justify-center mb-3">
+            <div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+            </div>
+        </div>
+        <h3 class="text-base font-bold text-gray-800 mb-1">Confirmar acción</h3>
+        <p id="confirm-mensaje" class="text-sm text-gray-500 mb-5"></p>
+        <div class="flex gap-2">
+            <button onclick="cerrarConfirm()"
+                class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition">
+                Cancelar
+            </button>
+            <button id="confirm-btn"
+                class="flex-1 px-3 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
+                style="background-color: #f29f05;">
+                Confirmar
+            </button>
+        </div>
     </div>
-    <h3 class="text-base font-bold text-gray-800 mb-1">Confirmar cambio de estatus</h3>
-    <p id="confirm-mensaje" class="text-sm text-gray-500 mb-5"></p>
-    <div class="flex gap-2">
-      <button onclick="cerrarConfirm()"
-        class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition">
-        Cancelar
-      </button>
-      <button id="confirm-btn"
-        class="flex-1 px-3 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
-        style="background-color: #ef4444;">
-        Confirmar
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════ MODAL VER ══════════════ -->
-<div id="modal-ver" class="hidden fixed inset-0 z-50 flex items-center justify-center"
-  style="background-color: rgba(0,0,0,0.45);">
-
-  <div class="bg-white rounded-2xl shadow-xl w-full mx-4 my-8 overflow-hidden" style="max-width:500px;">
-
-    <div class="flex justify-between items-center px-6 py-4" style="background-color:#3d1f0a;">
-      <h3 class="text-base font-bold text-white tracking-wide">
-        DETALLE MATERIA PRIMA
-      </h3>
-
-      <button onclick="cerrarModalVer()" class="text-white hover:text-gray-300 transition">
-        ✕
-      </button>
-    </div>
-
-    <div class="p-6 space-y-3">
-
-      <p><strong>Nombre:</strong> <span id="ver-nombre"></span></p>
-
-      <p><strong>Tipo:</strong> <span id="ver-tipo"></span></p>
-
-      <p><strong>Categoría:</strong> <span id="ver-categoria"></span></p>
-
-      <p><strong>Stock:</strong> <span id="ver-stock"></span></p>
-
-      <p><strong>Stock mínimo:</strong> <span id="ver-stock-minimo"></span></p>
-
-      <p><strong>Estatus:</strong> <span id="ver-estatus"></span></p>
-
-      <div class="mt-4">
-        <button onclick="cerrarModalVer()" class="w-full px-4 py-2 rounded-lg border border-gray-300 
-          text-gray-700 font-semibold hover:bg-gray-100 transition">
-          Cerrar
-        </button>
-      </div>
-
-    </div>
-  </div>
 </div>
 
 
 <script>
-  /* ── Abrir / cerrar modales ─────────────── */
-  function abrirModalRegistro() {
-    document.getElementById('modal-registro').classList.remove('hidden');
-  }
-  function cerrarModalRegistro() {
-    document.getElementById('modal-registro').classList.add('hidden');
-    document.getElementById('error-registro').classList.add('hidden');
-    document.getElementById('form-registro').reset();
-  }
-
-  function actualizarUnidadesStock() {
-    const tipo = document.getElementById('edit-tipo').value;
-    const unidad = tipo === 'Liquido' ? 'ml' : 'g';
-    document.getElementById('edit-stock-unit').textContent = unidad;
-    document.getElementById('edit-stock-minimo-unit').textContent = unidad;
-  }
-
-  function actualizarUnidadesStockRegistro() {
-    const tipo = document.querySelector('#form-registro [name="tipo"]').value;
-    const unidad = tipo === 'Liquido' ? 'ml' : 'g';
-    document.getElementById('reg-stock-unit').textContent = unidad;
-    document.getElementById('reg-stock-minimo-unit').textContent = unidad;
-  }
-
-  function abrirModalEdicion(id) {
-    const card = document.querySelector(`.materia-card[data-id="${id}"]`);
-    if (!card) return;
-
-    document.getElementById('edit-nombre').value = card.dataset.nombre;
-    document.getElementById('edit-tipo').value = card.dataset.tipo;
-    document.getElementById('edit-stock').value = card.dataset.stock;
-    document.getElementById('edit-stock-minimo').value = card.dataset.stockMinimo;
-    document.getElementById('edit-categoria').value = card.dataset.idCategoria;
-
-    actualizarUnidadesStock();
-    document.getElementById('form-edicion').action = `/editar-materia-prima/${id}`;
-    document.getElementById('modal-edicion').classList.remove('hidden');
-  }
-
-  function cerrarModalEdicion() {
-    document.getElementById('modal-edicion').classList.add('hidden');
-    document.getElementById('error-edicion').classList.add('hidden');
-  }
-
-  /* ── Confirmar cambio de estatus ────────── */
-  function confirmarCambioEstatus(e, id, nombre, estatus) {
-    e.preventDefault();
-    const btn = document.getElementById('confirm-btn');
-
-    if (estatus == 1) {
-      document.getElementById('confirm-mensaje').textContent = `¿Estás seguro de desactivar "${nombre}"? Podrás volver a activarlo después.`;
-      btn.textContent = 'Desactivar';
-      btn.style.backgroundColor = '#ef4444';
-    } else {
-      document.getElementById('confirm-mensaje').textContent = `¿Estás seguro de activar nuevamente "${nombre}"?`;
-      btn.textContent = 'Activar';
-      btn.style.backgroundColor = '#22c55e';
+    /* ── Formato de miles ───────────────────── */
+    function formatNum(n) {
+        const num = parseFloat(n);
+        if (isNaN(num)) return n;
+        return num % 1 === 0
+            ? num.toLocaleString('es-MX')
+            : num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    document.getElementById('confirm-btn').onclick = () => {
-      window.location.href = `/cambiar-estatus-materia-prima/${id}/${estatus}`;
-    };
-    document.getElementById('modal-confirm').classList.remove('hidden');
-  }
+    /* ── Paginación ─────────────────────────── */
+    let pagMaterias = null;
+    let pagCards = null;
 
-  function abrirModalVer(id) {
+    function crearPaginacion(opciones) {
+        const { contenedorItems, itemsSelector, contenedorId, selectorId } = opciones;
+        let paginaActual = 1;
+        let porPagina = 10;
 
-    const card = document.querySelector(`.materia-card[data-id="${id}"]`);
-    const unidad = card.dataset.tipo === 'Solido' ? 'g' : 'ml';
+        // Crear un nombre válido para la variable global (sin guiones)
+        const globalName = '__pag_' + selectorId.replace(/-/g, '_');
 
-    document.getElementById('ver-nombre').textContent = card.dataset.nombre;
-    document.getElementById('ver-tipo').textContent = card.dataset.tipo;
-    document.getElementById('ver-categoria').textContent = card.dataset.categoria;
-    document.getElementById('ver-stock').textContent = card.dataset.stock + ' ' + unidad;
-    document.getElementById('ver-stock-minimo').textContent = card.dataset.stockMinimo + ' ' + unidad;
-    document.getElementById('ver-estatus').textContent = card.dataset.estatus;
-    document.getElementById('modal-ver').classList.remove('hidden');
-  }
+        function obtenerItems() {
+            // Obtener solo los items que NO están ocultos por filtros
+            return Array.from(contenedorItems.querySelectorAll(itemsSelector))
+                .filter(item => !item.classList.contains('filtro-hidden'));
+        }
 
-  function cerrarModalVer() {
-    document.getElementById('modal-ver')
-      .classList.add('hidden');
-  }
+        function mostrarItems() {
+            const items = obtenerItems();
+            const total = items.length;
+            const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
 
-  function limpiarFiltros() {
-    document.getElementById('filtro-nombre').value = '';
-    document.getElementById('filtro-tipo').value = '';
-    document.getElementById('filtro-categoria').value = '';
-    document.getElementById('filtro-estatus').value = 'Activo';
-    filtrarMaterias();
-  }
+            // Ajustar página actual si es mayor que el total
+            if (paginaActual > totalPaginas) paginaActual = totalPaginas;
 
-  function cerrarConfirm() {
-    document.getElementById('modal-confirm').classList.add('hidden');
-  }
+            const inicio = (paginaActual - 1) * porPagina;
+            const fin = inicio + porPagina;
 
-  /* ── Cerrar modales al hacer clic fuera ─── */
-  ['modal-registro', 'modal-edicion'].forEach(id => {
-    document.getElementById(id).addEventListener('click', function (e) {
-      if (e.target === this) {
-        if (id === 'modal-registro') cerrarModalRegistro();
-        else if (id === 'modal-edicion') cerrarModalEdicion();
-      }
+            // Aplicar/remover clase pag-hidden
+            items.forEach((el, i) => {
+                if (i < inicio || i >= fin) {
+                    el.classList.add('pag-hidden');
+                } else {
+                    el.classList.remove('pag-hidden');
+                }
+            });
+
+            renderControles(total, totalPaginas, inicio, fin);
+        }
+
+        function renderControles(total, totalPaginas, inicio, fin) {
+            const contenedor = document.getElementById(contenedorId);
+            if (!contenedor) return;
+
+            // Buscar o crear el contenedor de paginación
+            let ctrl = document.getElementById(selectorId);
+            if (!ctrl) {
+                ctrl = document.createElement('div');
+                ctrl.id = selectorId;
+                contenedor.parentNode.insertBefore(ctrl, contenedor.nextSibling);
+            }
+
+            const mostradoIni = total === 0 ? 0 : inicio + 1;
+            const mostradoFin = Math.min(fin, total);
+
+            // Generar botones de paginación
+            let botonesHTML = '';
+            const delta = 2;
+            let rango = [];
+
+            for (let i = Math.max(1, paginaActual - delta); i <= Math.min(totalPaginas, paginaActual + delta); i++) {
+                rango.push(i);
+            }
+
+            // Botón primera página
+            if (rango[0] > 1) {
+                botonesHTML += `<button class="pag-btn" onclick="${globalName}.irA(1)">1</button>`;
+                if (rango[0] > 2) botonesHTML += `<span class="pag-ellipsis">…</span>`;
+            }
+
+            // Páginas del rango
+            rango.forEach(p => {
+                botonesHTML += `<button class="pag-btn ${p === paginaActual ? 'pag-btn-active' : ''}" onclick="${globalName}.irA(${p})">${p}</button>`;
+            });
+
+            // Botón última página
+            if (rango[rango.length - 1] < totalPaginas) {
+                if (rango[rango.length - 1] < totalPaginas - 1) botonesHTML += `<span class="pag-ellipsis">…</span>`;
+                botonesHTML += `<button class="pag-btn" onclick="${globalName}.irA(${totalPaginas})">${totalPaginas}</button>`;
+            }
+
+            ctrl.className = 'pag-wrapper';
+            ctrl.innerHTML = `
+        <div class="pag-info">Mostrando <strong>${mostradoIni}–${mostradoFin}</strong> de <strong>${total}</strong> registros</div>
+        <div class="pag-controls">
+            <div class="pag-por-pagina">
+                Mostrar
+                <select class="pag-select" onchange="${globalName}.cambiarPorPagina(this.value)">
+                    <option value="10" ${porPagina === 10 ? 'selected' : ''}>10</option>
+                    <option value="15" ${porPagina === 15 ? 'selected' : ''}>15</option>
+                    <option value="20" ${porPagina === 20 ? 'selected' : ''}>20</option>
+                    <option value="50" ${porPagina === 50 ? 'selected' : ''}>50</option>
+                </select>
+                por página
+            </div>
+            <div class="pag-botones">
+                <button class="pag-btn" onclick="${globalName}.irA(${paginaActual - 1})" ${paginaActual <= 1 ? 'disabled' : ''}>‹</button>
+                ${botonesHTML}
+                <button class="pag-btn" onclick="${globalName}.irA(${paginaActual + 1})" ${paginaActual >= totalPaginas ? 'disabled' : ''}>›</button>
+            </div>
+        </div>`;
+        }
+
+        const api = {
+            refresh() {
+                paginaActual = 1;
+                mostrarItems();
+            },
+            irA(p) {
+                if (p < 1) return;
+                const items = obtenerItems();
+                const totalPaginas = Math.max(1, Math.ceil(items.length / porPagina));
+                if (p > totalPaginas) return;
+                paginaActual = p;
+                mostrarItems();
+            },
+            cambiarPorPagina(val) {
+                porPagina = parseInt(val);
+                paginaActual = 1;
+                mostrarItems();
+            }
+        };
+
+        // Guardar en window con el nombre válido
+        window[globalName] = api;
+        mostrarItems();
+        return api;
+    }
+
+    /* ── Abrir / cerrar modales (tus funciones existentes) ── */
+    function abrirModalRegistro() {
+        document.getElementById('modal-registro').classList.remove('hidden');
+    }
+
+    function cerrarModalRegistro() {
+        document.getElementById('modal-registro').classList.add('hidden');
+        document.getElementById('error-registro').classList.add('hidden');
+        document.getElementById('form-registro').reset();
+        actualizarUnidadesStockRegistro();
+    }
+
+    function abrirModalEdicion(id) {
+        const card = document.querySelector(`.materia-row[data-id="${id}"], .materia-card[data-id="${id}"]`);
+        if (!card) return;
+        document.getElementById('edit-nombre').value = card.dataset.nombre;
+        document.getElementById('edit-tipo').value = card.dataset.tipo;
+        document.getElementById('edit-stock').value = card.dataset.stock;
+        document.getElementById('edit-stock-minimo').value = card.dataset.stockMinimo;
+        document.getElementById('edit-categoria').value = card.dataset.idCategoria;
+        actualizarUnidadesStock();
+        document.getElementById('form-edicion').action = `/editar-materia-prima/${id}`;
+        document.getElementById('modal-edicion').classList.remove('hidden');
+    }
+
+    function cerrarModalEdicion() {
+        document.getElementById('modal-edicion').classList.add('hidden');
+        document.getElementById('error-edicion').classList.add('hidden');
+    }
+
+    function abrirModalVer(id) {
+        const card = document.querySelector(`.materia-row[data-id="${id}"], .materia-card[data-id="${id}"]`);
+        if (!card) return;
+        const unidad = card.dataset.tipo === 'Solido' ? 'g' : 'ml';
+        document.getElementById('ver-nombre').textContent = card.dataset.nombre;
+        document.getElementById('ver-tipo').textContent = card.dataset.tipo;
+        document.getElementById('ver-categoria').textContent = card.dataset.categoria || '—';
+        document.getElementById('ver-stock').textContent = formatNum(card.dataset.stock) + ' ' + unidad;
+        document.getElementById('ver-stock-minimo').textContent = formatNum(card.dataset.stockMinimo) + ' ' + unidad;
+        const estatusEl = document.getElementById('ver-estatus');
+        estatusEl.textContent = card.dataset.estatus;
+        estatusEl.className = card.dataset.estatus === 'Activo' ? 'font-semibold text-green-600' : 'font-semibold text-red-500';
+        document.getElementById('modal-ver').classList.remove('hidden');
+    }
+
+    function cerrarModalVer() {
+        document.getElementById('modal-ver').classList.add('hidden');
+    }
+
+    /* ── Unidades dinámicas ─────────────────── */
+    function actualizarUnidadesStock() {
+        const tipo = document.getElementById('edit-tipo').value;
+        const unidad = tipo === 'Liquido' ? 'ml' : 'g';
+        document.getElementById('edit-stock-unit').textContent = unidad;
+        document.getElementById('edit-stock-minimo-unit').textContent = unidad;
+    }
+
+    function actualizarUnidadesStockRegistro() {
+        const tipo = document.querySelector('#form-registro [name="tipo"]').value;
+        const unidad = tipo === 'Liquido' ? 'ml' : 'g';
+        document.getElementById('reg-stock-unit').textContent = unidad;
+        document.getElementById('reg-stock-minimo-unit').textContent = unidad;
+    }
+
+    /* ── Confirmar cambio de estatus ────────── */
+    function confirmarCambioEstatus(e, id, nombre, estatus) {
+        e.preventDefault();
+        const btn = document.getElementById('confirm-btn');
+        if (estatus == 1) {
+            document.getElementById('confirm-mensaje').textContent = `¿Estás seguro de desactivar "${nombre}"? Podrás volver a activarlo después.`;
+            btn.textContent = 'Desactivar';
+            btn.style.backgroundColor = '#e53e3e';
+        } else {
+            document.getElementById('confirm-mensaje').textContent = `¿Estás seguro de activar nuevamente "${nombre}"?`;
+            btn.textContent = 'Activar';
+            btn.style.backgroundColor = '#48bb78';
+        }
+        btn.onclick = () => {
+            window.location.href = `/cambiar-estatus-materia-prima/${id}/${estatus}`;
+        };
+        document.getElementById('modal-confirm').classList.remove('hidden');
+    }
+
+    function cerrarConfirm() {
+        document.getElementById('modal-confirm').classList.add('hidden');
+    }
+
+    /* ── Filtrar ────────────────────────────── */
+    function filtrarMaterias() {
+        const nombre = document.getElementById('filtro-nombre').value.toLowerCase();
+        const tipo = document.getElementById('filtro-tipo').value;
+        const cat = document.getElementById('filtro-categoria').value;
+        let estatus = document.getElementById('filtro-estatus').value;
+        const filtroStock = document.getElementById('filtro-stock').value;
+
+        if (!estatus) estatus = 'Activo';
+
+        function coincide(el) {
+            const n = el.dataset.nombre.toLowerCase();
+            const t = el.dataset.tipo;
+            const c = el.dataset.categoria;
+            const s = el.dataset.estatus;
+
+            // Calcular si es stock bajo
+            const stock = parseFloat(el.dataset.stock);
+            const stockMinimo = parseFloat(el.dataset.stockMinimo);
+            const esStockBajo = (stockMinimo && stock <= stockMinimo && s === 'Activo');
+
+            // Aplicar filtro de stock
+            let cumpleFiltroStock = true;
+            if (filtroStock === 'bajo') {
+                cumpleFiltroStock = esStockBajo;
+            } else if (filtroStock === 'normal') {
+                cumpleFiltroStock = !esStockBajo;
+            }
+
+            return (!nombre || n.includes(nombre)) &&
+                (!tipo || t === tipo) &&
+                (!cat || c === cat) &&
+                (estatus === 'todos' ? true : s === estatus) &&
+                cumpleFiltroStock;
+        }
+
+        // Aplicar filtros
+        document.querySelectorAll('.materia-row').forEach(fila => {
+            if (!coincide(fila)) {
+                fila.classList.add('filtro-hidden');
+            } else {
+                fila.classList.remove('filtro-hidden');
+            }
+        });
+
+        document.querySelectorAll('.materia-card').forEach(card => {
+            if (!coincide(card)) {
+                card.classList.add('filtro-hidden');
+            } else {
+                card.classList.remove('filtro-hidden');
+            }
+        });
+
+        // Refrescar paginación
+        if (pagMaterias) pagMaterias.refresh();
+        if (pagCards) pagCards.refresh();
+
+        // Mostrar/ocultar mensaje sin resultados
+        const filasVisibles = document.querySelectorAll('.materia-row:not(.filtro-hidden)');
+        const sinResultados = document.getElementById('sin-resultados');
+        if (sinResultados) {
+            sinResultados.classList.toggle('hidden', filasVisibles.length > 0);
+        }
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filtro-nombre').value = '';
+        document.getElementById('filtro-tipo').value = '';
+        document.getElementById('filtro-categoria').value = '';
+        document.getElementById('filtro-estatus').value = 'Activo';
+        document.getElementById('filtro-stock').value = 'todos'; // Agrega esta línea
+        filtrarMaterias();
+    }
+
+    /* ── Responsive ─────────────────────────── */
+    function handleResponsive() {
+        const tablaDesktop = document.getElementById('tabla-desktop');
+        const cardsMobile = document.getElementById('cards-materias');
+        const pagDesktop = document.getElementById('pag-mp-desktop');
+        const pagCards = document.getElementById('pag-mp-cards');
+
+        if (window.innerWidth >= 768) {
+            if (tablaDesktop) tablaDesktop.style.display = 'block';
+            if (cardsMobile) cardsMobile.style.display = 'none';
+            if (pagDesktop) pagDesktop.style.display = 'flex';
+            if (pagCards) pagCards.style.display = 'none';
+        } else {
+            if (tablaDesktop) tablaDesktop.style.display = 'none';
+            if (cardsMobile) cardsMobile.style.display = 'block';
+            if (pagDesktop) pagDesktop.style.display = 'none';
+            if (pagCards) pagCards.style.display = 'flex';
+        }
+    }
+
+    /* ── Cerrar modales al click fuera ──────── */
+    const modalRegistro = document.getElementById('modal-registro');
+    const modalEdicion = document.getElementById('modal-edicion');
+    const modalVer = document.getElementById('modal-ver');
+    const modalConfirm = document.getElementById('modal-confirm');
+
+    if (modalRegistro) modalRegistro.addEventListener('click', function (e) {
+        if (e.target === this) cerrarModalRegistro();
     });
-  });
-
-  document.getElementById('modal-confirm').addEventListener('click', function(e) {
-    if (e.target === this) cerrarConfirm();
-  });
-
-  /* ── Cerrar con Escape ──────────────────── */
-  document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape') return;
-    cerrarModalRegistro();
-    cerrarModalEdicion();
-    cerrarConfirm();
-  });
-
-  /* ── Filtrar cards ──────────────────────── */
-  function filtrarMaterias() {
-
-    const nombre = document.getElementById('filtro-nombre').value.toLowerCase();
-    const tipo = document.getElementById('filtro-tipo').value;
-    const cat = document.getElementById('filtro-categoria').value;
-    let estatus = document.getElementById('filtro-estatus').value;
-
-    if (!estatus) estatus = 'Activo';
-
-    const cards = document.querySelectorAll('.materia-card');
-    let visibles = 0;
-
-    cards.forEach(card => {
-      const nombreCard = card.dataset.nombre.toLowerCase();
-      const tipoCard = card.dataset.tipo;
-      const categoriaCard = card.dataset.categoria;
-      const estatusCard = card.dataset.estatus;
-
-      const mostrar =
-        (!nombre || nombreCard.includes(nombre)) &&
-        (!tipo || tipoCard === tipo) &&
-        (!cat || categoriaCard === cat) &&
-        (estatus === 'todos' ? true : estatusCard === estatus);
-
-      card.style.display = mostrar ? '' : 'none';
-      if (mostrar) visibles++;
+    if (modalEdicion) modalEdicion.addEventListener('click', function (e) {
+        if (e.target === this) cerrarModalEdicion();
+    });
+    if (modalVer) modalVer.addEventListener('click', function (e) {
+        if (e.target === this) cerrarModalVer();
+    });
+    if (modalConfirm) modalConfirm.addEventListener('click', function (e) {
+        if (e.target === this) cerrarConfirm();
     });
 
-    document.getElementById('sin-resultados').style.display =
-      visibles === 0 ? 'block' : 'none';
-  }
-
-
-  document.addEventListener("DOMContentLoaded", function () {
-
-    document.getElementById('edit-tipo').addEventListener('change', actualizarUnidadesStock);
-    document.querySelector('#form-registro [name="tipo"]').addEventListener('change', actualizarUnidadesStockRegistro);
-
-    filtrarMaterias();
-
-    document.querySelectorAll(
-      '#filtro-nombre, #filtro-tipo, #filtro-categoria, #filtro-estatus'
-    ).forEach(el => {
-      el.addEventListener('keyup', filtrarMaterias);
-      el.addEventListener('change', filtrarMaterias);
+    /* ── Escape ─────────────────────────────── */
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Escape') return;
+        cerrarModalRegistro();
+        cerrarModalEdicion();
+        cerrarModalVer();
+        cerrarConfirm();
     });
 
-    {% if form_error and form_error.modal == 'registro' %}
-    const registro = {{ form_error.datos|tojson }};
-    document.querySelector('#form-registro [name="nombre"]').value = registro.nombre || '';
-    document.querySelector('#form-registro [name="tipo"]').value = registro.tipo || '';
-    document.querySelector('#form-registro [name="idCategoria"]').value = registro.idCategoria || '';
-    document.querySelector('#form-registro [name="stock"]').value = registro.stock || '';
-    document.querySelector('#form-registro [name="stockMinimo"]').value = registro.stockMinimo || '';
+    /* ── Init ───────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', function () {
+        // Configurar eventos de unidades
+        if (document.getElementById('edit-tipo')) {
+            document.getElementById('edit-tipo').addEventListener('change', actualizarUnidadesStock);
+        }
+
+        const tipoRegistro = document.querySelector('#form-registro [name="tipo"]');
+        if (tipoRegistro) {
+            tipoRegistro.addEventListener('change', actualizarUnidadesStockRegistro);
+        }
+
+        // Inicializar paginación para escritorio
+        const tablaDesktop = document.getElementById('tabla-desktop');
+        if (tablaDesktop) {
+            pagMaterias = crearPaginacion({
+                contenedorItems: tablaDesktop,
+                itemsSelector: '.materia-row',
+                contenedorId: 'tabla-desktop',
+                selectorId: 'pag-mp-desktop',
+            });
+        }
+
+        // Inicializar paginación para móvil
+        const cardsMaterias = document.getElementById('cards-materias');
+        if (cardsMaterias) {
+            pagCards = crearPaginacion({
+                contenedorItems: cardsMaterias,
+                itemsSelector: '.materia-card',
+                contenedorId: 'cards-materias',
+                selectorId: 'pag-mp-cards',
+            });
+        }
+
+        // Aplicar filtros iniciales
+        filtrarMaterias();
+        handleResponsive();
+
+        // Configurar event listeners para filtros
+        const filtros = ['filtro-nombre', 'filtro-tipo', 'filtro-categoria', 'filtro-estatus', 'filtro-stock'];
+        filtros.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keyup', filtrarMaterias);
+                el.addEventListener('change', filtrarMaterias);
+            }
+        });
+
+        // Recargar datos del servidor si hay errores de formulario
+        {% if form_error and form_error.modal == 'registro' %}
+        const registro = {{ form_error.datos| tojson
+    }};
+    const nombreInput = document.querySelector('#form-registro [name="nombre"]');
+    const tipoInput = document.querySelector('#form-registro [name="tipo"]');
+    const categoriaSelect = document.querySelector('#form-registro [name="idCategoria"]');
+    const stockInput = document.querySelector('#form-registro [name="stock"]');
+    const stockMinimoInput = document.querySelector('#form-registro [name="stockMinimo"]');
+
+    if (nombreInput) nombreInput.value = registro.nombre || '';
+    if (tipoInput) tipoInput.value = registro.tipo || '';
+    if (categoriaSelect) categoriaSelect.value = registro.idCategoria || '';
+    if (stockInput) stockInput.value = registro.stock || '';
+    if (stockMinimoInput) stockMinimoInput.value = registro.stockMinimo || '';
+
+    actualizarUnidadesStockRegistro();
     abrirModalRegistro();
     {% elif form_error and form_error.modal == 'edicion' %}
-    const edicion = {{ form_error.datos|tojson }};
+    const edicion = {{ form_error.datos| tojson }};
     document.getElementById('edit-nombre').value = edicion.nombre || '';
     document.getElementById('edit-tipo').value = edicion.tipo || '';
     document.getElementById('edit-stock').value = edicion.stock || '';
     document.getElementById('edit-stock-minimo').value = edicion.stockMinimo || '';
     document.getElementById('edit-categoria').value = edicion.idCategoria || '';
     document.getElementById('form-edicion').action = `/editar-materia-prima/${edicion.id}`;
+    actualizarUnidadesStock();
     document.getElementById('modal-edicion').classList.remove('hidden');
     {% endif %}
+    });
 
-  });
+    window.addEventListener('load', handleResponsive);
+    window.addEventListener('resize', handleResponsive);
 </script>
 
 {%endblock%}
