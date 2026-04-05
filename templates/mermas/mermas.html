@@ -1,0 +1,402 @@
+{% extends layout %}
+
+{% block title %}Mermas{% endblock %}
+
+{% block container %}
+
+<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 shadow-lg h-16 flex items-center"
+    style="border-bottom: 3px solid #f29f05;">
+    <div class="container flex justify-center mx-auto">
+        <h1 class="text-xl sm:text-2xl font-bold text-white">
+            Gestión de <span style="color:#f29f05;">Mermas</span>
+        </h1>
+    </div>
+</nav>
+
+<div class="container mx-auto px-4 sm:px-6 max-w-6xl">
+
+    {# --- SECCIÓN DE MENSAJES FLASH --- #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="mb-4 p-4 rounded-xl shadow-sm border
+        {% if category == 'success' %}bg-green-50 text-green-700 border-green-200
+        {% elif category == 'danger' or category == 'warning' %}bg-red-50 text-red-700 border-red-200
+        {% else %}bg-blue-50 text-blue-700 border-blue-200{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endwith %}
+
+    {# --- SECCIÓN DE ALERTAS DE STOCK (SESSION) --- #}
+    {% if session.get('stock_alerts') %}
+    <div id="stock-alert-container" class="mb-6 space-y-3">
+        <p class="text-xs font-bold text-black uppercase tracking-widest">⚠️ Stock bajo</p>
+        {% for alerta in session.get('stock_alerts') %}
+        <div class="flex items-center justify-between bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-black text-amber-800 text-sm">{{ alerta.nombre }}</p>
+                    <p class="text-xs text-amber-600">
+                        Stock actual: <strong>{{ alerta.stock }}</strong> —
+                        Mínimo requerido: <strong>{{ alerta.minimo }}</strong>
+                    </p>
+                </div>
+            </div>
+            <span class="bg-amber-400 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-wide">
+                Stock Bajo
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {# Limpiar alertas de sesión tras mostrarlas #}
+    {% set _ = session.pop('stock_alerts', None) %}
+    {% endif %}
+
+    <div class="flex justify-end mb-4">
+        <button onclick="abrirModalRegistro()"
+            class="text-white font-bold px-6 py-2 rounded-full shadow-lg hover:brightness-110 transition-all active:scale-95"
+            style="background-color:#f29f05;">
+            + Registrar Merma
+        </button>
+    </div>
+
+    {# --- FILTROS --- #}
+    <div class="bg-white rounded-2xl shadow-md mb-6 overflow-hidden border border-gray-100">
+        <div class="p-3 border-b" style="background:#38230f;">
+            <h2 class="text-white font-bold text-xs tracking-widest uppercase ml-2">Filtros de búsqueda</h2>
+        </div>
+        <div class="p-4 flex flex-wrap gap-4 items-end">
+            <div class="flex-1 min-w-[140px]">
+                <label class="block text-[10px] font-bold mb-1 text-gray-400 uppercase">Inicio</label>
+                <input type="date" id="filtro-inicio" class="w-full border border-gray-200 px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#f29f05]">
+            </div>
+            <div class="flex-1 min-w-[140px]">
+                <label class="block text-[10px] font-bold mb-1 text-gray-400 uppercase">Fin</label>
+                <input type="date" id="filtro-fin" class="w-full border border-gray-200 px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#f29f05]">
+            </div>
+            <div class="flex-2 min-w-[200px]">
+                <label class="block text-[10px] font-bold mb-1 text-gray-400 uppercase">Descripción</label>
+                <input type="text" id="filtro-desc" placeholder="Buscar motivo..." class="w-full border border-gray-200 px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#f29f05]">
+            </div>
+            <div class="flex-1 min-w-[120px]">
+                <label class="block text-[10px] font-bold mb-1 text-gray-400 uppercase">Estatus</label>
+                <select id="filtro-estatus" class="w-full border border-gray-200 px-3 py-2 rounded-lg text-sm outline-none">
+                    <option value="">Todos</option>
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="filtrarMermas()" class="bg-[#f29f05] text-white px-5 py-2 rounded-lg text-sm font-bold hover:shadow-md transition">Filtrar</button>
+                <button onclick="limpiarFiltros()" class="bg-gray-200 text-gray-600 px-5 py-2 rounded-lg text-sm font-bold hover:bg-gray-300 transition">Limpiar</button>
+            </div>
+        </div>
+    </div>
+
+    {# --- TABLA --- #}
+    <div class="rounded-2xl overflow-hidden shadow-xl bg-white border border-gray-100">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr style="background:#38230f;">
+                        <th class="text-white px-6 py-4 text-left font-bold uppercase text-xs">Descripción</th>
+                        <th class="text-white px-6 py-4 text-center font-bold uppercase text-xs">Insumos</th>
+                        <th class="text-white px-6 py-4 text-left font-bold uppercase text-xs">Fecha</th>
+                        <th class="text-white px-6 py-4 text-left font-bold uppercase text-xs">Estatus</th>
+                        <th class="text-white px-6 py-4 text-center font-bold uppercase text-xs">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-mermas">
+                    {% for m in registros %}
+                    <tr class="merma-row border-b hover:bg-gray-50 transition"
+                        data-desc="{{ m.descripcion }}"
+                        data-fecha="{{ m.fecha.strftime('%Y-%m-%d') }}"
+                        data-estatus="{{ 'Activo' if m.estatus else 'Inactivo' }}">
+                        
+                        <td class="px-6 py-4 font-bold text-gray-700">{{ m.descripcion }}</td>
+                        
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="verDetalles('{{ m.descripcion }}', '{{ m.idMerma }}')"
+                                class="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-600 hover:text-white px-4 py-1 rounded-full text-xs font-bold transition-all">
+                                Ver Detalle
+                            </button>
+                            <div id="data-detalle-{{ m.idMerma }}" class="hidden">
+                                {% for d in m.detalle_mermas %}
+                                    <span>{{ d.materia_prima.nombre }}|{{ d.cantidad }}|{{ d.materia_prima.tipo }}</span>{% if not loop.last %}||{% endif %}
+                                {% endfor %}
+                            </div>
+                        </td>
+
+                        <td class="px-6 py-4 text-gray-500 font-medium italic">
+                            {{ m.fecha.strftime('%d/%m/%Y %H:%M') }}
+                        </td>
+
+                        <td class="px-6 py-4">
+                            {% if m.estatus %}
+                            <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">Activo</span>
+                            {% else %}
+                            <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">Inactivo</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="px-6 py-4 text-center">
+                            {% if m.estatus %}
+                            <button onclick="confirmarCambioEstado('{{ url_for('mermas.desactivar', id=m.idMerma) }}', 'desactivar')"
+                                class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition shadow-sm w-28">
+                                Desactivar
+                            </button>
+                            {% else %}
+                            <button onclick="confirmarCambioEstado('{{ url_for('mermas.activar', id=m.idMerma) }}', 'activar')"
+                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition shadow-sm w-28">
+                                Reactivar
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# --- MODALES --- #}
+
+<div id="modal-registro" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 backdrop-blur-sm">
+    <div class="bg-white p-6 rounded-3xl w-full max-w-lg shadow-2xl">
+        <h2 class="font-black text-2xl text-[#38230f] mb-6 border-b pb-2">Nueva Merma</h2>
+        <form id="form-merma" action="{{ url_for('mermas.crear') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Motivo general</label>
+            <input type="text" name="descripcion" required class="w-full border-2 border-gray-100 p-3 rounded-xl mb-6 outline-none focus:border-[#f29f05]" placeholder="Ej. Producto caducado, derrame...">
+            
+            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2">Detalle de Insumos</label>
+
+            <div id="materias-container" class="max-h-60 overflow-y-auto mb-4 pr-1 space-y-3">
+                <div class="flex flex-col gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100 fila-materia">
+                    <div class="flex gap-2">
+                        <select class="w-1/2 text-xs bg-white border border-gray-200 rounded-lg p-2 outline-none selector-tipo" 
+                                onchange="actualizarMateriasPorTipo(this)">
+                            <option value="">Seleccionar Tipo...</option>
+                            {% for t in tipos %}
+                            <option value="{{ t }}">{{ t }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <select name="materia[]" required class="w-1/2 text-xs bg-white border border-gray-200 rounded-lg p-2 outline-none selector-materia-final">
+                            <option value="">Elija un tipo primero</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <input type="number" step="0.01" name="cantidad[]" required 
+                               class="flex-1 p-2 rounded-lg text-sm font-bold border border-gray-200" placeholder="Cantidad">
+                        <button type="button" onclick="eliminarFila(this)" class="text-red-400 hover:text-red-600 px-2">✕</button>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="button" onclick="agregarFila()" class="w-full border-2 border-dashed border-gray-200 py-2 rounded-xl text-xs font-bold text-gray-400 mb-6 hover:bg-orange-50 transition">
+                + Añadir otro insumo
+            </button>
+
+            <div class="flex gap-3">
+                <button type="button" onclick="cerrarModalRegistro()" class="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-gray-500">Cancelar</button>
+                <button type="submit" class="flex-1 py-3 rounded-xl font-bold text-white shadow-lg" style="background-color:#f29f05;">Guardar Registro</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="modal-detalles" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[60] backdrop-blur-sm">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div class="p-5 border-b flex justify-between items-center" style="background:#38230f;">
+            <h3 class="text-white font-bold">Insumos en Merma</h3>
+            <button onclick="cerrarModalDetalles()" class="text-white/60 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="p-6">
+            <p id="detalles-desc" class="text-gray-800 font-black text-lg mb-4"></p>
+            <div class="flex justify-between px-3 mb-2 text-[10px] font-bold text-gray-400 uppercase">
+                <span>Insumo</span>
+                <span>Cant. / Tipo</span>
+            </div>
+            <div id="lista-detalles" class="space-y-2"></div>
+            <button onclick="cerrarModalDetalles()" class="w-full mt-6 bg-[#38230f] text-white font-bold py-3 rounded-2xl">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-confirm" class="hidden fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm"
+    style="background-color: rgba(0, 0, 0, 0.4);">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-80 text-center">
+        <div class="flex justify-center mb-4">
+            <div class="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center">
+                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+            </div>
+        </div>
+        <h3 class="text-lg font-black text-gray-800 mb-2">Confirmar Acción</h3>
+        <p id="confirm-mensaje" class="text-sm text-gray-500 mb-6"></p>
+        <div class="flex gap-3">
+            <button onclick="cerrarModalConfirm()" class="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-gray-500 text-sm font-bold">No, cancelar</button>
+            <button id="confirm-btn-link" class="flex-1 px-4 py-2 rounded-xl text-white text-sm font-bold transition shadow-md">Sí, confirmar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- DATOS GLOBALES ---
+    const todasLasMaterias = [
+        {% for mat in materias %}
+        { id: "{{ mat.idMateriaP }}", nombre: "{{ mat.nombre }}", tipo: "{{ mat.tipo }}" },
+        {% endfor %}
+    ];
+
+    const todosLosTipos = [
+        {% for t in tipos %}
+        "{{ t }}",
+        {% endfor %}
+    ];
+
+    // --- LÓGICA DE FORMULARIO DINÁMICO ---
+    function actualizarMateriasPorTipo(selectTipo) {
+        const fila = selectTipo.closest('.fila-materia');
+        const selectMateria = fila.querySelector('.selector-materia-final');
+        const tipoSeleccionado = selectTipo.value;
+
+        selectMateria.innerHTML = '<option value="">Seleccione materia...</option>';
+
+        if (tipoSeleccionado) {
+            const filtradas = todasLasMaterias.filter(m => m.tipo === tipoSeleccionado);
+            filtradas.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.nombre;
+                selectMateria.appendChild(opt);
+            });
+        } else {
+            selectMateria.innerHTML = '<option value="">Elija un tipo primero</option>';
+        }
+    }
+
+    function agregarFila() {
+        const container = document.getElementById('materias-container');
+        const nuevaFila = document.createElement('div');
+        nuevaFila.className = "flex flex-col gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100 fila-materia animate-pulse";
+        
+        let opcionesTipos = `<option value="">Seleccionar Tipo...</option>`;
+        todosLosTipos.forEach(t => { opcionesTipos += `<option value="${t}">${t}</option>`; });
+
+        nuevaFila.innerHTML = `
+            <div class="flex gap-2">
+                <select class="w-1/2 text-xs bg-white border border-gray-200 rounded-lg p-2 outline-none selector-tipo" 
+                        onchange="actualizarMateriasPorTipo(this)">
+                    ${opcionesTipos}
+                </select>
+                <select name="materia[]" required class="w-1/2 text-xs bg-white border border-gray-200 rounded-lg p-2 outline-none selector-materia-final">
+                    <option value="">Elija un tipo primero</option>
+                </select>
+            </div>
+            <div class="flex gap-2 items-center">
+                <input type="number" step="0.01" name="cantidad[]" required 
+                       class="flex-1 p-2 rounded-lg text-sm font-bold border border-gray-200" placeholder="Cantidad">
+                <button type="button" onclick="eliminarFila(this)" class="text-red-400 hover:text-red-600 px-2">✕</button>
+            </div>
+        `;
+        container.appendChild(nuevaFila);
+        setTimeout(() => nuevaFila.classList.remove('animate-pulse'), 500);
+    }
+
+    function eliminarFila(btn) {
+        const container = document.getElementById('materias-container');
+        if (container.children.length > 1) {
+            btn.closest('.fila-materia').remove();
+        } else {
+            alert("Debe haber al menos un insumo en el registro.");
+        }
+    }
+
+    // --- FUNCIONES DE MODALES ---
+    function abrirModalRegistro() { document.getElementById('modal-registro').classList.remove('hidden'); }
+    function cerrarModalRegistro() { document.getElementById('modal-registro').classList.add('hidden'); }
+    
+    function confirmarCambioEstado(urlDestino, accion) {
+        const modal = document.getElementById('modal-confirm');
+        const mensajeTxt = document.getElementById('confirm-mensaje');
+        const btnConfirmar = document.getElementById('confirm-btn-link');
+
+        if (accion === 'activar') {
+            mensajeTxt.innerText = "¿Deseas volver a activar este registro de merma?";
+            btnConfirmar.style.backgroundColor = "#16a34a";
+        } else {
+            mensajeTxt.innerText = "¿Estás seguro de desactivar esta merma? No se borrará de la base de datos.";
+            btnConfirmar.style.backgroundColor = "#f29f05";
+        }
+
+        btnConfirmar.onclick = function() { window.location.href = urlDestino; };
+        modal.classList.remove('hidden');
+    }
+
+    function cerrarModalConfirm() { document.getElementById('modal-confirm').classList.add('hidden'); }
+
+    function verDetalles(descripcion, id) {
+        const modal = document.getElementById('modal-detalles');
+        document.getElementById('detalles-desc').innerText = descripcion;
+        const lista = document.getElementById('lista-detalles');
+        lista.innerHTML = '';
+
+        const rawData = document.getElementById(`data-detalle-${id}`).innerText.trim();
+        if(rawData) {
+            rawData.split('||').forEach(item => {
+                const [nombre, cant, tipo] = item.split('|');
+                lista.innerHTML += `
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm">
+                    <span class="text-gray-700 font-bold uppercase">${nombre}</span>
+                    <div class="text-right">
+                        <span class="text-[#38230f] font-black block">${cant}</span>
+                        <span class="text-[9px] text-[#f29f05] font-bold uppercase tracking-tighter">${tipo}</span>
+                    </div>
+                </div>`;
+            });
+        }
+        modal.classList.remove('hidden');
+    }
+    function cerrarModalDetalles() { document.getElementById('modal-detalles').classList.add('hidden'); }
+
+    // --- FILTROS ---
+    function filtrarMermas(){
+        const desc = document.getElementById('filtro-desc').value.toLowerCase();
+        const estatus = document.getElementById('filtro-estatus').value;
+        const inicio = document.getElementById('filtro-inicio').value;
+        const fin = document.getElementById('filtro-fin').value;
+
+        document.querySelectorAll('.merma-row').forEach(f=>{
+            let mostrar = true;
+            if(desc && !f.dataset.desc.toLowerCase().includes(desc)) mostrar = false;
+            if(estatus && f.dataset.estatus !== estatus) mostrar = false;
+            if(inicio && f.dataset.fecha < inicio) mostrar = false;
+            if(fin && f.dataset.fecha > fin) mostrar = false;
+            f.classList.toggle('hidden', !mostrar);
+        });
+    }
+
+    function limpiarFiltros(){
+        ['filtro-desc', 'filtro-estatus', 'filtro-inicio', 'filtro-fin'].forEach(id => document.getElementById(id).value = '');
+        filtrarMermas();
+    }
+
+    window.onclick = function(e) {
+        if(e.target.id === 'modal-registro') cerrarModalRegistro();
+        if(e.target.id === 'modal-detalles') cerrarModalDetalles();
+        if(e.target.id === 'modal-confirm') cerrarModalConfirm();
+    }
+</script>
+
+{% endblock %}
