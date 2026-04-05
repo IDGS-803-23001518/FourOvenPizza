@@ -820,7 +820,7 @@
     <div class="modal-body">
 
       <form method="POST" action="/registrar-unidad">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div id="error-registro" class="{% if not form_error or form_error.modal != 'registro' %}hidden{% endif %}" style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">{{ form_error.mensaje if form_error and form_error.modal == 'registro' else '' }}</div>
         <div class="form-grid">
 
@@ -879,7 +879,7 @@
     <div class="modal-body">
 
       <form method="POST" id="formEditar">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div id="error-edicion" class="{% if not form_error or form_error.modal != 'edicion' %}hidden{% endif %}" style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">{{ form_error.mensaje if form_error and form_error.modal == 'edicion' else '' }}</div>
         <div class="form-grid">
 

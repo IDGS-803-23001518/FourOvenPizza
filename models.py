@@ -168,6 +168,7 @@ class Productos(db.Model):
     precio = db.Column(db.Numeric(10, 2))
     tamano = db.Column('tamaño', db.String(50))
     stock = db.Column(db.Numeric(10, 2))
+    imagen = db.Column(db.Text)
     estatus = db.Column(db.Boolean)
 
     detalle_ventas = db.relationship('DetalleVenta', back_populates='producto')

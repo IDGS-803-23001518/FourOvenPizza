@@ -639,7 +639,9 @@
         <div class="producto-card-top">PRODUCTO</div>
         <div class="producto-card-body">
           <div style="display:flex;justify-content:center;margin-bottom:.6rem;">
-          {% if p.imagen %}
+          {% if p.imagen and p.imagen.startswith('data:') %}
+          <img class="producto-image" src="{{ p.imagen }}" alt="{{ p.nombre }}">
+          {% elif p.imagen %}
           <img class="producto-image" src="{{ url_for('static', filename=p.imagen) }}" alt="{{ p.nombre }}"
             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
           <div class="producto-image-placeholder" style="display:none">PZ</div>
@@ -700,7 +702,7 @@
     </div>
     <div class="modal-body">
       <form method="POST" action="{{ url_for('productos.registrar_producto') }}" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div id="error-registro" class="{% if not form_error or form_error.modal != 'registro' %}hidden{% endif %} full"
           style="margin-bottom:8px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">
           {{ form_error.mensaje if form_error and form_error.modal == 'registro' else '' }}
@@ -749,7 +751,7 @@
     </div>
     <div class="modal-body">
       <form method="POST" id="formEditar" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div id="error-edicion" class="{% if not form_error or form_error.modal != 'edicion' %}hidden{% endif %} full"
           style="margin-bottom:8px;padding:12px 14px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-family:'Poppins',sans-serif;font-weight:400;">
           {{ form_error.mensaje if form_error and form_error.modal == 'edicion' else '' }}

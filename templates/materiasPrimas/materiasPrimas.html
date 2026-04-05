@@ -556,7 +556,7 @@
 
     <div class="p-6">
       <form id="form-registro" action="{{ url_for('materiasPrimas.registrar_materia_prima') }}" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div id="error-registro" class="{% if not form_error or form_error.modal != 'registro' %}hidden{% endif %} mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm" style="font-family:'Poppins',sans-serif;font-weight:400;">{{ form_error.mensaje if form_error and form_error.modal == 'registro' else '' }}</div>
 
         <div class="grid grid-cols-2 gap-4 mb-4">
@@ -643,7 +643,7 @@
 
     <div class="p-6">
       <form id="form-edicion" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div id="error-edicion" class="{% if not form_error or form_error.modal != 'edicion' %}hidden{% endif %} mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm" style="font-family:'Poppins',sans-serif;font-weight:400;">{{ form_error.mensaje if form_error and form_error.modal == 'edicion' else '' }}</div>
 
         <div class="grid grid-cols-2 gap-4 mb-4">

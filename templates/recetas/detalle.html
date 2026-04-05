@@ -366,7 +366,7 @@
     <aside class="recipe-card">
       <h2>Receta</h2>
       <form method="POST" action="{{ url_for('recetas.guardar_receta_producto', id_producto=producto.idProducto) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="field">
           <label>Descripción</label>
           <textarea name="descripcion" maxlength="200" placeholder="Describe la receta base del producto.">{{ receta.descripcion if receta else '' }}</textarea>
@@ -389,7 +389,7 @@
       <h2>Detalle de Receta</h2>
 
       <form method="POST" action="{{ url_for('recetas.agregar_detalle_receta', id_producto=producto.idProducto) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         {% if form_error and form_error.seccion == 'detalle' %}
         <div class="inline-alert">{{ form_error.mensaje }}</div>
         {% endif %}
@@ -433,7 +433,7 @@
               <td>{{ detalle.materia_prima.nombre }}</td>
               <td>
                 <form method="POST" class="inline-form" action="{{ url_for('recetas.editar_detalle_receta', id_detalle=detalle.idDetalleR) }}">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                   <input type="number" name="cantidad" step="1" min="1" value="{{ detalle.cantidad }}" required>
                   <span style="font-family:'Nunito',sans-serif;font-weight:700;color:var(--orange);font-size:.84rem;">{{ unidad }}</span>
                   <button type="submit" class="btn-secondary" style="padding:.45rem .8rem;font-size:.8rem;">Actualizar</button>
@@ -475,7 +475,7 @@
       <div class="confirm-actions">
         <button type="button" class="btn-secondary" onclick="cerrarConfirmEliminar()">Cancelar</button>
         <form id="formEliminarDetalle" method="POST" style="display:inline;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button type="submit" class="btn-danger">Eliminar</button>
         </form>
       </div>
@@ -500,7 +500,7 @@
       <div class="confirm-actions">
         <button type="button" class="btn-secondary" onclick="cerrarConfirmEliminarReceta()">Cancelar</button>
         <form method="POST" action="{{ url_for('recetas.eliminar_receta_completa', id_producto=producto.idProducto) }}" style="display:inline;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button type="submit" class="btn-danger">Eliminar todo</button>
         </form>
       </div>

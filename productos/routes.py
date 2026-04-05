@@ -1,3 +1,4 @@
+import base64
 import glob
 import os
 import re
@@ -126,6 +127,27 @@ def _guardar_imagen_producto(archivo, id_producto):
     archivo.save(os.path.join(PRODUCTOS_IMG_DIR, f"producto_{id_producto}{extension}"))
 
 
+def _convertir_imagen_a_base64(archivo):
+    if not archivo or not archivo.filename:
+        return None
+    try:
+        contenido = archivo.read()
+        extension = os.path.splitext(secure_filename(archivo.filename))[1].lower()
+        if extension not in ALLOWED_IMAGE_EXTENSIONS:
+            raise ValueError("Formato de imagen no permitido.")
+        mime_types = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.webp': 'image/webp',
+            '.gif': 'image/gif'
+        }
+        mime_type = mime_types.get(extension, 'image/jpeg')
+        return f"data:{mime_type};base64,{base64.b64encode(contenido).decode('utf-8')}"
+    except Exception:
+        return None
+
+
 def _obtener_imagen_producto(id_producto, nombre_producto):
     for ruta in glob.glob(os.path.join(PRODUCTOS_IMG_DIR, f"producto_{id_producto}.*")):
         if os.path.isfile(ruta):
@@ -197,13 +219,17 @@ def listado_productos():
     productos_final = []
     for p in productos_view:
         nombre_p = (p["nombre"] or "").lower()
-        imagen = _obtener_imagen_producto(p["idProducto"], nombre_p)
-        if not imagen:
-            imagen = "img/Pizzas/PizzaPepperoni.png"
-            for clave, ruta in imagenes.items():
-                if clave in nombre_p:
-                    imagen = ruta
-                    break
+        producto = Productos.query.get(p["idProducto"])
+        if producto and producto.imagen:
+            imagen = producto.imagen
+        else:
+            imagen = _obtener_imagen_producto(p["idProducto"], nombre_p)
+            if not imagen:
+                imagen = "img/Pizzas/PizzaPepperoni.png"
+                for clave, ruta in imagenes.items():
+                    if clave in nombre_p:
+                        imagen = ruta
+                        break
         productos_final.append({**p, "imagen": imagen})
 
     filtros = {
@@ -245,11 +271,19 @@ def registrar_producto():
              "tamano": tamano, "stock": stock, "estatus": 1,
              "ip": request.remote_addr, "usuario": session["usuario_id"]},
         )
-        resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
-        id_generado = db.session.execute(text("SELECT @p_idGenerado")).fetchone()[0]
+        resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()
+        id_generado = db.session.execute(text("SELECT @p_idGenerado")).fetchone()
+        resultado = resultado[0] if resultado else None
+        id_generado = id_generado[0] if id_generado else None
         archivo_imagen = request.files.get("imagen")
         if resultado and resultado.startswith("SUCCESS") and id_generado:
             _guardar_imagen_producto(archivo_imagen, id_generado)
+            imagen_base64 = _convertir_imagen_a_base64(archivo_imagen)
+            if imagen_base64:
+                producto = Productos.query.get(id_generado)
+                if producto:
+                    producto.imagen = imagen_base64
+                    db.session.commit()
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
         if categoria == "danger":
@@ -292,10 +326,16 @@ def editar_producto(id):
              "tamano": tamano, "stock": stock, "estatus": None,
              "ip": request.remote_addr, "usuario": session["usuario_id"]},
         )
-        resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
+        resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()
+        resultado = resultado[0] if resultado else None
         archivo_imagen = request.files.get("imagen")
         if resultado and resultado.startswith("SUCCESS") and archivo_imagen and archivo_imagen.filename:
             _guardar_imagen_producto(archivo_imagen, id)
+            imagen_base64 = _convertir_imagen_a_base64(archivo_imagen)
+            if imagen_base64:
+                producto = Productos.query.get(id)
+                if producto:
+                    producto.imagen = imagen_base64
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
         if categoria == "danger":
@@ -323,8 +363,10 @@ def cambiar_estatus_producto(id):
             text("CALL sp_cambiar_estatus_producto(:idProducto,:ip,:usuario,@p_resultado,@p_nuevoEstatus)"),
             {"idProducto": id, "ip": request.remote_addr, "usuario": session["usuario_id"]},
         )
-        resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
-        nuevo_estatus = db.session.execute(text("SELECT @p_nuevoEstatus")).fetchone()[0]
+        resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()
+        nuevo_estatus = db.session.execute(text("SELECT @p_nuevoEstatus")).fetchone()
+        resultado = resultado[0] if resultado else None
+        nuevo_estatus = nuevo_estatus[0] if nuevo_estatus else None
         db.session.commit()
         if not resultado or "ERROR" in resultado:
             if ajax:
