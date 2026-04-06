@@ -12,6 +12,7 @@ from unidadesMedida.routes import unidadesMedida
 from recetas.routes import recetas
 from produccion.routes import produccion
 from ventas.routes import ventas
+from mermas.routes import mermas
 from models import db
 from productos.routes import productos
 
@@ -31,6 +32,7 @@ app.register_blueprint(productos)
 app.register_blueprint(recetas)
 app.register_blueprint(produccion)
 app.register_blueprint(ventas)
+app.register_blueprint(mermas)
 
 db.init_app(app)
 
