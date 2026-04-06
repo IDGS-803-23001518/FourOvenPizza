@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, session, request
+from flask import Flask, render_template, redirect, url_for, session, request, flash
 from flask_wtf.csrf import CSRFProtect
 from flask_mail import Mail
 from datetime import datetime, timedelta, timezone
@@ -13,8 +13,13 @@ from recetas.routes import recetas
 from produccion.routes import produccion
 from ventas.routes import ventas
 from mermas.routes import mermas
-from models import db
 from productos.routes import productos
+from caja.routes import caja
+from dashboard.routes import dashboard
+from models import db
+
+# Importar la función de registro de acceso
+from autentificacion.routes import registrar_acceso
 
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -33,6 +38,8 @@ app.register_blueprint(recetas)
 app.register_blueprint(produccion)
 app.register_blueprint(ventas)
 app.register_blueprint(mermas)
+app.register_blueprint(caja)
+app.register_blueprint(dashboard)
 
 db.init_app(app)
 
@@ -77,9 +84,37 @@ def index():
 
 @app.route("/inicio")
 def inicio():
+    """Redirige al dashboard o página principal según el rol del usuario"""
     if not session.get('usuario_id'):
         return redirect(url_for('autentificacion.login'))
-    return render_template("inicio.html")
+    
+    # Redirigir según el rol del usuario
+    rol = session.get('usuario_rol')
+    
+    if rol == 'Administrador':
+        return redirect(url_for('dashboard.index'))
+    elif rol == 'Ventas':
+        # Si tienes una página principal para ventas
+        return render_template("inicio.html")  # O la vista que corresponda
+    elif rol == 'Cocinero':
+        # Si tienes una página principal para cocinero
+        return render_template("inicio.html")  # O la vista que corresponda
+    else:
+        # Por defecto, mostrar una página de bienvenida
+        return render_template("inicio.html")
+
+
+@app.route("/dashboard-redirect")
+def dashboard_redirect():
+    """Redirección específica para el dashboard (solo administradores)"""
+    if not session.get('usuario_id'):
+        return redirect(url_for('autentificacion.login'))
+    
+    if session.get('usuario_rol') != 'Administrador':
+        flash('No tienes permisos para acceder al dashboard.', 'danger')
+        return redirect(url_for('inicio'))
+    
+    return redirect(url_for('dashboard.index'))
 
 
 @app.context_processor
