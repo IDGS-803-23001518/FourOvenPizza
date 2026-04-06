@@ -1,4 +1,5 @@
 import glob
+import base64
 import os
 import re
 from decimal import Decimal, InvalidOperation
@@ -30,6 +31,34 @@ def _texto_resultado(resultado):
     categoria = "success" if resultado.startswith("SUCCESS") else "danger"
     return mensaje, categoria
 
+def _leer_bytes_imagen(archivo):
+    """Convierte el archivo subido a una cadena base64 con data URI."""
+    if not archivo or not archivo.filename:
+        return None
+    try:
+        contenido = archivo.read()
+        archivo.seek(0)
+        extension = os.path.splitext(secure_filename(archivo.filename))[1].lower()
+        if extension not in ALLOWED_IMAGE_EXTENSIONS:
+            return None
+        mime_types = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.webp': 'image/webp',
+            '.gif': 'image/gif'
+        }
+        mime_type = mime_types.get(extension, 'image/jpeg')
+        base64_str = f"data:{mime_type};base64,{base64.b64encode(contenido).decode('utf-8')}"
+        return base64_str.encode('utf-8')
+    except Exception:
+        return None
+    
+def _obtener_imagen_producto(id_producto, nombre_producto):
+    for ruta in glob.glob(os.path.join(PRODUCTOS_IMG_DIR, f"producto_{id_producto}.*")):
+        if os.path.isfile(ruta):
+            return f"img/productos/{os.path.basename(ruta)}"
+    return None
 
 def _guardar_error_formulario(modal, mensaje, datos=None):
     session["productos_form_error"] = {
@@ -88,26 +117,6 @@ def _parsear_entero_no_negativo(valor, etiqueta):
 
 def _asegurar_directorio_imagenes():
     os.makedirs(PRODUCTOS_IMG_DIR, exist_ok=True)
-
-
-def _guardar_imagen_producto(archivo, id_producto):
-    if not archivo or not archivo.filename:
-        return
-    _, extension = os.path.splitext(secure_filename(archivo.filename))
-    extension = extension.lower()
-    if extension not in ALLOWED_IMAGE_EXTENSIONS:
-        raise ValueError("Formato de imagen no permitido. Usa png, jpg, jpeg, webp o gif.")
-    _asegurar_directorio_imagenes()
-    for ruta in glob.glob(os.path.join(PRODUCTOS_IMG_DIR, f"producto_{id_producto}.*")):
-        if os.path.isfile(ruta):
-            os.remove(ruta)
-    archivo.save(os.path.join(PRODUCTOS_IMG_DIR, f"producto_{id_producto}{extension}"))
-
-
-def _obtener_imagen_producto(id_producto, nombre_producto):
-    for ruta in glob.glob(os.path.join(PRODUCTOS_IMG_DIR, f"producto_{id_producto}.*")):
-        if os.path.isfile(ruta):
-            return f"img/productos/{os.path.basename(ruta)}"
 
 
 def _existe_producto_duplicado(nombre, tamano, id_producto=None):
@@ -215,14 +224,18 @@ def listado_productos():
     productos_final = []
     for p in productos_view:
         nombre_p = (p["nombre"] or "").lower()
-        imagen = _obtener_imagen_producto(p["idProducto"], nombre_p)
-        if not imagen:
-            imagen = "img/Pizzas/PizzaPepperoni.png"
+        producto_obj = Productos.query.get(p["idProducto"])
+        imagen_b64 = None
+        if producto_obj and producto_obj.imagen:
+            imagen_b64 = producto_obj.imagen.decode('utf-8') if isinstance(producto_obj.imagen, bytes) else producto_obj.imagen
+        imagen_fallback = _obtener_imagen_producto(p["idProducto"], nombre_p)
+        if not imagen_fallback:
+            imagen_fallback = "img/Pizzas/PizzaPepperoni.png"
             for clave, ruta in imagenes.items():
                 if clave in nombre_p:
-                    imagen = ruta
+                    imagen_fallback = ruta
                     break
-        productos_final.append({**p, "imagen": imagen})
+        productos_final.append({**p, "imagen_b64": imagen_b64, "imagen_fallback": imagen_fallback})
 
     filtros = {
         "nombre": nombre,
@@ -285,7 +298,15 @@ def registrar_producto():
         id_generado = db.session.execute(text("SELECT @p_idGenerado")).fetchone()[0]
         archivo_imagen = request.files.get("imagen")
         if resultado and resultado.startswith("SUCCESS") and id_generado:
-            _guardar_imagen_producto(archivo_imagen, id_generado)
+            try:
+                imagen_base64 = _leer_bytes_imagen(archivo_imagen)
+                if imagen_base64:
+                    producto = Productos.query.get(id_generado)
+                    if producto:
+                        producto.imagen = imagen_base64
+                        db.session.commit()
+            except Exception:
+                pass
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
         if categoria == "danger":
@@ -346,7 +367,15 @@ def editar_producto(id):
         resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
         archivo_imagen = request.files.get("imagen")
         if resultado and resultado.startswith("SUCCESS") and archivo_imagen and archivo_imagen.filename:
-            _guardar_imagen_producto(archivo_imagen, id)
+            try:
+                imagen_base64 = _leer_bytes_imagen(archivo_imagen)
+                if imagen_base64:
+                    producto = Productos.query.get(id)
+                    if producto:
+                        producto.imagen = imagen_base64
+                        db.session.commit()
+            except Exception:
+                pass
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
         if categoria == "danger":
@@ -456,22 +485,25 @@ def listado_productos_terminados():
     productos_final = []
     for p in productos_view:
         nombre_p = (p["nombre"] or "").lower()
-        imagen   = _obtener_imagen_producto(p["idProducto"], nombre_p)
-        if not imagen:
-            imagen = "img/Pizzas/PizzaPepperoni.png"
+        producto_obj = Productos.query.get(p["idProducto"])
+        imagen_b64 = None
+        if producto_obj and producto_obj.imagen:
+            imagen_b64 = producto_obj.imagen.decode('utf-8') if isinstance(producto_obj.imagen, bytes) else producto_obj.imagen
+        imagen_fallback = _obtener_imagen_producto(p["idProducto"], nombre_p)
+        if not imagen_fallback:
+            imagen_fallback = "img/Pizzas/PizzaPepperoni.png"
             for clave, ruta in imagenes.items():
                 if clave in nombre_p:
-                    imagen = ruta
+                    imagen_fallback = ruta
                     break
 
-        # Filtro de stock en Python (evita modificar el SP existente)
         stock_actual = int(p["stock"] or 0)
         if stock_filtro == "con_stock" and stock_actual <= 0:
             continue
         if stock_filtro == "sin_stock" and stock_actual > 0:
             continue
 
-        productos_final.append({**p, "imagen": imagen})
+        productos_final.append({**p, "imagen_b64": imagen_b64, "imagen_fallback": imagen_fallback})
 
     filtros = {
         "nombre":       nombre,
