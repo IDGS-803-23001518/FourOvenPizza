@@ -2693,7 +2693,203 @@ CREATE EVENT evt_cancelar_ventas_fin_dia
     ON SCHEDULE EVERY 1 DAY
     STARTS (CURDATE() + INTERVAL 1 DAY + INTERVAL 23 HOUR + INTERVAL 59 MINUTE)
     DO CALL sp_cancelar_ventas_cierre_dia();
+    
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Mermas
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_mermas$$
+CREATE PROCEDURE sp_gestion_mermas(
+    IN  p_accion        VARCHAR(20),
+    IN  p_idMerma       INT,
+    IN  p_descripcion   VARCHAR(200),
+    IN  p_estatus       TINYINT,
+    IN  p_materias      TEXT,
+    IN  p_ip            VARCHAR(45),
+    IN  p_ejecutadoPor  INT,
+    OUT p_resultado     VARCHAR(255),
+    OUT p_idGenerado    INT
+)
+BEGIN
+    DECLARE v_nombre_ejecutor   VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_idMateriaP        INT;
+    DECLARE v_cantidad          DECIMAL(10,2);
+    DECLARE v_idx               INT DEFAULT 0;
+    DECLARE v_total_items       INT DEFAULT 0;
+    DECLARE v_item              JSON;
+    DECLARE v_descripcion_merma VARCHAR(200);
+    DECLARE v_error             VARCHAR(255) DEFAULT '';  -- ← control de errores del WHILE
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado = 'ERROR: Ocurrió un error inesperado en la operación';
+        SET p_idGenerado = 0;
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES (
+            'ERROR', 'Mermas',
+            CONCAT('Error en sp_gestion_mermas acción: ', p_accion),
+            CONCAT('Merma ID: ', IFNULL(p_idMerma, 'N/A'),
+                   ' | Ejecutado por ID: ', IFNULL(p_ejecutadoPor, 0)),
+            NOW(), p_ip, p_ejecutadoPor
+        );
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor
+        FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    -- ════════════════════════════════════════════════════════
+    -- ACCIÓN: INSERT
+    -- ════════════════════════════════════════════════════════
+    IF p_accion = 'INSERT' THEN
+
+        IF p_descripcion IS NULL OR TRIM(p_descripcion) = '' THEN
+            SET p_resultado = 'ERROR: La descripción es obligatoria';
+            SET p_idGenerado = 0;
+
+        ELSEIF p_materias IS NULL OR JSON_LENGTH(p_materias) = 0 THEN
+            SET p_resultado = 'ERROR: Debe registrar al menos una materia prima';
+            SET p_idGenerado = 0;
+
+        ELSEIF p_ejecutadoPor IS NOT NULL
+               AND NOT EXISTS (SELECT 1 FROM usuarios WHERE idUsuario = p_ejecutadoPor AND estatus = 1) THEN
+            SET p_resultado = 'ERROR: El usuario ejecutor no existe o está inactivo';
+            SET p_idGenerado = 0;
+
+        ELSE
+            START TRANSACTION;
+
+            INSERT INTO mermas (descripcion, fecha, estatus)
+            VALUES (TRIM(p_descripcion), NOW(), 1);
+
+            SET p_idGenerado   = LAST_INSERT_ID();
+            SET v_total_items  = JSON_LENGTH(p_materias);
+            SET v_idx          = 0;
+            SET v_error        = '';
+
+            -- Recorrer el JSON validando cada item antes de insertar
+            WHILE v_idx < v_total_items AND v_error = '' DO
+
+                SET v_item       = JSON_EXTRACT(p_materias, CONCAT('$[', v_idx, ']'));
+                SET v_idMateriaP = CAST(JSON_UNQUOTE(JSON_EXTRACT(v_item, '$.idMateriaP')) AS UNSIGNED);
+                SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(v_item, '$.cantidad'))   AS DECIMAL(10,2));
+
+                -- Validar materia prima activa
+                IF NOT EXISTS (
+                    SELECT 1 FROM materiasPrimas
+                    WHERE idMateriaP = v_idMateriaP AND estatus = 1
+                ) THEN
+                    SET v_error = CONCAT('ERROR: La materia prima ID ', v_idMateriaP, ' no existe o está inactiva');
+
+                -- Validar cantidad positiva
+                ELSEIF v_cantidad <= 0 THEN
+                    SET v_error = CONCAT('ERROR: La cantidad para materia prima ID ', v_idMateriaP, ' debe ser mayor a cero');
+
+                ELSE
+                    -- Insertar detalle
+                    INSERT INTO detalleMerma (idMerma, idMateriaP, cantidad)
+                    VALUES (p_idGenerado, v_idMateriaP, v_cantidad);
+
+                    -- Descontar stock
+                    UPDATE materiasPrimas
+                    SET stock = stock - v_cantidad
+                    WHERE idMateriaP = v_idMateriaP;
+
+                END IF;
+
+                SET v_idx = v_idx + 1;
+            END WHILE;
+
+            -- Si hubo error en el WHILE → ROLLBACK
+            IF v_error != '' THEN
+                ROLLBACK;
+                SET p_resultado = v_error;
+                SET p_idGenerado = 0;
+            ELSE
+                INSERT INTO bitacora_eventos
+                    (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+                VALUES (
+                    p_ejecutadoPor, v_nombre_ejecutor,
+                    'Mermas', 'CREAR', 'merma',
+                    CONCAT('ID:', p_idGenerado, ' | ', TRIM(p_descripcion)),
+                    NOW(), p_ip
+                );
+                COMMIT;
+                SET p_resultado = 'SUCCESS: Merma registrada correctamente';
+            END IF;
+
+        END IF;
+
+    -- ════════════════════════════════════════════════════════
+    -- ACCIÓN: CHANGE_STATUS
+    -- ════════════════════════════════════════════════════════
+ELSEIF p_accion = 'CHANGE_STATUS' THEN
+
+    IF NOT EXISTS (SELECT 1 FROM mermas WHERE idMerma = p_idMerma) THEN
+        SET p_resultado = 'ERROR: La merma no existe';
+        SET p_idGenerado = 0;
+
+    ELSEIF p_estatus NOT IN (0, 1) THEN
+        SET p_resultado = 'ERROR: Estatus no válido (use 0 o 1)';
+        SET p_idGenerado = 0;
+
+    ELSEIF EXISTS (SELECT 1 FROM mermas WHERE idMerma = p_idMerma AND estatus = p_estatus) THEN
+        SET p_resultado = IF(p_estatus = 1,
+            'ERROR: La merma ya se encuentra activa',
+            'ERROR: La merma ya se encuentra inactiva');
+        SET p_idGenerado = 0;
+
+    ELSE
+        START TRANSACTION;
+
+        SELECT descripcion INTO v_descripcion_merma
+        FROM mermas WHERE idMerma = p_idMerma;
+
+        UPDATE mermas SET estatus = p_estatus WHERE idMerma = p_idMerma;
+        SET p_idGenerado = p_idMerma;
+
+IF p_estatus = 0 THEN
+    -- Desactivar: devolver el stock (anular la merma)
+    UPDATE materiasPrimas mp
+    INNER JOIN detalleMerma dm ON dm.idMateriaP = mp.idMateriaP
+    SET mp.stock = mp.stock + dm.cantidad
+    WHERE dm.idMerma = p_idMerma;
+
+ELSE
+    -- Reactivar: volver a descontar el stock
+    UPDATE materiasPrimas mp
+    INNER JOIN detalleMerma dm ON dm.idMateriaP = mp.idMateriaP
+    SET mp.stock = mp.stock - dm.cantidad
+    WHERE dm.idMerma = p_idMerma;
+END IF;
+
+        INSERT INTO bitacora_eventos
+            (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (
+            p_ejecutadoPor, v_nombre_ejecutor,
+            'Mermas',
+            IF(p_estatus = 1, 'ACTIVAR', 'DESACTIVAR'),
+            'merma',
+            CONCAT('ID:', p_idMerma, ' | ', v_descripcion_merma),
+            NOW(), p_ip
+        );
+
+        COMMIT;
+        SET p_resultado = IF(p_estatus = 1,
+            'SUCCESS: Merma activada y stock restaurado correctamente',
+            'SUCCESS: Merma desactivada y stock ajustado correctamente');
+    END IF;
+
+    ELSE
+        SET p_resultado = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+    END IF;
+
+END$$
+DELIMITER ;
 
 -- Agrergar materias primas
 LOCK TABLES `materiasprimas` WRITE;
@@ -2701,3 +2897,671 @@ LOCK TABLES `materiasprimas` WRITE;
 INSERT INTO `materiasprimas` VALUES (1,'Cebolla','Solido',5,5000.00,1000.00,1),(2,'Harina','Solido',1,24450.00,5000.00,1),(3,'Aceite','Liquido',6,4960.00,1000.00,1),(4,'Levadura seca','Solido',1,996.00,200.00,1),(5,'Azúcar','Solido',7,1996.00,500.00,1),(6,'Sal','Solido',7,2996.00,500.00,1),(7,'Pepperoni','Solido',2,8000.00,1500.00,1),(8,'Jamón','Solido',2,5910.00,1000.00,1),(9,'Piña','Solido',5,0.00,800.00,1),(10,'Tocino','Solido',2,4000.00,800.00,1),(11,'Salami','Solido',2,4000.00,800.00,1),(12,'Chorizo','Solido',2,8500.00,1000.00,1),(13,'Jalapeño','Solido',5,2000.00,500.00,1),(14,'Morrón','Solido',5,3000.00,600.00,1),(15,'Asadero','Solido',3,10000.00,2000.00,1),(16,'Monarca','Solido',3,8000.00,1500.00,1),(17,'Gouda','Solido',3,6000.00,1000.00,1),(18,'Mozzarella','Solido',3,15000.00,3000.00,1),(19,'Champiñones','Solido',5,4000.00,800.00,1),(20,'Aceitunas','Solido',5,300.00,600.00,1);
 /*!40000 ALTER TABLE `materiasprimas` ENABLE KEYS */;
 UNLOCK TABLES;
+
+-- ============================================================
+-- MÓDULO: CORTE DE CAJA Y UTILIDADES
+-- FourOvenPizzaDB
+-- ============================================================
+
+USE FourOvenPizzaDB;
+
+-- ------------------------------------------------------------
+-- TABLA: corteCaja (registro de cortes diarios)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS corteCaja (
+    idCorte         INT AUTO_INCREMENT PRIMARY KEY,
+    idUsuario       INT          NOT NULL,
+    fecha           DATE         NOT NULL,
+    turno           VARCHAR(20)  NOT NULL DEFAULT 'General',  -- 'Mañana' | 'Tarde' | 'General'
+    efectivoInicial DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    totalVentas     DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    totalEfectivo   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    totalTarjeta    DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    totalEgresos    DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    saldoFinal      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    diferencia      DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- saldoContado - saldoEsperado
+    saldoContado    DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- lo que el cajero cuenta físicamente
+    observaciones   TEXT         NULL,
+    estado          VARCHAR(20)  NOT NULL DEFAULT 'Abierto', -- 'Abierto' | 'Cerrado'
+    fechaCreacion   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fechaCierre     DATETIME     NULL,
+
+    FOREIGN KEY (idUsuario) REFERENCES usuarios(idUsuario),
+    UNIQUE KEY uk_corte_fecha_turno (fecha, turno)
+) ENGINE=InnoDB;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_corte_caja_resumen
+-- Calcula el resumen del día (ventas, egresos, saldo esperado)
+-- para pre-rellenar el formulario de corte.
+-- ------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_corte_caja_resumen;
+DELIMITER $$
+CREATE PROCEDURE sp_corte_caja_resumen(IN p_fecha DATE)
+BEGIN
+    DECLARE v_fecha DATE;
+    SET v_fecha = IFNULL(p_fecha, CURDATE());
+
+    -- RS1: Ventas confirmadas del día (sin cambios)
+    SELECT
+        COALESCE(SUM(CASE WHEN v.metodoPago = 'Efectivo' THEN dv_total.total ELSE 0 END), 0) AS total_efectivo,
+        COALESCE(SUM(CASE WHEN v.metodoPago = 'Tarjeta'  THEN dv_total.total ELSE 0 END), 0) AS total_tarjeta,
+        COALESCE(SUM(dv_total.total), 0)                                                       AS total_ventas,
+        COUNT(v.idVenta)                                                                       AS num_ventas
+    FROM ventas v
+    JOIN (
+        SELECT idVenta, SUM(cantidad * precio) AS total
+        FROM detalleVenta GROUP BY idVenta
+    ) dv_total ON dv_total.idVenta = v.idVenta
+    WHERE DATE(v.fecha) = v_fecha
+      AND v.estado = 'Confirmada'
+      AND v.tipo = 'Punto venta';
+
+    -- RS2: Movimientos informativos del día
+    -- Solo INGRESO y CORTE anteriores; excluye EGRESO (compras) porque no afectan esta caja
+    SELECT
+        cm.idMovimiento,
+        cm.tipo,
+        cm.monto,
+        cm.descripcion,
+        cm.fecha,
+        u.nombre AS nombre_usuario
+    FROM cajaMovimientos cm
+    JOIN usuarios u ON u.idUsuario = cm.idUsuario
+    WHERE DATE(cm.fecha) = v_fecha
+      AND cm.tipo NOT IN ('EGRESO')   -- las compras no son de esta caja
+    ORDER BY cm.fecha DESC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_gestion_corte_caja
+-- INSERT: registrar un nuevo corte
+-- GET_HISTORIAL: listar cortes con filtros
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_corte_caja$$
+CREATE PROCEDURE sp_gestion_corte_caja(
+    IN  p_accion          VARCHAR(20),
+    IN  p_idCorte         INT,
+    IN  p_idUsuario       INT,
+    IN  p_fecha           DATE,
+    IN  p_turno           VARCHAR(20),
+    IN  p_efectivoInicial DECIMAL(10,2),
+    IN  p_saldoContado    DECIMAL(10,2),
+    IN  p_observaciones   TEXT,
+    IN  p_ip              VARCHAR(45),
+    OUT p_resultado       VARCHAR(255),
+    OUT p_idGenerado      INT
+)
+BEGIN
+    DECLARE v_nombre_usuario  VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_total_ventas    DECIMAL(10,2) DEFAULT 0;
+    DECLARE v_total_efectivo  DECIMAL(10,2) DEFAULT 0;
+    DECLARE v_total_tarjeta   DECIMAL(10,2) DEFAULT 0;
+    DECLARE v_total_egresos   DECIMAL(10,2) DEFAULT 0;
+    DECLARE v_saldo_esperado  DECIMAL(10,2) DEFAULT 0;
+    DECLARE v_diferencia      DECIMAL(10,2) DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado  = 'ERROR: Ocurrió un error al registrar el corte de caja';
+        SET p_idGenerado = 0;
+    END;
+
+    IF p_idUsuario IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_idUsuario;
+    END IF;
+
+    -- ── INSERT: nuevo corte ──────────────────────────────────
+    IF p_accion = 'INSERT' THEN
+
+        IF EXISTS (SELECT 1 FROM corteCaja WHERE fecha = p_fecha AND turno = p_turno) THEN
+            SET p_resultado  = CONCAT('ERROR: Ya existe un corte de caja para el turno "', p_turno, '" del día ', p_fecha);
+            SET p_idGenerado = 0;
+        ELSE
+            START TRANSACTION;
+
+            -- Calcular totales de ventas del día
+            SELECT
+                COALESCE(SUM(CASE WHEN v.metodoPago = 'Efectivo' THEN dv_t.total ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN v.metodoPago = 'Tarjeta'  THEN dv_t.total ELSE 0 END), 0),
+                COALESCE(SUM(dv_t.total), 0)
+            INTO v_total_efectivo, v_total_tarjeta, v_total_ventas
+            FROM ventas v
+            JOIN (
+                SELECT idVenta, SUM(cantidad * precio) AS total
+                FROM detalleVenta GROUP BY idVenta
+            ) dv_t ON dv_t.idVenta = v.idVenta
+            WHERE DATE(v.fecha) = p_fecha
+              AND v.estado = 'Confirmada'
+              AND v.tipo = 'Punto venta';
+
+            -- Calcular egresos del día
+            SELECT COALESCE(SUM(monto), 0) INTO v_total_egresos
+            FROM cajaMovimientos
+            WHERE DATE(fecha) = p_fecha AND tipo = 'EGRESO';
+
+            -- Saldo esperado en caja: efectivo inicial + efectivo de ventas - egresos
+            SET v_saldo_esperado = p_efectivoInicial + v_total_efectivo - v_total_egresos;
+            SET v_diferencia     = p_saldoContado - v_saldo_esperado;
+
+            INSERT INTO corteCaja (
+                idUsuario, fecha, turno,
+                efectivoInicial, totalVentas, totalEfectivo, totalTarjeta,
+                totalEgresos, saldoFinal, saldoContado, diferencia,
+                observaciones, estado, fechaCreacion, fechaCierre
+            ) VALUES (
+                p_idUsuario, p_fecha, p_turno,
+                p_efectivoInicial, v_total_ventas, v_total_efectivo, v_total_tarjeta,
+                v_total_egresos, v_saldo_esperado, p_saldoContado, v_diferencia,
+                p_observaciones, 'Cerrado', NOW(), NOW()
+            );
+
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado  = 'SUCCESS: Corte de caja registrado correctamente';
+
+            -- Registrar en movimientos de caja
+            INSERT INTO cajaMovimientos (idUsuario, tipo, monto, descripcion, fecha)
+            VALUES (p_idUsuario, 'CORTE',
+                    v_total_ventas,
+                    CONCAT('Corte de caja #', p_idGenerado, ' | Turno: ', p_turno,
+                           ' | Diferencia: ', v_diferencia),
+                    NOW());
+
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES (p_idUsuario, v_nombre_usuario, 'CorteCaja', 'CREAR',
+                    'corte', CONCAT('ID:', p_idGenerado, ' | Fecha:', p_fecha), NOW(), p_ip);
+
+            COMMIT;
+        END IF;
+
+    -- ── GET_HISTORIAL: listar cortes ─────────────────────────
+    ELSEIF p_accion = 'GET_HISTORIAL' THEN
+        SET p_resultado  = 'OK';
+        SET p_idGenerado = 0;
+
+        SELECT
+            cc.idCorte,
+            cc.fecha,
+            cc.turno,
+            cc.efectivoInicial,
+            cc.totalVentas,
+            cc.totalEfectivo,
+            cc.totalTarjeta,
+            cc.totalEgresos,
+            cc.saldoFinal,
+            cc.saldoContado,
+            cc.diferencia,
+            cc.observaciones,
+            cc.estado,
+            cc.fechaCreacion,
+            u.nombre AS nombre_usuario
+        FROM corteCaja cc
+        JOIN usuarios u ON u.idUsuario = cc.idUsuario
+        WHERE (p_fecha IS NULL OR cc.fecha = p_fecha)
+        ORDER BY cc.fecha DESC, cc.fechaCreacion DESC;
+
+    ELSE
+        SET p_resultado  = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+    END IF;
+END$$
+DELIMITER ;
+
+
+-- ============================================================
+-- SPs DE UTILIDADES / REPORTES
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- SP: sp_utilidades_resumen
+-- KPIs generales: ingresos, costos, utilidad bruta
+-- p_fecha_ini / p_fecha_fin: rango de fechas (NULL = último mes)
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_utilidades_resumen$$
+CREATE PROCEDURE sp_utilidades_resumen(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    -- ── 1) KPIs generales ───────────────────────────────────
+    SELECT
+        COALESCE(SUM(dv.cantidad * dv.precio), 0)                    AS total_ingresos,
+        COUNT(DISTINCT v.idVenta)                                     AS total_ventas,
+        COALESCE(SUM(dv.cantidad), 0)                                 AS total_unidades,
+        COALESCE(AVG(sub_total.total_venta), 0)                      AS ticket_promedio
+    FROM ventas v
+    JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+    JOIN (
+        SELECT idVenta, SUM(cantidad * precio) AS total_venta
+        FROM detalleVenta GROUP BY idVenta
+    ) sub_total ON sub_total.idVenta = v.idVenta
+    WHERE v.estado = 'Confirmada'
+      AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin;
+
+    -- ── 2) Costo promedio por gramo (últimos 30 días) ────────
+    -- Costo unitario de cada materia prima basado en compras completadas
+    SELECT
+        mp.idMateriaP,
+        mp.nombre AS nombre_mp,
+        COALESCE(
+            (
+                SELECT SUM(dc2.precio) / NULLIF(SUM(dc2.cantidad), 0)
+                FROM detalleCompra dc2
+                JOIN compras c2 ON c2.idCompra = dc2.idCompra
+                WHERE dc2.idMateriaP = mp.idMateriaP
+                  AND c2.estatus = 'Completado'
+                  AND DATE(c2.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            ), 0
+        ) AS costo_por_unidad_promedio
+    FROM materiasPrimas mp
+    WHERE mp.estatus = 1
+    ORDER BY mp.nombre;
+
+    -- ── 3) Utilidad por producto ─────────────────────────────
+    SELECT
+        p.idProducto,
+        p.nombre                                                       AS nombre_producto,
+        p.`tamaño`                                                     AS tamano,
+        p.precio                                                       AS precio_venta,
+        COALESCE(SUM(dv.cantidad), 0)                                  AS unidades_vendidas,
+        COALESCE(SUM(dv.cantidad * dv.precio), 0)                      AS ingresos_totales,
+        -- Costo de materia prima por unidad producida (promedio últimos 30d)
+        COALESCE((
+            SELECT SUM(dr.cantidad * costo_mp.costo_unit)
+            FROM recetas r
+            JOIN detalleReceta dr ON dr.idReceta = r.idReceta
+            JOIN (
+                SELECT dc3.idMateriaP,
+                       SUM(dc3.precio) / NULLIF(SUM(dc3.cantidad), 0) AS costo_unit
+                FROM detalleCompra dc3
+                JOIN compras c3 ON c3.idCompra = dc3.idCompra
+                WHERE c3.estatus = 'Completado'
+                  AND DATE(c3.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                GROUP BY dc3.idMateriaP
+            ) costo_mp ON costo_mp.idMateriaP = dr.idMateriaP
+            WHERE r.idProducto = p.idProducto
+        ), 0)                                                          AS costo_unit_mp,
+        -- Utilidad bruta total
+        COALESCE(SUM(dv.cantidad * dv.precio), 0) - COALESCE(
+            (
+                SELECT SUM(dr.cantidad * costo_mp2.costo_unit) * COALESCE(SUM(dv.cantidad), 0)
+                FROM recetas r2
+                JOIN detalleReceta dr ON dr.idReceta = r2.idReceta
+                JOIN (
+                    SELECT dc4.idMateriaP,
+                           SUM(dc4.precio) / NULLIF(SUM(dc4.cantidad), 0) AS costo_unit
+                    FROM detalleCompra dc4
+                    JOIN compras c4 ON c4.idCompra = dc4.idCompra
+                    WHERE c4.estatus = 'Completado'
+                      AND DATE(c4.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                    GROUP BY dc4.idMateriaP
+                ) costo_mp2 ON costo_mp2.idMateriaP = dr.idMateriaP
+                WHERE r2.idProducto = p.idProducto
+            ), 0
+        )                                                              AS utilidad_bruta
+    FROM productos p
+    LEFT JOIN detalleVenta dv ON dv.idProducto = p.idProducto
+    LEFT JOIN ventas v        ON v.idVenta = dv.idVenta
+        AND v.estado = 'Confirmada'
+        AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    WHERE p.estatus = 1
+    GROUP BY p.idProducto, p.nombre, p.`tamaño`, p.precio
+    ORDER BY unidades_vendidas DESC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_productos_vendidos
+-- Ranking de productos: más y menos vendidos
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_productos_vendidos$$
+CREATE PROCEDURE sp_reporte_productos_vendidos(
+    IN p_fecha_ini  DATE,
+    IN p_fecha_fin  DATE,
+    IN p_limite     INT,      -- top N productos (NULL = todos)
+    IN p_orden      VARCHAR(5) -- 'DESC' = más vendidos | 'ASC' = menos vendidos
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+    DECLARE v_limite INT;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+	SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+	SET v_limite   = IFNULL(p_limite, 999999);
+
+    -- Más / menos vendidos por unidades
+    SELECT
+        p.idProducto,
+        p.nombre                              AS nombre_producto,
+        p.`tamaño`                            AS tamano,
+        p.precio                              AS precio_venta,
+        COALESCE(SUM(dv.cantidad), 0)         AS unidades_vendidas,
+        COALESCE(SUM(dv.cantidad * dv.precio), 0) AS ingresos,
+        COUNT(DISTINCT v.idVenta)             AS num_transacciones
+    FROM productos p
+    LEFT JOIN detalleVenta dv ON dv.idProducto = p.idProducto
+    LEFT JOIN ventas v        ON v.idVenta = dv.idVenta
+        AND v.estado = 'Confirmada'
+        AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    WHERE p.estatus = 1
+    GROUP BY p.idProducto, p.nombre, p.`tamaño`, p.precio
+    ORDER BY
+        CASE WHEN p_orden = 'ASC'  THEN unidades_vendidas END ASC,
+        CASE WHEN p_orden = 'DESC' THEN unidades_vendidas END DESC
+    LIMIT v_limite;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_ventas_por_dia
+-- Ventas agrupadas por día (para gráfica de tendencia)
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_ventas_por_dia$$
+CREATE PROCEDURE sp_reporte_ventas_por_dia(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    SELECT
+        DATE(v.fecha)                          AS dia,
+        COUNT(DISTINCT v.idVenta)              AS num_ventas,
+        COALESCE(SUM(dv.cantidad * dv.precio), 0) AS total_ingresos,
+        COALESCE(SUM(dv.cantidad), 0)          AS unidades
+    FROM ventas v
+    JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+    WHERE v.estado = 'Confirmada'
+      AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    GROUP BY DATE(v.fecha)
+    ORDER BY dia ASC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_metodo_pago
+-- Distribución por método de pago
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_metodo_pago$$
+CREATE PROCEDURE sp_reporte_metodo_pago(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    SELECT
+        v.metodoPago,
+        COUNT(DISTINCT v.idVenta)                 AS num_ventas,
+        COALESCE(SUM(dv.cantidad * dv.precio), 0) AS total_ingresos
+    FROM ventas v
+    JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+    WHERE v.estado = 'Confirmada'
+      AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    GROUP BY v.metodoPago
+    ORDER BY total_ingresos DESC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_costos_materias_primas
+-- Costo total de insumos comprados en el período
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_costos_materias_primas$$
+CREATE PROCEDURE sp_reporte_costos_materias_primas(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    SELECT
+        mp.idMateriaP,
+        mp.nombre                                          AS nombre_mp,
+        cat.nombre                                         AS categoria,
+        SUM(dc.cantidad)                                   AS total_comprado,
+        SUM(dc.precio)                                     AS costo_total,
+        SUM(dc.precio) / NULLIF(SUM(dc.cantidad), 0)       AS costo_promedio_unidad,
+        COUNT(DISTINCT c.idCompra)                         AS num_compras
+    FROM detalleCompra dc
+    JOIN compras c        ON c.idCompra  = dc.idCompra
+    JOIN materiasPrimas mp ON mp.idMateriaP = dc.idMateriaP
+    JOIN categorias cat   ON cat.idCategoria = mp.idCategoria
+    WHERE c.estatus = 'Completado'
+      AND DATE(c.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    GROUP BY mp.idMateriaP, mp.nombre, cat.nombre
+    ORDER BY costo_total DESC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_mermas_periodo
+-- Mermas del período y su impacto económico
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_mermas_periodo$$
+CREATE PROCEDURE sp_reporte_mermas_periodo(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    SELECT
+        m.idMerma,
+        m.descripcion,
+        DATE(m.fecha)                                      AS fecha,
+        mp.nombre                                          AS materia_prima,
+        dm.cantidad                                        AS cantidad_merma,
+        -- Valorizar la merma al costo promedio del último mes
+        COALESCE((
+            SELECT SUM(dc2.precio) / NULLIF(SUM(dc2.cantidad), 0)
+            FROM detalleCompra dc2
+            JOIN compras c2 ON c2.idCompra = dc2.idCompra
+            WHERE dc2.idMateriaP = mp.idMateriaP
+              AND c2.estatus = 'Completado'
+              AND DATE(c2.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ), 0) * dm.cantidad                                AS valor_perdida
+    FROM mermas m
+    JOIN detalleMerma dm ON dm.idMerma = m.idMerma
+    JOIN materiasPrimas mp ON mp.idMateriaP = dm.idMateriaP
+    WHERE m.estatus = 1
+      AND DATE(m.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    ORDER BY m.fecha DESC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_utilidad_neta
+-- Resultado final: ingresos - costos MP consumidos - mermas
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_utilidad_neta$$
+CREATE PROCEDURE sp_reporte_utilidad_neta(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+    DECLARE v_total_ingresos    DECIMAL(12,2) DEFAULT 0;
+    DECLARE v_total_costo_mp    DECIMAL(12,2) DEFAULT 0;
+    DECLARE v_total_mermas      DECIMAL(12,2) DEFAULT 0;
+    DECLARE v_utilidad_bruta    DECIMAL(12,2) DEFAULT 0;
+    DECLARE v_utilidad_neta     DECIMAL(12,2) DEFAULT 0;
+    DECLARE v_margen_bruto      DECIMAL(8,4)  DEFAULT 0;
+    DECLARE v_margen_neto       DECIMAL(8,4)  DEFAULT 0;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    -- Total ingresos (ventas confirmadas)
+    SELECT COALESCE(SUM(dv.cantidad * dv.precio), 0)
+    INTO v_total_ingresos
+    FROM ventas v
+    JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+    WHERE v.estado = 'Confirmada'
+      AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin;
+
+    -- Costo MP consumido (órdenes de producción terminadas × costo promedio)
+    SELECT COALESCE(SUM(dr.cantidad * dp.cantidad * costo_mp.costo_unit), 0)
+    INTO v_total_costo_mp
+    FROM detalleProduccion dp
+    JOIN ordenesProduccion op ON op.idOrden = dp.idOrden
+    JOIN recetas r  ON r.idProducto = dp.idProducto
+    JOIN detalleReceta dr ON dr.idReceta = r.idReceta
+    JOIN (
+        SELECT dc.idMateriaP,
+               SUM(dc.precio) / NULLIF(SUM(dc.cantidad), 0) AS costo_unit
+        FROM detalleCompra dc
+        JOIN compras c ON c.idCompra = dc.idCompra
+        WHERE c.estatus = 'Completado'
+          AND DATE(c.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        GROUP BY dc.idMateriaP
+    ) costo_mp ON costo_mp.idMateriaP = dr.idMateriaP
+    WHERE op.estado = 'Terminada'
+      AND DATE(op.fecha) BETWEEN v_fecha_ini AND v_fecha_fin;
+
+    -- Pérdida por mermas
+    SELECT COALESCE(SUM(
+        dm.cantidad * COALESCE((
+            SELECT SUM(dc2.precio) / NULLIF(SUM(dc2.cantidad), 0)
+            FROM detalleCompra dc2
+            JOIN compras c2 ON c2.idCompra = dc2.idCompra
+            WHERE dc2.idMateriaP = dm.idMateriaP
+              AND c2.estatus = 'Completado'
+              AND DATE(c2.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ), 0)
+    ), 0)
+    INTO v_total_mermas
+    FROM mermas m
+    JOIN detalleMerma dm ON dm.idMerma = m.idMerma
+    WHERE m.estatus = 1
+      AND DATE(m.fecha) BETWEEN v_fecha_ini AND v_fecha_fin;
+
+    SET v_utilidad_bruta = v_total_ingresos - v_total_costo_mp;
+    SET v_utilidad_neta  = v_utilidad_bruta - v_total_mermas;
+    SET v_margen_bruto   = IF(v_total_ingresos > 0, (v_utilidad_bruta / v_total_ingresos) * 100, 0);
+    SET v_margen_neto    = IF(v_total_ingresos > 0, (v_utilidad_neta  / v_total_ingresos) * 100, 0);
+
+    SELECT
+        v_fecha_ini          AS fecha_ini,
+        v_fecha_fin          AS fecha_fin,
+        v_total_ingresos     AS total_ingresos,
+        v_total_costo_mp     AS costo_materias_primas,
+        v_total_mermas       AS perdida_mermas,
+        v_utilidad_bruta     AS utilidad_bruta,
+        v_utilidad_neta      AS utilidad_neta,
+        ROUND(v_margen_bruto, 2) AS margen_bruto_pct,
+        ROUND(v_margen_neto,  2) AS margen_neto_pct;
+END$$
+DELIMITER ;
+
+-- ============================================================
+-- ADICION AL MODULO CAJA/UTILIDADES
+-- SP adicional: sp_alertas_stock_bajo
+-- FourOvenPizzaDB
+-- ============================================================
+
+USE FourOvenPizzaDB;
+
+-- ------------------------------------------------------------
+-- SP: sp_alertas_stock_bajo
+-- Insumos con stock actual <= stock minimo configurado.
+-- Se puede llamar desde Python en lugar de la consulta directa
+-- si se prefiere centralizar la logica en la BD.
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_alertas_stock_bajo$$
+CREATE PROCEDURE sp_alertas_stock_bajo()
+BEGIN
+    SELECT
+        mp.idMateriaP,
+        mp.nombre,
+        mp.stock,
+        mp.stockMinimo,
+        mp.stock - mp.stockMinimo          AS diferencia,
+        cat.nombre                         AS categoria,
+        -- Costo estimado para reponer al nivel minimo (basado en compras recientes)
+        COALESCE((
+            SELECT SUM(dc.precio) / NULLIF(SUM(dc.cantidad), 0)
+            FROM detalleCompra dc
+            JOIN compras c ON c.idCompra = dc.idCompra
+            WHERE dc.idMateriaP = mp.idMateriaP
+              AND c.estatus = 'Completado'
+              AND DATE(c.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ), 0) * ABS(mp.stock - mp.stockMinimo) AS costo_reposicion_estimado
+    FROM materiasPrimas mp
+    JOIN categorias cat ON cat.idCategoria = mp.idCategoria
+    WHERE mp.estatus = 1
+      AND mp.stock <= mp.stockMinimo
+    ORDER BY (mp.stock - mp.stockMinimo) ASC;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_alertas_stock_bajo$$
+CREATE PROCEDURE sp_alertas_stock_bajo()
+BEGIN
+    SELECT
+        mp.idMateriaP,
+        mp.nombre,
+        mp.stock,
+        mp.stockMinimo,
+        mp.stock - mp.stockMinimo          AS diferencia,
+        cat.nombre                         AS categoria,
+        -- Costo estimado para reponer al nivel minimo (basado en compras recientes)
+        COALESCE((
+            SELECT SUM(dc.precio) / NULLIF(SUM(dc.cantidad), 0)
+            FROM detalleCompra dc
+            JOIN compras c ON c.idCompra = dc.idCompra
+            WHERE dc.idMateriaP = mp.idMateriaP
+              AND c.estatus = 'Completado'
+              AND DATE(c.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ), 0) * ABS(mp.stock - mp.stockMinimo) AS costo_reposicion_estimado
+    FROM materiasPrimas mp
+    JOIN categorias cat ON cat.idCategoria = mp.idCategoria
+    WHERE mp.estatus = 1
+      AND mp.stock <= mp.stockMinimo
+    ORDER BY (mp.stock - mp.stockMinimo) ASC;
+END$$
+DELIMITER ;
