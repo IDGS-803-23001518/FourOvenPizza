@@ -8,7 +8,7 @@
     <div class="container flex flex-wrap items-center justify-between mx-auto">
         <div class="flex-1 flex justify-center">
             <div class="flex items-center space-x-2 sm:space-x-3 bg-opacity-20 px-3 sm:px-6 py-2 rounded-full">
-                <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Dashboard</span>
+                <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Inicio</span>
             </div>
         </div>
     </div>
@@ -25,6 +25,20 @@
     {% endfor %}
     {% endif %}
     {% endwith %}
+</div>
+
+<div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+    <div style="text-align: center; max-width: 600px;">
+        <h1 style="color: var(--cafe);">Bienvenido a FourOvenPizza</h1>
+        <p style="color: var(--suave); margin-top: 1rem;">
+            Selecciona una opción del menú lateral para comenzar.
+        </p>
+        <div style="margin-top: 2rem;">
+            <img src="{{ url_for('static', filename='img/Logo FourOvenPizzas/logo2.png') }}" 
+                 alt="FourOvenPizza" 
+                 style="max-width: 200px; opacity: 0.8;">
+        </div>
+    </div>
 </div>
 
 {% endblock %}
