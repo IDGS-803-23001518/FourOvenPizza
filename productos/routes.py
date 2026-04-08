@@ -295,17 +295,17 @@ def listado_productos():
     for p in productos_view:
         nombre_p = (p["nombre"] or "").lower()
         producto = Productos.query.get(p["idProducto"])
+        imagen_b64 = None
         if producto and producto.imagen:
-            imagen = producto.imagen
-        else:
-            imagen = _obtener_imagen_producto(p["idProducto"], nombre_p)
-            if not imagen:
-                imagen = "img/Pizzas/PizzaPepperoni.png"
-                for clave, ruta in imagenes.items():
-                    if clave in nombre_p:
-                        imagen = ruta
-                        break
-        productos_final.append({**p, "imagen": imagen})
+            imagen_b64 = producto.imagen.decode('utf-8') if isinstance(producto.imagen, bytes) else producto.imagen
+        imagen_fallback = _obtener_imagen_producto(p["idProducto"], nombre_p)
+        if not imagen_fallback:
+            imagen_fallback = "img/Pizzas/PizzaPepperoni.png"
+            for clave, ruta in imagenes.items():
+                if clave in nombre_p:
+                    imagen_fallback = ruta
+                    break
+        productos_final.append({**p, "imagen_b64": imagen_b64, "imagen_fallback": imagen_fallback})
 
     filtros = {
         "nombre": nombre,

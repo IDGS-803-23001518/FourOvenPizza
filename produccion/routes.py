@@ -68,11 +68,31 @@ def listado_ordenes():
     estado_f    = request.args.get("estado",    "").strip() or None
     fecha_ini_f = request.args.get("fecha_ini", "").strip() or None
     fecha_fin_f = request.args.get("fecha_fin", "").strip() or None
+    pagina_f    = request.args.get("page", "1").strip()
+    
+    try:
+        pagina = int(pagina_f)
+        if pagina < 1:
+            pagina = 1
+    except ValueError:
+        pagina = 1
+    
+    limite = 10
 
     ordenes = db.session.execute(
         text("CALL sp_listar_ordenes_produccion(:estado, :fecha_ini, :fecha_fin)"),
         {"estado": estado_f, "fecha_ini": fecha_ini_f, "fecha_fin": fecha_fin_f},
     ).mappings().all()
+    
+    total_ordenes = len(ordenes)
+    total_paginas = (total_ordenes + limite - 1) // limite if total_ordenes > 0 else 1
+    
+    if pagina > total_paginas:
+        pagina = total_paginas if total_paginas > 0 else 1
+    
+    inicio = (pagina - 1) * limite
+    fin = inicio + limite
+    ordenes_pagina = ordenes[inicio:fin] if ordenes else []
 
     productos_disponibles = _productos_disponibles()
     form_error     = session.pop("produccion_form_error",    None)
@@ -86,11 +106,14 @@ def listado_ordenes():
 
     return render_template(
         "produccion/ordenes.html",
-        ordenes=ordenes,
+        ordenes=ordenes_pagina,
         productos_disponibles=productos_disponibles,
         form_error=form_error,
         detalle_editar=detalle_editar,
         filtros=filtros,
+        pagina_actual=pagina,
+        total_paginas=total_paginas,
+        total_ordenes=total_ordenes,
     )
 
 

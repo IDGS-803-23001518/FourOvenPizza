@@ -122,7 +122,7 @@ def compras():
 
     proveedores = Proveedores.query.filter_by(estatus=1).order_by(Proveedores.nombre).all()
     materias = MateriasPrimas.query.filter_by(estatus=1).order_by(MateriasPrimas.nombre).all()
-    unidades = UnidadesMedida.query.filter_by(estatus=1).order_by(UnidadesMedida.nombre).all()
+    unidades = UnidadesMedida.query.order_by(UnidadesMedida.nombre).all()
 
     compras_json = json.dumps(_serializar_compras(lista_compras))
     unidades_json = json.dumps([{

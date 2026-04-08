@@ -219,13 +219,30 @@ def registrar_venta():
             session["ventas_form_error"] = {"mensaje": "Agrega al menos un producto."}
             return redirect(url_for("ventas.punto_venta"))
 
-        # Enriquecer detalles con precio actual
+        # Enriquecer detalles con precio actual y validar receta
         detalles_sp = []
         for d in detalles:
             prod = Productos.query.filter_by(idProducto=int(d["idProducto"]), estatus=True).first()
             if not prod:
                 session["ventas_form_error"] = {"mensaje": f"Producto ID {d['idProducto']} no encontrado."}
                 return redirect(url_for("ventas.punto_venta"))
+            
+            # Validar que el producto tenga receta con ingredientes
+            receta = Recetas.query.filter_by(idProducto=int(d["idProducto"])).first()
+            if not receta:
+                session["ventas_form_error"] = {"mensaje": f"El producto '{prod.nombre}' no tiene receta registrada."}
+                return redirect(url_for("ventas.punto_venta"))
+            
+            # Verificar que la receta tenga ingredientes (mínimo 4)
+            tiene_ingredientes = db.session.execute(
+                text("SELECT COUNT(*) FROM detalleReceta WHERE idReceta = :idReceta"),
+                {"idReceta": receta.idReceta}
+            ).scalar()
+            
+            if not tiene_ingredientes or tiene_ingredientes < 4:
+                session["ventas_form_error"] = {"mensaje": f"El producto '{prod.nombre}' debe tener al menos 4 ingredientes en su receta."}
+                return redirect(url_for("ventas.punto_venta"))
+            
             detalles_sp.append({
                 "idProducto": int(d["idProducto"]),
                 "cantidad":   int(d["cantidad"]),

@@ -18,9 +18,6 @@ from caja.routes import caja
 from dashboard.routes import dashboard
 from models import db
 
-# Importar la función de registro de acceso
-from autentificacion.routes import registrar_acceso
-
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=10)
@@ -46,7 +43,23 @@ db.init_app(app)
 
 @app.before_request
 def verificar_sesion():
-    # Si no hay sesión, no hacer nada
+    # Rutas exemptas de verificación de sesión
+    exempt_routes = [
+        'autentificacion.login',
+        'autentificacion.logout',
+        'autentificacion.logout_beacon',
+        'autentificacion.reset_password',
+        'autentificacion.cambiar_contrasena',
+        'autentificacion.registrar_usuario',
+        'autentificacion.enviar_correo_reset',
+        'static',
+    ]
+    
+    # Si es ruta statica o exempta, permitir
+    if request.endpoint in exempt_routes or request.endpoint is None:
+        return
+    
+    # Si no hay sesión, no hacer nada (dejar que la ruta maneje el redirect)
     if not session.get('usuario_id'):
         return
 
@@ -55,22 +68,38 @@ def verificar_sesion():
 
     if ultima:
         if isinstance(ultima, str):
-            ultima = datetime.fromisoformat(ultima)
+            try:
+                ultima = datetime.fromisoformat(ultima)
+            except ValueError:
+                ultima = None
         
-        # Verificar si la sesión expiró por inactividad
-        if (ahora - ultima) > timedelta(minutes=10):
-            # Registrar logout por inactividad ANTES de limpiar la sesión
-            registrar_acceso(
-                session.get('usuario_id'),
-                session.get('usuario_nombre'),
-                'LOGOUT_INACTIVIDAD',
-                'SESION_EXPIRADA'
-            )
-            
-            # Limpiar sesión y redirigir al login
-            session.clear()
-            flash('Tu sesión ha expirado por inactividad.', 'warning')
-            return redirect(url_for('autentificacion.login'))
+        if ultima:
+            # Verificar si la sesión expiró por inactividad
+            if (ahora - ultima) > timedelta(minutes=10):
+                # Registrar logout por inactividad ANTES de limpiar la sesión
+                try:
+                    from sqlalchemy import text
+                    db.session.execute(
+                        text("""
+                            INSERT INTO bitacora_accesos (usuarioId, nombreUsuario, evento, ip, navegador, resultado, fecha)
+                            VALUES (:uid, :nombre, 'LOGOUT_INACTIVIDAD', :ip, :navegador, 'SESION_EXPIRADA', NOW())
+                        """),
+                        {
+                            'uid': session.get('usuario_id'),
+                            'nombre': session.get('usuario_nombre'),
+                            'ip': request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip(),
+                            'navegador': request.headers.get('User-Agent', 'Desconocido')[:255]
+                        }
+                    )
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"Error registrando logout por inactividad: {e}")
+                
+                # Limpiar sesión y redirigir al login
+                session.clear()
+                flash('Tu sesión ha expirado por inactividad.', 'warning')
+                return redirect(url_for('autentificacion.login'))
     
     # Actualizar la última actividad
     session['ultima_actividad'] = ahora.isoformat()

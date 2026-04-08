@@ -196,12 +196,26 @@
     .compra-row {
         transition: opacity 0.2s ease;
     }
+    .compra-card {
+        transition: opacity 0.2s ease;
+    }
     .pag-hidden {
         opacity: 0;
         transition: opacity 0.2s ease;
     }
     .filtro-hidden, .pag-hidden {
         display: none !important;
+    }
+
+    /* Cards en móvil */
+    #cards-compras { display: none; }
+    @media (max-width: 767px) {
+        #tabla-compras-desktop { display: none; }
+        #tabla-compras-desktop + .pag-wrapper { display: none; }
+        #cards-compras { display: block; }
+    }
+    @media (min-width: 768px) {
+        #cards-compras + .pag-wrapper { display: none; }
     }
 </style>
 
@@ -382,6 +396,89 @@
         </div>
         <div id="sin-resultados" class="hidden text-center py-10 bg-white text-gray-400 text-sm font-medium">
             No se encontraron compras con los filtros seleccionados.
+        </div>
+
+        <!-- Cards Móvil -->
+        <div id="cards-compras" class="md:hidden space-y-3 p-3">
+            {% for compra in compras %}
+            {% set total_compra = compra.detalle_compras | map(attribute='precio') | list | sum %}
+            <div class="compra-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg"
+                data-id="{{ compra.idCompra }}"
+                data-idproveedor="{{ compra.idProveedor }}"
+                data-estatus="{{ compra.estatus }}"
+                data-fecha-iso="{{ compra.fecha.strftime('%Y-%m-%d') }}"
+                data-total="{{ '%.2f' | format(total_compra) }}">
+                <div class="p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1">
+                            <h3 class="text-base font-bold text-gray-800">Compra #{{ compra.idCompra }}</h3>
+                            <p class="text-xs text-gray-500 mt-1">{{ compra.proveedor.nombre }}</p>
+                        </div>
+                        {% if compra.estatus == 'Pendiente' %}
+                        <span class="flex items-center gap-1 text-xs font-semibold text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">
+                            <span class="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+                            Pendiente
+                        </span>
+                        {% elif compra.estatus == 'Completado' %}
+                        <span class="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                            Completado
+                        </span>
+                        {% else %}
+                        <span class="flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                            Cancelado
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="border-t border-gray-100 my-2"></div>
+                    <div class="space-y-1 mb-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-600">Fecha:</span>
+                            <span class="text-xs text-gray-800 font-semibold">{{ compra.fecha.strftime('%d/%m/%Y') }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-600">Total:</span>
+                            <span class="text-xs text-gray-800 font-semibold tabular-nums">${{ "{:,.2f}".format(total_compra) }}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="verDetalle({{ compra.idCompra }})"
+                            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white transition-all duration-200 hover:scale-105 text-sm"
+                            style="background-color: #3b82f6;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            <span>Ver</span>
+                        </button>
+                        {% if compra.estatus == 'Pendiente' %}
+                        <button onclick="abrirModalEdicion({{ compra.idCompra }})"
+                            class="flex items-center justify-center w-10 h-10 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+                            style="background-color: #f29f05;" title="Editar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                        </button>
+                        <button onclick="abrirModalCompletar({{ compra.idCompra }})"
+                            class="flex items-center justify-center w-10 h-10 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+                            style="background-color: #48bb78;" title="Completar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </button>
+                        <button onclick="confirmarCancelar({{ compra.idCompra }})"
+                            class="flex items-center justify-center w-10 h-10 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
+                            style="background-color: #e53e3e;" title="Cancelar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
 </div>
@@ -754,7 +851,6 @@
     }
 
     /* ── Paginación mejorada ─────────────────────────── */
-    let pagCompras = null;
 
     function crearPaginacion(opciones) {
         const { contenedorItems, itemsSelector, contenedorId, selectorId } = opciones;
@@ -913,9 +1009,22 @@
             f.classList.toggle('filtro-hidden', !ok);
         });
 
-        if (pagCompras) pagCompras.refresh();
+        document.querySelectorAll('.compra-card').forEach(f => {
+            let ok = true;
+            if (idProv && f.dataset.idproveedor !== idProv) ok = false;
+            if (ok && estatus && f.dataset.estatus !== estatus) ok = false;
+            if (ok && fechaIni && f.dataset.fechaIso < fechaIni) ok = false;
+            if (ok && fechaFin && f.dataset.fechaIso > fechaFin) ok = false;
+            const total = parseFloat(f.dataset.total || 0);
+            if (ok && precioMin !== null && total < precioMin) ok = false;
+            if (ok && precioMax !== null && total > precioMax) ok = false;
+            f.classList.toggle('filtro-hidden', !ok);
+        });
 
-        const visibles = document.querySelectorAll('.compra-row:not(.filtro-hidden)').length;
+        if (window.pagCompras) window.pagCompras.refresh();
+        if (window.pagComprasCards) window.pagComprasCards.refresh();
+
+        const visibles = document.querySelectorAll('.compra-row:not(.filtro-hidden), .compra-card:not(.filtro-hidden)').length;
         document.getElementById('sin-resultados').classList.toggle('hidden', visibles > 0);
     }
 
@@ -1035,7 +1144,14 @@
     }
 
     function eliminarInsumo(ctx, i) {
-        if (confirm('¿Eliminar este insumo?')) { getLista(ctx).splice(i, 1); renderTablaInsumos(ctx); }
+        document.getElementById('confirm-mensaje').textContent = '¿Estás seguro de que deseas eliminar este insumo?';
+        document.getElementById('confirm-btn').onclick = () => {
+            cerrarModalConfirm();
+            getLista(ctx).splice(i, 1);
+            renderTablaInsumos(ctx);
+        };
+        document.getElementById('modal-confirm').classList.remove('hidden');
+        bloquearScroll();
     }
 
     /* ── Modal insumo ───────────────────────── */
@@ -1056,12 +1172,10 @@
     }
 
     function poblarUnidades(tipoMP) {
-        const tipoMap = { 'Solido': 'Masa', 'Liquido': 'Volumen' };
-        const tipoU = tipoMap[tipoMP] || null;
         const unidBase = tipoMP === 'Solido' ? 'g' : tipoMP === 'Liquido' ? 'ml' : 'unidad';
         const uSelect = document.getElementById('insumo-unidad');
         uSelect.innerHTML = '';
-        const filtradas = tipoU ? UNIDADES_MEDIDA.filter(u => u.tipo === tipoU) : UNIDADES_MEDIDA;
+        const filtradas = tipoMP ? UNIDADES_MEDIDA.filter(u => u.tipo === tipoMP) : UNIDADES_MEDIDA;
         if (!filtradas.length) {
             const o = document.createElement('option'); o.value = ''; o.textContent = '— Sin unidades disponibles —'; uSelect.appendChild(o);
         } else {
@@ -1168,7 +1282,11 @@
     function abrirModalRegistro() {
         insumosRegistro = [];
         document.getElementById('reg-proveedor').value = '';
-        document.getElementById('reg-fecha').value = new Date().toISOString().split('T')[0];
+        const hoy = new Date();
+        const anio = hoy.getFullYear();
+        const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoy.getDate()).padStart(2, '0');
+        document.getElementById('reg-fecha').value = `${anio}-${mes}-${dia}`;
         renderTablaInsumos('registro');
         document.getElementById('error-registro').classList.add('hidden');
         document.getElementById('modal-registro').classList.remove('hidden');
@@ -1309,13 +1427,24 @@
 
     /* ── Init ───────────────────────────────── */
     document.addEventListener('DOMContentLoaded', function() {
+        window.pagCompras = null;
+        window.pagComprasCards = null;
         const tablaDesktop = document.getElementById('tabla-compras-desktop');
         if (tablaDesktop) {
-            pagCompras = crearPaginacion({
+            window.pagCompras = crearPaginacion({
                 contenedorItems: tablaDesktop,
                 itemsSelector: '.compra-row',
                 contenedorId: 'tabla-compras-desktop',
                 selectorId: 'pag-compras',
+            });
+        }
+        const cardsContainer = document.getElementById('cards-compras');
+        if (cardsContainer) {
+            window.pagComprasCards = crearPaginacion({
+                contenedorItems: cardsContainer,
+                itemsSelector: '.compra-card',
+                contenedorId: 'cards-compras',
+                selectorId: 'pag-compras-cards',
             });
         }
         filtrarCompras();

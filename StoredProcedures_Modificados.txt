@@ -1,0 +1,444 @@
+-- =====================================================================
+-- STORED PROCEDURES MODIFICADOS - FourOvenPizza
+-- Fecha: 2026-04-07
+-- Descripción: En este archivo se encuentran los SP que fueron modificados
+--              para corregir o agregar funcionalidades.
+-- =====================================================================
+
+USE FourOvenPizzaDB;
+
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- MÓDULO DE VENTAS - sp_listar_productos
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- MODIFICADO: Agregada validación de mínimo 4 ingredientes en la receta
+-- PROPÓSITO: Listar productos para venta (solo productos con receta activa Y mínimo 4 ingredientes)
+-- MOTIVO: Evitar que se puedan vender productos sin receta o con receta vacía
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_listar_productos$$
+CREATE PROCEDURE sp_listar_productos(
+    IN p_nombre         VARCHAR(100),
+    IN p_precio_inicio  DECIMAL(10,2),
+    IN p_precio_fin     DECIMAL(10,2),
+    IN p_estatus        VARCHAR(10),
+    IN p_tamano         VARCHAR(50),
+    IN p_estatus_receta VARCHAR(10)
+)
+BEGIN
+    SELECT
+        p.idProducto,
+        p.nombre,
+        p.precio,
+        p.`tamaño` AS tamano,
+        p.stock,
+        p.estatus,
+        CASE WHEN EXISTS (SELECT 1 FROM recetas r WHERE r.idProducto = p.idProducto)
+             THEN 1 ELSE 0 END AS receta_activa
+    FROM productos p
+    WHERE (p_nombre IS NULL OR p.nombre LIKE CONCAT('%', p_nombre, '%'))
+      AND (p_precio_inicio IS NULL OR p.precio >= p_precio_inicio)
+      AND (p_precio_fin IS NULL OR p.precio <= p_precio_fin)
+      AND (p_tamano IS NULL OR p.`tamaño` = p_tamano)
+      AND (
+            p_estatus IS NULL
+            OR p_estatus = 'todos'
+            OR p.estatus = CAST(p_estatus AS UNSIGNED)
+          )
+      AND (
+            p_estatus_receta IS NULL
+            OR p_estatus_receta = 'todos'
+            -- MODIFICACIÓN: Verifica que tenga al menos 4 ingredientes
+            OR (p_estatus_receta = '1' AND EXISTS (
+                SELECT 1 FROM recetas r2 
+                JOIN detalleReceta dr ON dr.idReceta = r2.idReceta
+                WHERE r2.idProducto = p.idProducto
+                HAVING COUNT(dr.idDetalleR) >= 4
+            ))
+            OR (p_estatus_receta = '0' AND NOT EXISTS (
+                SELECT 1 FROM recetas r3 
+                JOIN detalleReceta dr ON dr.idReceta = r3.idReceta
+                WHERE r3.idProducto = p.idProducto
+                HAVING COUNT(dr.idDetalleR) >= 4
+            ))
+          )
+    ORDER BY p.nombre ASC;
+END$$
+DELIMITER ;
+
+
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- MÓDULO DE PRODUCCIÓN - sp_gestion_ordenes_produccion
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- MODIFICADO: Ahora descuenta insumos al crear y restablece al cancelar
+-- PROPÓSITO: Gestión de órdenes de producción (insertar, editar, cambiar estado)
+-- MOTIVO: 
+--   1. Antes: Los insumos se descontaban solo al TERMINAR la orden
+--   2. Ahora: Los insumos se descontar al CREAR la orden (cuando se confirma que hay stock)
+--   3. Al CANCELAR: Se restablecen los insumos que fueron descontados al crear
+--   4. Al TERMINAR: Ya no descontaba insumos (ya estaban descontados), solo suma stock a productos
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_ordenes_produccion$$
+CREATE PROCEDURE sp_gestion_ordenes_produccion(
+    IN  p_accion        VARCHAR(20),
+    IN  p_idOrden       INT,
+    IN  p_idUsuario     INT,
+    IN  p_estado        VARCHAR(50),
+    IN  p_detalles      JSON,
+    IN  p_ip            VARCHAR(45),
+    IN  p_ejecutadoPor  INT,
+    OUT p_resultado     VARCHAR(255),
+    OUT p_idGenerado    INT
+)
+sp_main: BEGIN
+    DECLARE v_nombre_ejecutor   VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_idx               INT          DEFAULT 0;
+    DECLARE v_total_items       INT          DEFAULT 0;
+    DECLARE v_idProducto        INT;
+    DECLARE v_cantidad          DECIMAL(10,2);
+    DECLARE v_estado_actual     VARCHAR(50);
+
+    DECLARE v_idReceta          INT;
+    DECLARE v_idMateriaP        INT;
+    DECLARE v_cantidad_receta   DECIMAL(10,2);
+    DECLARE v_stock_mp          DECIMAL(10,2);
+    DECLARE v_nombre_mp         VARCHAR(100);
+    DECLARE v_nombre_producto   VARCHAR(100);
+    DECLARE v_tiene_receta      INT DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado  = 'ERROR: Ocurrió un error inesperado en la operación';
+        SET p_idGenerado = 0;
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES ('ERROR', 'OrdenesProduccion',
+                CONCAT('Error en sp_gestion_ordenes_produccion acción: ', p_accion),
+                CONCAT('Orden ID: ', IFNULL(p_idOrden, 0),
+                       ' | Ejecutado por: ', IFNULL(p_ejecutadoPor, 0)),
+                NOW(), p_ip, p_ejecutadoPor);
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    START TRANSACTION;
+    IF p_accion = 'INSERT' THEN
+
+        IF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+            SET p_resultado  = 'ERROR: Debe incluir al menos un producto en la orden';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        SET v_total_items = JSON_LENGTH(p_detalles);
+        SET v_idx = 0;
+
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+
+            IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = v_idProducto AND estatus = 1) THEN
+                SET p_resultado  = CONCAT('ERROR: Producto ID ', v_idProducto, ' no existe o está inactivo');
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            SELECT COUNT(*) INTO v_tiene_receta FROM recetas WHERE idProducto = v_idProducto;
+            IF v_tiene_receta = 0 THEN
+                SELECT nombre INTO v_nombre_producto FROM productos WHERE idProducto = v_idProducto;
+                SET p_resultado  = CONCAT('ERROR: El producto "', v_nombre_producto, '" no tiene receta registrada');
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            IF v_cantidad <= 0 THEN
+                SET p_resultado  = 'ERROR: La cantidad de cada producto debe ser mayor a 0';
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- Verificar stock de materias primas
+        CREATE TEMPORARY TABLE IF NOT EXISTS tmp_consumo_mp (
+            idMateriaP INT,
+            total_requerido DECIMAL(10,2)
+        );
+        DELETE FROM tmp_consumo_mp;
+
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+            SELECT idReceta INTO v_idReceta FROM recetas WHERE idProducto = v_idProducto LIMIT 1;
+            INSERT INTO tmp_consumo_mp (idMateriaP, total_requerido)
+            SELECT dr.idMateriaP, dr.cantidad * v_cantidad
+            FROM detalleReceta dr
+            WHERE dr.idReceta = v_idReceta
+            ON DUPLICATE KEY UPDATE total_requerido = total_requerido + (dr.cantidad * v_cantidad);
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        SELECT t.idMateriaP, t.total_requerido, mp.stock, mp.nombre
+        INTO v_idMateriaP, v_cantidad_receta, v_stock_mp, v_nombre_mp
+        FROM tmp_consumo_mp t
+        JOIN materiasPrimas mp ON mp.idMateriaP = t.idMateriaP
+        WHERE mp.stock < t.total_requerido
+        LIMIT 1;
+
+        IF v_stock_mp IS NOT NULL AND v_stock_mp < v_cantidad_receta THEN
+            DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp;
+            SET p_resultado  = CONCAT('ERROR: Stock insuficiente de "', v_nombre_mp,
+                                      '". Disponible: ', v_stock_mp, ', requerido: ', v_cantidad_receta);
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp;
+
+        -- Insertar la orden
+        INSERT INTO ordenesProduccion (idUsuario, estado, fecha)
+        VALUES (p_ejecutadoPor, 'En proceso', NOW());
+        SET p_idGenerado = LAST_INSERT_ID();
+
+        -- Insertar el detalle
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+            INSERT INTO detalleProduccion (idProducto, idOrden, cantidad)
+            VALUES (v_idProducto, p_idGenerado, v_cantidad);
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        SET p_resultado = 'SUCCESS: Orden de producción registrada correctamente';
+
+        -- NUEVO: Descontar materias primas al crear la orden
+        CREATE TEMPORARY TABLE IF NOT EXISTS tmp_consumo_insert (
+            idMateriaP INT,
+            total_requerido DECIMAL(10,2)
+        );
+        DELETE FROM tmp_consumo_insert;
+
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+            SELECT idReceta INTO v_idReceta FROM recetas WHERE idProducto = v_idProducto LIMIT 1;
+            INSERT INTO tmp_consumo_insert (idMateriaP, total_requerido)
+            SELECT dr.idMateriaP, dr.cantidad * v_cantidad
+            FROM detalleReceta dr
+            WHERE dr.idReceta = v_idReceta
+            ON DUPLICATE KEY UPDATE total_requerido = total_requerido + (dr.cantidad * v_cantidad);
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        UPDATE materiasPrimas mp
+        JOIN tmp_consumo_insert t ON t.idMateriaP = mp.idMateriaP
+        SET mp.stock = mp.stock - t.total_requerido;
+
+        DROP TEMPORARY TABLE IF EXISTS tmp_consumo_insert;
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'OrdenesProduccion', 'CREAR',
+                'orden', CONCAT('ID:', p_idGenerado), NOW(), p_ip);
+
+        COMMIT;
+
+    ELSEIF p_accion = 'CHANGE_STATUS' THEN
+
+        SELECT estado INTO v_estado_actual FROM ordenesProduccion WHERE idOrden = p_idOrden;
+
+        IF v_estado_actual IS NULL THEN
+            SET p_resultado  = 'ERROR: La orden no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF v_estado_actual != 'En proceso' THEN
+            SET p_resultado  = 'ERROR: Solo se pueden cambiar órdenes en estado "En proceso"';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF p_estado NOT IN ('Cancelada', 'Terminada') THEN
+            SET p_resultado  = 'ERROR: Estado no válido. Use Cancelada o Terminada';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        UPDATE ordenesProduccion SET estado = p_estado WHERE idOrden = p_idOrden;
+
+        -- MODIFICADO: Cambió la lógica de descuentos
+        -- Al cancelar: restablecer materias primas (ya fueron descontadas al crear)
+        -- Al terminar: solo sumar stock a productos terminados (materias ya descontadas al crear)
+        IF p_estado = 'Cancelada' THEN
+            UPDATE materiasPrimas mp
+            JOIN (
+                SELECT dr.idMateriaP, SUM(dr.cantidad * dp.cantidad) AS total_consumido
+                FROM detalleProduccion dp
+                JOIN recetas r ON r.idProducto = dp.idProducto
+                JOIN detalleReceta dr ON dr.idReceta = r.idReceta
+                WHERE dp.idOrden = p_idOrden
+                GROUP BY dr.idMateriaP
+            ) consumo ON consumo.idMateriaP = mp.idMateriaP
+            SET mp.stock = mp.stock + consumo.total_consumido;
+
+        ELSEIF p_estado = 'Terminada' THEN
+            UPDATE productos p
+            JOIN detalleProduccion dp ON dp.idProducto = p.idProducto
+            SET p.stock = p.stock + dp.cantidad
+            WHERE dp.idOrden = p_idOrden;
+        END IF;
+
+        SET p_idGenerado = p_idOrden;
+        SET p_resultado  = CONCAT('SUCCESS: Orden marcada como "', p_estado, '" correctamente');
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'OrdenesProduccion',
+                UPPER(p_estado), 'orden', CONCAT('ID:', p_idOrden), NOW(), p_ip);
+
+        COMMIT;
+
+    ELSEIF p_accion = 'UPDATE' THEN
+
+        SELECT estado INTO v_estado_actual FROM ordenesProduccion WHERE idOrden = p_idOrden;
+
+        IF v_estado_actual IS NULL THEN
+            SET p_resultado  = 'ERROR: La orden no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF v_estado_actual != 'En proceso' THEN
+            SET p_resultado  = 'ERROR: Solo se pueden editar órdenes en estado "En proceso"';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF TIMESTAMPDIFF(SECOND, (SELECT fecha FROM ordenesProduccion WHERE idOrden = p_idOrden), NOW()) > 60 THEN
+            SET p_resultado  = 'ERROR: El tiempo de edición ha expirado (máximo 1 minuto)';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+            SET p_resultado  = 'ERROR: Debe incluir al menos un producto en la orden';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        SET v_total_items = JSON_LENGTH(p_detalles);
+        SET v_idx = 0;
+
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+
+            IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = v_idProducto AND estatus = 1) THEN
+                SET p_resultado  = CONCAT('ERROR: Producto ID ', v_idProducto, ' no existe o está inactivo');
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            SELECT COUNT(*) INTO v_tiene_receta FROM recetas WHERE idProducto = v_idProducto;
+            IF v_tiene_receta = 0 THEN
+                SELECT nombre INTO v_nombre_producto FROM productos WHERE idProducto = v_idProducto;
+                SET p_resultado  = CONCAT('ERROR: El producto "', v_nombre_producto, '" no tiene receta');
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            IF v_cantidad <= 0 THEN
+                SET p_resultado  = 'ERROR: La cantidad debe ser mayor a 0';
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- Verificar stock
+        CREATE TEMPORARY TABLE IF NOT EXISTS tmp_consumo_mp2 (
+            idMateriaP INT,
+            total_requerido DECIMAL(10,2)
+        );
+        DELETE FROM tmp_consumo_mp2;
+
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+            SELECT idReceta INTO v_idReceta FROM recetas WHERE idProducto = v_idProducto LIMIT 1;
+            INSERT INTO tmp_consumo_mp2 (idMateriaP, total_requerido)
+            SELECT dr.idMateriaP, dr.cantidad * v_cantidad
+            FROM detalleReceta dr WHERE dr.idReceta = v_idReceta
+            ON DUPLICATE KEY UPDATE total_requerido = total_requerido + (dr.cantidad * v_cantidad);
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        SET v_stock_mp = NULL;
+        SELECT t.idMateriaP, t.total_requerido, mp.stock, mp.nombre
+        INTO v_idMateriaP, v_cantidad_receta, v_stock_mp, v_nombre_mp
+        FROM tmp_consumo_mp2 t
+        JOIN materiasPrimas mp ON mp.idMateriaP = t.idMateriaP
+        WHERE mp.stock < t.total_requerido
+        LIMIT 1;
+
+        IF v_stock_mp IS NOT NULL AND v_stock_mp < v_cantidad_receta THEN
+            DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp2;
+            SET p_resultado  = CONCAT('ERROR: Stock insuficiente de "', v_nombre_mp,
+                                      '". Disponible: ', v_stock_mp, ', requerido: ', v_cantidad_receta);
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp2;
+
+        DELETE FROM detalleProduccion WHERE idOrden = p_idOrden;
+
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+            INSERT INTO detalleProduccion (idProducto, idOrden, cantidad)
+            VALUES (v_idProducto, p_idOrden, v_cantidad);
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        SET p_idGenerado = p_idOrden;
+        SET p_resultado  = 'SUCCESS: Orden actualizada correctamente';
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'OrdenesProduccion', 'EDITAR',
+                'orden', CONCAT('ID:', p_idOrden), NOW(), p_ip);
+
+        COMMIT;
+
+    ELSE
+        SET p_resultado  = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    END IF;
+
+END$$
+DELIMITER ;

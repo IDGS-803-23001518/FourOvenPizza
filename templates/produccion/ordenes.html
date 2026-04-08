@@ -82,7 +82,7 @@
   <!-- Tabla de órdenes -->
   <div class="rounded-2xl overflow-hidden shadow-md mb-8">
     <div class="overflow-x-auto">
-      <table class="w-full text-sm text-left">
+      <table class="w-full text-sm text-left border-collapse">
         <thead>
           <tr style="background-color:#38230f;">
             <th class="px-5 py-3 text-white font-bold uppercase tracking-wide"># Orden</th>
@@ -94,14 +94,15 @@
             <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Acciones</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="tablaOrdenesBody">
+          {% if ordenes and ordenes|length > 0 %}
           {% for o in ordenes %}
-          <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150">
-            <td class="px-5 py-3 font-bold" style="color:#38230f;">#{{ o.idOrden }}</td>
-            <td class="px-5 py-3 text-gray-700">{{ o.fecha.strftime('%d/%m/%Y %H:%M') if o.fecha else '—' }}</td>
-            <td class="px-5 py-3 text-gray-700">{{ o.nombre_usuario }}</td>
-            <td class="px-5 py-3 text-gray-700">{{ o.total_productos }}</td>
-            <td class="px-5 py-3 text-gray-700">{{ o.total_unidades | int }}</td>
+          <tr class="orden-row bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150">
+            <td class="px-5 py-3 font-bold" style="color:#38230f;">#{{ o.idOrden if o.idOrden else '-' }}</td>
+            <td class="px-5 py-3 text-gray-700">{{ o.fecha.strftime('%d/%m/%Y %H:%M') if o.fecha else '-' }}</td>
+            <td class="px-5 py-3 text-gray-700">{{ o.nombre_usuario if o.nombre_usuario else '-' }}</td>
+            <td class="px-5 py-3 text-gray-700">{{ o.total_productos if o.total_productos else 0 }}</td>
+            <td class="px-5 py-3 text-gray-700">{{ o.total_unidades|int if o.total_unidades else 0 }}</td>
             <td class="px-5 py-3">
               {% if o.estado == 'En proceso' %}
                 <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
@@ -119,9 +120,7 @@
             </td>
             <td class="px-5 py-3">
               <div class="flex gap-2 items-center">
-
-                <!-- Ver -->
-                <button type="button" onclick="abrirVer({{ o.idOrden }})"
+                <button type="button" onclick="abrirVer({{ o.idOrden if o.idOrden else 0 }})"
                   class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
                   style="background-color:#2563eb;" title="Ver detalle">
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -129,18 +128,12 @@
                     <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clip-rule="evenodd"/>
                   </svg>
                 </button>
-
-                {# Botón editar:
-                   - Solo visible si la orden está En proceso Y quedan segundos.
-                   - data-ts-creacion: timestamp Unix (segundos) de la fecha de creación.
-                     El JS calcula el tiempo restante como: 60 - (Date.now()/1000 - ts_creacion)
-                     Esto garantiza que el timer NO se reinicia al abrir/cerrar el modal. #}
-                {% if o.estado == 'En proceso' and o.segundos_desde_creacion <= 60 %}
+                {% if o.estado == 'En proceso' and (o.segundos_desde_creacion is defined and o.segundos_desde_creacion <= 60) %}
                 <button type="button"
                   class="btn-editar flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
                   style="background-color:#f29f05;" title="Editar orden"
-                  data-id="{{ o.idOrden }}"
-                  data-ts-creacion="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}"
+                  data-id="{{ o.idOrden if o.idOrden else 0 }}"
+                  data-ts-creacion="{{ (o.fecha.timestamp()|int) if o.fecha else 0 }}"
                   onclick="abrirEditar(this)">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -148,10 +141,8 @@
                   </svg>
                 </button>
                 {% endif %}
-
-                <!-- Cancelar -->
                 {% if o.estado == 'En proceso' %}
-                <button type="button" onclick="abrirCancelar({{ o.idOrden }})"
+                <button type="button" onclick="abrirCancelar({{ o.idOrden if o.idOrden else 0 }})"
                   class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
                   style="background-color:#e53e3e;" title="Cancelar orden">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -159,22 +150,166 @@
                   </svg>
                 </button>
                 {% endif %}
-
               </div>
             </td>
           </tr>
+          {% endfor %}
           {% else %}
           <tr>
             <td colspan="7" class="text-center py-12 text-gray-400 text-sm font-semibold bg-white">
               No se encontraron órdenes con los filtros seleccionados.
             </td>
           </tr>
-          {% endfor %}
+          {% endif %}
         </tbody>
       </table>
     </div>
   </div>
 </div>
+
+<!-- Estilos de paginación -->
+<style>
+  .pag-wrapper {
+    display: flex; flex-wrap: wrap; align-items: center;
+    justify-content: space-between; gap: 0.75rem;
+    padding: 0.85rem 1.25rem; background: #fff;
+    border-top: 1px solid #f0e8dc; border-radius: 0 0 1rem 1rem;
+  }
+  .pag-info { font-size: 0.78rem; color: #6b7280; }
+  .pag-info strong { color: #38230f; }
+  .pag-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+  .pag-por-pagina { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #6b7280; }
+  .pag-select {
+    border: 1px solid #d1d5db; border-radius: 0.5rem;
+    padding: 0.4rem 0.75rem; font-size: 0.85rem;
+    color: #38230f; font-weight: 600; cursor: pointer; outline: none;
+    font-family: inherit; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2338230f' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0.5rem center;
+    background-size: 1.2em; padding-right: 2rem;
+  }
+  .pag-select:focus { box-shadow: 0 0 0 2px rgba(242,159,5,0.35); border-color: #f29f05; }
+  .pag-select option { font-weight: normal; font-size: 0.85rem; padding: 0.5rem; }
+  .pag-botones { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; justify-content: center; }
+  .pag-btn {
+    min-width: 2rem; height: 2rem; border-radius: 0.4rem;
+    border: 1px solid #e5e7eb; background: #fff;
+    color: #38230f; font-size: 0.78rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; padding: 0 0.4rem;
+  }
+  .pag-btn:hover:not(:disabled) { background: #f29f05; color: #fff; border-color: #f29f05; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  .pag-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .pag-btn-active { background: #38230f !important; color: #fff !important; border-color: #38230f !important; }
+  .pag-ellipsis { padding: 0 0.2rem; color: #9ca3af; font-size: 0.78rem; user-select: none; }
+  .pag-hidden { display: none; }
+  @media (max-width: 767px) {
+    .pag-wrapper {
+      position: sticky;
+      bottom: 0;
+      background: #fff;
+      z-index: 10;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+      margin-top: 0.5rem;
+      padding: 0.75rem 1rem;
+      flex-direction: column;
+    }
+    .pag-info { font-size: 0.7rem; text-align: center; width: 100%; margin-bottom: 0.5rem; }
+  }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  crearPaginacionOrdenes();
+});
+
+function crearPaginacionOrdenes() {
+  const contenedorItems = document.getElementById('tablaOrdenesBody');
+  if (!contenedorItems) return;
+  
+  let paginaActual = 1;
+  let porPagina = 10;
+
+  function obtenerItems() {
+    return Array.from(contenedorItems.querySelectorAll('.orden-row'));
+  }
+
+  function mostrarItems() {
+    const items = obtenerItems();
+    const total = items.length;
+    if (total === 0) return;
+    const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+    const inicio = (paginaActual - 1) * porPagina;
+    const fin = inicio + porPagina;
+    items.forEach((el, i) => {
+      if (i < inicio || i >= fin) {
+        el.classList.add('pag-hidden');
+      } else {
+        el.classList.remove('pag-hidden');
+      }
+    });
+    renderControles(total, totalPaginas, inicio, fin);
+  }
+
+  function renderControles(total, totalPaginas, inicio, fin) {
+    let ctrl = document.getElementById('paginacionOrdenes');
+    if (!ctrl) {
+      const tablaWrapper = document.querySelector('#tablaOrdenesBody').closest('.overflow-x-auto');
+      if (!tablaWrapper) return;
+      ctrl = document.createElement('div');
+      ctrl.id = 'paginacionOrdenes';
+      tablaWrapper.parentNode.insertBefore(ctrl, tablaWrapper.nextSibling);
+    }
+    const mostradoIni = total === 0 ? 0 : inicio + 1;
+    const mostradoFin = Math.min(fin, total);
+    let botonesHTML = '';
+    const delta = 2;
+    const rango = [];
+    for (let i = Math.max(1, paginaActual - delta); i <= Math.min(totalPaginas, paginaActual + delta); i++) rango.push(i);
+    function pBtn(p) { return `<button class="pag-btn ${p===paginaActual?'pag-btn-active':''}" onclick="irAPaginaOrdenes(${p})">${p}</button>`; }
+    if (rango[0] > 1) { botonesHTML += pBtn(1); if (rango[0] > 2) botonesHTML += `<span class="pag-ellipsis">…</span>`; }
+    rango.forEach(p => { botonesHTML += pBtn(p); });
+    if (rango[rango.length-1] < totalPaginas) { if (rango[rango.length-1] < totalPaginas-1) botonesHTML += `<span class="pag-ellipsis">…</span>`; botonesHTML += pBtn(totalPaginas); }
+    ctrl.className = 'pag-wrapper';
+    ctrl.innerHTML = `
+    <div class="pag-info">Mostrando <strong>${mostradoIni}–${mostradoFin}</strong> de <strong>${total}</strong> registros</div>
+    <div class="pag-controls">
+      <div class="pag-por-pagina">
+        Mostrar
+        <select class="pag-select" onchange="cambiarPorPaginaOrdenes(this.value)">
+          <option value="10" ${porPagina===10?'selected':''}>10</option>
+          <option value="15" ${porPagina===15?'selected':''}>15</option>
+          <option value="20" ${porPagina===20?'selected':''}>20</option>
+          <option value="50" ${porPagina===50?'selected':''}>50</option>
+        </select>
+        por página
+      </div>
+      <div class="pag-botones">
+        <button class="pag-btn" onclick="irAPaginaOrdenes(${paginaActual-1})" ${paginaActual<=1?'disabled':''}>‹</button>
+        ${botonesHTML}
+        <button class="pag-btn" onclick="irAPaginaOrdenes(${paginaActual+1})" ${paginaActual>=totalPaginas?'disabled':''}>›</button>
+      </div>
+    </div>`;
+  }
+
+  window.irAPaginaOrdenes = function(p) {
+    const items = obtenerItems();
+    const total = items.length;
+    const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+    if (p < 1 || p > totalPaginas) return;
+    paginaActual = p;
+    mostrarItems();
+  };
+
+  window.cambiarPorPaginaOrdenes = function(val) {
+    porPagina = parseInt(val);
+    paginaActual = 1;
+    mostrarItems();
+  };
+
+  mostrarItems();
+}
+</script>
 
 
 <!-- ══════════════ MODAL REGISTRAR ══════════════ -->
@@ -200,10 +335,13 @@
             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
             <option value="">Selecciona un producto...</option>
             {% for p in productos_disponibles %}
-            <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}">
-              {{ p.nombre }} — {{ p.tamano }}
+            <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}" data-stock="{{ p.stock }}">
+              {{ p.nombre }} — {{ p.tamano }} (Stock: {{ p.stock }})
             </option>
             {% endfor %}
+            {% if not productos_disponibles %}
+            <option value="" disabled>No hay productos con receta activa</option>
+            {% endif %}
           </select>
         </div>
         <div>
@@ -313,8 +451,8 @@
             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
             <option value="">Selecciona un producto...</option>
             {% for p in productos_disponibles %}
-            <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}">
-              {{ p.nombre }} — {{ p.tamano }}
+            <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}" data-stock="{{ p.stock }}">
+              {{ p.nombre }} — {{ p.tamano }} (Stock: {{ p.stock }})
             </option>
             {% endfor %}
           </select>
@@ -466,20 +604,48 @@ function enviarOrdenRegistro() {
 }
 
 /* ════════════════════════════════════════════════
-   EDITAR — Timer basado en ts_creacion del servidor
-   El tiempo restante siempre es: 60 - (ahora_unix - ts_creacion)
-   Así, abrir/cerrar el modal no reinicia el contador.
+    EDITAR — Timer basado en ts_creacion del servidor
+    El tiempo restante siempre es: 60 - (ahora_unix - ts_creacion)
+    Así, abrir/cerrar el modal no reinicia el contador.
+    Carga los detalles de la orden desde el servidor.
 ════════════════════════════════════════════════ */
 function abrirEditar(btn) {
   const idOrden    = parseInt(btn.dataset.id, 10);
-  const tsCreacion = parseInt(btn.dataset.tsCreacion, 10); // Unix segundos
+  const tsCreacion = parseInt(btn.dataset.tsCreacion, 10);
+  abrirEditarCore(idOrden, tsCreacion);
+}
 
+function abrirEditarBtn(idOrden, tsCreacion) {
+  abrirEditarCore(idOrden, tsCreacion);
+}
+
+function abrirEditarCore(idOrden, tsCreacion) {
   // Guardar para el ticker
   _tsCreacionEditar = tsCreacion;
 
   document.getElementById('editOrdenNum').textContent = '#' + idOrden;
   document.getElementById('formEditarOrden').action   = `/produccion/editar/${idOrden}`;
   ocultarError('errorEditar');
+
+  // Cargar detalles de la orden desde el servidor
+  fetch(`/produccion/detalle-json/${idOrden}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok && data.items) {
+        editarItems = data.items.map(item => ({
+          idProducto: item.idProducto,
+          nombre: item.nombre,
+          tamano: item.tamano,
+          cantidad: item.cantidad
+        }));
+        renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar');
+      } else {
+        mostrarError('errorEditar', 'Error al cargar los detalles de la orden');
+      }
+    })
+    .catch(() => {
+      mostrarError('errorEditar', 'Error al comunicarse con el servidor');
+    });
 
   // Iniciar / reiniciar el timer tick
   if (timerInterval) clearInterval(timerInterval);

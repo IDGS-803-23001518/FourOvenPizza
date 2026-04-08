@@ -95,15 +95,18 @@
                   <label class="block text-xs font-semibold text-gray-600 mb-1">Producto</label>
                   <select id="selProducto"
                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition bg-white">
-                    <option value="">Selecciona un producto...</option>
+                    <option value="" data-tiene-receta="0">Selecciona un producto...</option>
                     {% for p in productos_disponibles %}
                     <option value="{{ p.idProducto }}"
                       data-nombre="{{ p.nombre }}"
                       data-tamano="{{ p.tamano }}"
                       data-precio="{{ p.precio }}"
-                      data-stock="{{ p.stock }}">
+                      data-stock="{{ p.stock }}"
+                      data-tiene-receta="1">
                       {{ p.nombre }} — {{ p.tamano }} — ${{ p.precio }}
                     </option>
+                    {% else %}
+                    <option value="" disabled>No hay productos con receta activa</option>
                     {% endfor %}
                   </select>
                 </div>

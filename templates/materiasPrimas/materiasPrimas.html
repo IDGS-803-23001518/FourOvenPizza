@@ -405,7 +405,7 @@
                 </thead>
                 <tbody id="tabla-materias">
                     {% for mp in materias %}
-                    <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150 materia-row {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %}border-l-4 border-l-yellow-400{% endif %}"
+                    <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150 materia-row {% if mp.stockMinimo and mp.stock <= mp.stockMinimo %}border-l-4 border-l-yellow-400{% endif %}"
                         data-id="{{ mp.idMateriaP }}" data-nombre="{{ mp.nombre }}" data-tipo="{{ mp.tipo }}"
                         data-stock="{{ mp.stock }}" data-stock-minimo="{{ mp.stockMinimo }}"
                         data-id-categoria="{{ mp.idCategoria }}"
@@ -414,7 +414,7 @@
                         data-estatus-valor="{{ 1 if mp.estatus else 0 }}">
                         <td class="px-5 py-3 font-semibold text-gray-800">
                             {{ mp.nombre }}
-                            {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %} <span
+                            {% if mp.stockMinimo and mp.stock <= mp.stockMinimo %} <span
                                 class="ml-2 text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">
                                 Bajo stock</span>
                                 {% endif %}
@@ -487,7 +487,7 @@
         <!-- Cards Móvil -->
         <div id="cards-materias" class="md:hidden space-y-3 p-3">
             {% for mp in materias %}
-            <div class="materia-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %}border-l-4 border-l-yellow-400{% endif %}"
+            <div class="materia-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg {% if mp.stockMinimo and mp.stock <= mp.stockMinimo %}border-l-4 border-l-yellow-400{% endif %}"
                 data-id="{{ mp.idMateriaP }}" data-nombre="{{ mp.nombre }}" data-tipo="{{ mp.tipo }}"
                 data-stock="{{ mp.stock }}" data-stock-minimo="{{ mp.stockMinimo }}"
                 data-id-categoria="{{ mp.idCategoria }}"
@@ -516,7 +516,7 @@
                         {% endif %}
                     </div>
 
-                    {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %} <span
+                        {% if mp.stockMinimo and mp.stock <= mp.stockMinimo %} <span
                         class="inline-flex items-center text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full mb-2">
                         ⚠ Bajo stock</span>
                         {% endif %}
@@ -1100,10 +1100,10 @@
             const c = el.dataset.categoria;
             const s = el.dataset.estatus;
 
-            // Calcular si es stock bajo
+            // Calcular si es stock bajo (sin importar el estatus)
             const stock = parseFloat(el.dataset.stock);
             const stockMinimo = parseFloat(el.dataset.stockMinimo);
-            const esStockBajo = (stockMinimo && stock <= stockMinimo && s === 'Activo');
+            const esStockBajo = (stockMinimo && stock <= stockMinimo);
 
             // Aplicar filtro de stock
             let cumpleFiltroStock = true;
