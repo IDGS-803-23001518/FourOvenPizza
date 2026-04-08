@@ -95,7 +95,7 @@ def listado_ordenes():
 
 
 @produccion.route("/produccion/registrar", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def registrar_orden():
     try:
         detalles_raw = request.form.get("detalles_json", "[]").strip()

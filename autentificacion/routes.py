@@ -27,6 +27,20 @@ def login_requerido(f):
     return decorated
 
 
+def get_redirect_by_role():
+    """Determina a qué página redirigir según el rol del usuario"""
+    usuario_rol = session.get('usuario_rol')
+    
+    if usuario_rol == 'Administrador':
+        return url_for('dashboard.index')  # Asumiendo que tu dashboard está aquí
+    elif usuario_rol == 'Ventas':
+        return url_for('inicio')  # O la página principal para ventas
+    elif usuario_rol == 'Cocinero':
+        return url_for('inicio')  # O la página principal para cocinero
+    else:
+        return url_for('inicio')  # Página por defecto
+
+
 def rol_requerido(*roles):
     def decorator(f):
         @wraps(f)
@@ -34,9 +48,11 @@ def rol_requerido(*roles):
             if not session.get('usuario_id'):
                 flash('Debes iniciar sesión.', 'danger')
                 return redirect(url_for('autentificacion.login'))
+            
             if session.get('usuario_rol') not in roles:
                 flash('No tienes permisos para acceder a esta sección.', 'danger')
-                return redirect(url_for('inicio'))
+                return redirect(get_redirect_by_role())
+            
             return f(*args, **kwargs)
         return decorated
     return decorator

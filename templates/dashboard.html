@@ -1,0 +1,567 @@
+{% extends "layoutAdmin.html" %}
+{% block container %}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<style>
+  .font-playfair { font-family: 'Playfair Display', serif; }
+  .font-dm      { font-family: 'DM Sans', sans-serif; }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .anim-up { animation: slideUp 0.45s ease both; }
+  .anim-up-1 { animation: slideUp 0.45s ease 0.05s both; }
+  .anim-up-2 { animation: slideUp 0.45s ease 0.10s both; }
+  .anim-up-3 { animation: slideUp 0.45s ease 0.15s both; }
+  .anim-up-4 { animation: slideUp 0.45s ease 0.20s both; }
+  .hkpi-bar { height: 2px; border-radius: 1px; background: rgba(255,255,255,0.10); margin-top: 0.75rem; overflow: hidden; }
+  .hkpi-bar-fill { height: 100%; background: #f29f05; border-radius: 1px; }
+  .prod-bar { height: 4px; background: #ede8e2; border-radius: 2px; overflow: hidden; }
+  .prod-bar-fill { height: 100%; background: #f29f05; border-radius: 2px; }
+  .chart-wrap { position: relative; }
+  .scrollable { max-height: 280px; overflow-y: auto; }
+</style>
+
+<!-- ══════════════════════════════════════════
+     NAV HERO — igual al estilo usuarios
+══════════════════════════════════════════ -->
+<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg flex items-center"
+     style="border-bottom: 3px solid #f29f05; min-height: 4rem;">
+  <div class="container flex flex-wrap items-center justify-between mx-auto">
+    <div class="flex-1 flex justify-center">
+      <div class="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2 rounded-full">
+                <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Dashboard</span>
+      </div>
+    </div>
+    <div class="text-white/60 text-xs font-dm border border-white/20 rounded-full px-4 py-1.5" id="reloj">
+      {{ fecha_hoy }}
+    </div>
+  </div>
+</nav>
+
+<div class="container mx-auto px-4 sm:px-6 max-w-7xl font-dm">
+
+  <!-- ══════════════════════════════════════
+       FILA KPIs
+  ══════════════════════════════════════ -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+
+    <!-- Ventas hoy -->
+    <div class="rounded-2xl p-4 anim-up-1 relative overflow-hidden" style="background:#38230f; border:1px solid rgba(255,255,255,0.10);">
+      <p class="text-[0.65rem] uppercase tracking-widest text-white/50 mb-1">Ventas hoy</p>
+      <p class="font-playfair text-2xl font-bold" style="color:#f29f05;">${{ '%.2f' % (resumen_hoy.total_ventas or 0) }}</p>
+      <p class="text-[0.65rem] text-white/40 mt-0.5">{{ resumen_hoy.num_ventas or 0 }} transacciones</p>
+      <div class="hkpi-bar"><div class="hkpi-bar-fill" style="width:{{ [(((resumen_hoy.total_ventas or 0)|float)/(meta_diaria or 1)*100),100]|min|int }}%"></div></div>
+    </div>
+
+    <!-- Ventas mes -->
+    <div class="rounded-2xl p-4 anim-up-2 relative overflow-hidden" style="background:#38230f; border:1px solid rgba(255,255,255,0.10);">
+      <p class="text-[0.65rem] uppercase tracking-widest text-white/50 mb-1">Ventas este mes</p>
+      <p class="font-playfair text-2xl font-bold text-white">${{ '%.2f' % (resumen_mes.total_ventas or 0) }}</p>
+      <p class="text-[0.65rem] text-white/40 mt-0.5">{{ resumen_mes.num_ventas or 0 }} ordenes</p>
+      <div class="hkpi-bar"><div class="hkpi-bar-fill" style="width:65%"></div></div>
+    </div>
+
+    <!-- Ticket promedio -->
+    <div class="rounded-2xl p-4 anim-up-3 relative overflow-hidden" style="background:#38230f; border:1px solid rgba(255,255,255,0.10);">
+      <p class="text-[0.65rem] uppercase tracking-widest text-white/50 mb-1">Ticket promedio hoy</p>
+      <p class="font-playfair text-2xl font-bold text-white">
+        ${% if resumen_hoy.num_ventas and resumen_hoy.num_ventas > 0 %}{{ '%.2f' % ((resumen_hoy.total_ventas or 0) / resumen_hoy.num_ventas) }}{% else %}0.00{% endif %}
+      </p>
+      <p class="text-[0.65rem] text-white/40 mt-0.5">por venta confirmada</p>
+      <div class="hkpi-bar"><div class="hkpi-bar-fill" style="width:40%"></div></div>
+    </div>
+
+    <!-- Ordenes activas -->
+    <div class="rounded-2xl p-4 anim-up-4 relative overflow-hidden" style="background:#38230f; border:1px solid rgba(255,255,255,0.10);">
+      <p class="text-[0.65rem] uppercase tracking-widest text-white/50 mb-1">Ordenes activas</p>
+      <p class="font-playfair text-2xl font-bold" style="color:#f29f05;">{{ ordenes_activas | length }}</p>
+      <p class="text-[0.65rem] text-white/40 mt-0.5">en produccion ahora</p>
+      <div class="hkpi-bar"><div class="hkpi-bar-fill" style="width:{{ [ordenes_activas|length*20,100]|min }}%"></div></div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FILA 1: Tendencia + Método de pago + Accesos
+  ══════════════════════════════════════ -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+    <!-- Tendencia 7 días -->
+    <div class="md:col-span-1 bg-white rounded-2xl shadow-md overflow-hidden anim-up-1">
+      <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Ingresos — Últimos 7 días</h2>
+        <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#f29f05; color:#38230f;">Tendencia</span>
+      </div>
+      <div class="p-4">
+        {% if ventas_7d %}
+        <div class="chart-wrap" style="height:130px;">
+          <canvas id="chartSemana"></canvas>
+        </div>
+        <div class="flex justify-between mt-3">
+          <div>
+            <p class="text-[0.65rem] uppercase tracking-widest text-gray-500">Total 7 días</p>
+            <p class="font-playfair text-xl font-bold" style="color:#38230f;">
+              ${{ '%.2f' % (ventas_7d | sum(attribute='total_ingresos')) }}
+            </p>
+          </div>
+          <div class="text-right">
+            <p class="text-[0.65rem] uppercase tracking-widest text-gray-500">Mejor día</p>
+            {% set mejor = ventas_7d | max(attribute='total_ingresos') %}
+            <p class="text-sm font-bold" style="color:#38230f;">${{ '%.2f' % mejor.total_ingresos }}</p>
+            <p class="text-[0.62rem] text-gray-400">{{ mejor.dia.strftime('%A %d') if mejor.dia else '' }}</p>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-center py-10 text-sm text-gray-400">Sin ventas en los últimos 7 días</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Método de pago -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden anim-up-2">
+      <div class="px-5 py-3 rounded-t-2xl" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Pago — Hoy</h2>
+      </div>
+      <div class="p-4">
+        {% if pago_hoy %}
+        <div class="flex items-center justify-center" style="height:110px;">
+          <canvas id="chartPagoHoy" width="110" height="110"></canvas>
+        </div>
+        <div class="mt-3 flex flex-col gap-1.5">
+          {% for p in pago_hoy %}
+          <div class="flex items-center justify-between text-sm">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full inline-block flex-shrink-0"
+                style="background:{% if loop.index==1 %}#f29f05{% elif loop.index==2 %}#38230f{% else %}#7a6040{% endif %};"></span>
+              <span class="text-gray-700 font-medium text-xs">{{ p.metodoPago }}</span>
+            </div>
+            <span class="font-bold text-xs" style="color:#38230f;">${{ '%.2f' % p.total_ingresos }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-center py-10 text-sm text-gray-400">Sin pagos hoy</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Accesos rápidos -->
+    <div class="flex flex-col gap-3 anim-up-3">
+      <p class="text-xs font-bold uppercase tracking-widest" style="color:#38230f;">Accesos rápidos</p>
+      <a href="{{ url_for('caja.utilidades') }}"
+         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
+        <span>&#9783;</span> Reporte utilidades
+      </a>
+      <a href="{{ url_for('caja.corte_caja') }}"
+         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
+        <span>&#9635;</span> Corte de caja
+      </a>
+      <a href="{{ url_for('ventas.punto_venta') }}"
+         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
+        <span>&#9786;</span> Nueva venta
+      </a>
+      <a href="{{ url_for('produccion.listado_ordenes') }}"
+         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
+        <span>&#9776;</span> Produccion
+      </a>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FILA 2: Top productos + Órdenes + Alertas/Mermas
+  ══════════════════════════════════════ -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+    <!-- Top 5 productos -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden anim-up-1">
+      <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Top productos — Mes</h2>
+        <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#f29f05; color:#38230f;">Top 5</span>
+      </div>
+      <div class="px-5 py-3">
+        {% if top_productos %}
+          {% set max_u = top_productos[0].unidades_vendidas if top_productos else 1 %}
+          {% for p in top_productos[:5] %}
+          <div class="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+            <span class="font-playfair text-base font-bold w-5 text-center flex-shrink-0
+              {% if loop.index == 1 %}{% else %}text-gray-200{% endif %}"
+              style="{% if loop.index == 1 %}color:#f29f05;{% endif %}">
+              {{ loop.index }}
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-gray-800 truncate">{{ p.nombre_producto }}</p>
+              <p class="text-[0.62rem] text-gray-400">{{ p.tamano }}</p>
+            </div>
+            <div class="w-14 flex-shrink-0">
+              <div class="prod-bar">
+                <div class="prod-bar-fill" style="width:{{ ((p.unidades_vendidas/max_u)*100)|int if max_u>0 else 0 }}%"></div>
+              </div>
+            </div>
+            <span class="text-xs font-bold flex-shrink-0" style="color:#38230f;">{{ p.unidades_vendidas }} uds</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-center py-8 text-sm text-gray-400">Sin ventas este mes</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Órdenes de producción -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden anim-up-2">
+      <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Órdenes de Producción</h2>
+        <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#f29f05; color:#38230f;">Recientes</span>
+      </div>
+      <div class="px-5 py-3">
+        {% if ordenes_recientes %}
+          {% for o in ordenes_recientes[:7] %}
+          <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 gap-2">
+            <div>
+              <p class="text-[0.65rem] font-bold text-gray-400">#{{ o.idOrden }}</p>
+              <p class="text-[0.62rem] text-gray-400">{{ o.fecha.strftime('%d/%m %H:%M') if o.fecha else '' }}</p>
+            </div>
+            <p class="flex-1 text-center text-[0.68rem] text-gray-400">{{ o.nombre_usuario or '' }}</p>
+            <span class="text-[0.6rem] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide
+              {% if o.estado == 'Pendiente' %}bg-amber-100 text-amber-800
+              {% elif o.estado == 'En proceso' %}bg-blue-100 text-blue-800
+              {% elif o.estado == 'Terminada' %}bg-green-100 text-green-800
+              {% else %}bg-red-100 text-red-800{% endif %}">
+              {{ o.estado }}
+            </span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-center py-8 text-sm text-gray-400">Sin ordenes recientes</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Alertas stock + Mermas -->
+    <div class="flex flex-col gap-4 anim-up-3">
+
+      <!-- Alertas stock -->
+      <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+        <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+          <h2 class="text-sm font-bold text-white tracking-wide uppercase">Alertas de Stock</h2>
+          {% if alertas_stock %}
+          <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#f29f05; color:#38230f;">
+            {{ alertas_stock | length }} insumo(s)
+          </span>
+          {% endif %}
+        </div>
+        <div class="px-4 py-3">
+          {% if alertas_stock %}
+            {% for a in alertas_stock[:5] %}
+            <div class="flex items-center justify-between px-3 py-2 rounded-lg mb-1.5 border
+              {% if a.stock <= 0 %}bg-red-50 border-red-200{% else %}bg-amber-50 border-amber-200{% endif %}">
+              <div>
+                <p class="text-xs font-semibold text-gray-800">{{ a.nombre }}</p>
+                <p class="text-[0.6rem] text-gray-500">{{ a.categoria }}</p>
+              </div>
+              <span class="text-xs font-bold text-red-600">{{ '%.1f' % a.stock }} / {{ '%.1f' % a.stockMinimo }}</span>
+            </div>
+            {% endfor %}
+            {% if alertas_stock | length > 5 %}
+            <p class="text-center text-[0.65rem] text-gray-400 mt-1">+{{ alertas_stock|length - 5 }} más en inventario</p>
+            {% endif %}
+          {% else %}
+            <p class="text-center py-4 text-sm text-gray-400">Stock en niveles normales</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Mermas hoy -->
+      <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+        <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+          <h2 class="text-sm font-bold text-white tracking-wide uppercase">Mermas — Hoy</h2>
+          {% if mermas_hoy %}
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-red-100 border border-red-200 text-red-700">
+            -${{ '%.2f' % (mermas_hoy | sum(attribute='valor_perdida')) }}
+          </span>
+          {% endif %}
+        </div>
+        <div class="px-4 py-3">
+          {% if mermas_hoy %}
+            {% for m in mermas_hoy[:4] %}
+            <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+              <div>
+                <p class="text-xs font-semibold text-gray-800">{{ m.materia_prima }}</p>
+                <p class="text-[0.6rem] text-gray-400">{{ m.cantidad_merma }} u.</p>
+              </div>
+              <span class="text-xs font-bold text-red-600">-${{ '%.2f' % (m.valor_perdida or 0) }}</span>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-center py-4 text-sm text-gray-400">Sin mermas registradas hoy</p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FILA 3: Indicadores generales
+  ══════════════════════════════════════ -->
+  <div class="px-5 py-3 rounded-t-2xl flex items-center gap-3 mb-0 rounded-b-none" style="background:#38230f;">
+    <h2 class="text-sm font-bold text-white tracking-wide uppercase">Indicadores generales</h2>
+    <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#f29f05; color:#38230f;">Mes en curso</span>
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div class="bg-amber-50 rounded-b-2xl rounded-tr-2xl border-l-4 p-4 anim-up-1" style="border-color:#f29f05;">
+      <p class="text-[0.62rem] uppercase tracking-widest text-gray-500">Total ventas mes</p>
+      <p class="font-playfair text-2xl font-bold mt-0.5" style="color:#38230f;">{{ resumen_mes.num_ventas or 0 }}</p>
+      <p class="text-[0.62rem] text-gray-400 mt-0.5">transacciones confirmadas</p>
+    </div>
+    <div class="bg-amber-50 rounded-2xl border-l-4 p-4 anim-up-2" style="border-color:#f29f05;">
+      <p class="text-[0.62rem] uppercase tracking-widest text-gray-500">Unidades vendidas</p>
+      <p class="font-playfair text-2xl font-bold mt-0.5" style="color:#38230f;">{{ resumen_mes.total_unidades or 0 }}</p>
+      <p class="text-[0.62rem] text-gray-400 mt-0.5">productos este mes</p>
+    </div>
+    <div class="bg-amber-50 rounded-2xl border-l-4 p-4 anim-up-3" style="border-color:#f29f05;">
+      <p class="text-[0.62rem] uppercase tracking-widest text-gray-500">Ticket promedio mes</p>
+      <p class="font-playfair text-2xl font-bold mt-0.5" style="color:#38230f;">
+        ${% if resumen_mes.num_ventas and resumen_mes.num_ventas > 0 %}{{ '%.2f' % ((resumen_mes.total_ventas or 0)/resumen_mes.num_ventas) }}{% else %}0.00{% endif %}
+      </p>
+      <p class="text-[0.62rem] text-gray-400 mt-0.5">por transacción</p>
+    </div>
+    <div class="bg-amber-50 rounded-2xl border-l-4 p-4 anim-up-4" style="border-color:#f29f05;">
+      <p class="text-[0.62rem] uppercase tracking-widest text-gray-500">Insumos en alerta</p>
+      <p class="font-playfair text-2xl font-bold mt-0.5 {% if alertas_stock %}text-red-600{% else %}text-green-600{% endif %}">
+        {{ alertas_stock | length }}
+      </p>
+      <p class="text-[0.62rem] text-gray-400 mt-0.5">bajo stock mínimo</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FILA 4: Ventas recientes + Distribución por hora
+  ══════════════════════════════════════ -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+
+    <!-- Ventas recientes hoy -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden anim-up-1">
+      <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Ventas recientes — Hoy</h2>
+        <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#f29f05; color:#38230f;">
+          {{ ventas_hoy | length }} ventas
+        </span>
+      </div>
+      <div class="px-5 py-3 scrollable">
+        {% if ventas_hoy %}
+          {% for v in ventas_hoy[:10] %}
+          <div class="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+            <span class="w-2 h-2 rounded-full flex-shrink-0 mt-1.5
+              {% if v.estado == 'Cancelada' %}bg-red-500{% elif v.estado != 'Confirmada' %}bg-gray-300{% else %}bg-amber-400{% endif %}">
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs text-gray-700">
+                <strong>{{ v.nombreCliente or 'Cliente' }}</strong>
+                <span class="text-gray-400"> — {{ v.metodoPago }}</span>
+              </p>
+              <p class="text-[0.62rem] text-gray-400">{{ v.fecha.strftime('%H:%M') if v.fecha else '' }} &bull; {{ v.estado }}</p>
+            </div>
+            <span class="text-sm font-bold flex-shrink-0" style="color:#38230f;">${{ '%.2f' % (v.total or 0) }}</span>
+          </div>
+          {% endfor %}
+          {% if ventas_hoy | length > 10 %}
+          <p class="text-center text-[0.65rem] text-gray-400 mt-2">+{{ ventas_hoy|length - 10 }} ventas más hoy</p>
+          {% endif %}
+        {% else %}
+          <p class="text-center py-8 text-sm text-gray-400">Sin ventas registradas hoy</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Distribución por hora -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden anim-up-2">
+      <div class="px-5 py-3 rounded-t-2xl" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Distribución por hora — Hoy</h2>
+      </div>
+      <div class="p-4">
+        {% if ventas_por_hora %}
+        <div class="chart-wrap" style="height:220px;">
+          <canvas id="chartHoras"></canvas>
+        </div>
+        {% set hora_pico = ventas_por_hora | max(attribute='total_ingresos') %}
+        <div class="flex justify-between mt-3 text-xs text-gray-500">
+          <span>Hora de mayor actividad: <strong class="font-bold" style="color:#38230f;">{{ hora_pico.hora }}:00 h</strong></span>
+          <span>${{ '%.2f' % hora_pico.total_ingresos }}</span>
+        </div>
+        {% else %}
+          <p class="text-center py-16 text-sm text-gray-400">Sin datos de ventas por hora hoy</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FILA 5: Compras recientes + Cortes de caja
+  ══════════════════════════════════════ -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+
+    <!-- Compras de insumos -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden anim-up-1">
+      <div class="px-5 py-3 rounded-t-2xl" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Compras de insumos — Recientes</h2>
+      </div>
+      <div class="px-5 py-3">
+        {% if compras_recientes %}
+          {% for c in compras_recientes[:6] %}
+          <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 gap-2">
+            <div>
+              <p class="text-xs font-semibold text-gray-800">{{ c.nombre_proveedor }}</p>
+              <p class="text-[0.6rem] text-gray-400">{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '' }}</p>
+            </div>
+            <p class="flex-1 text-center text-[0.65rem] text-gray-400">{{ c.nombre_usuario }}</p>
+            <span class="text-[0.6rem] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide
+              {% if c.estatus == 'Completado' %}bg-green-100 text-green-800
+              {% elif c.estatus == 'Pendiente' %}bg-amber-100 text-amber-800
+              {% else %}bg-red-100 text-red-800{% endif %}">
+              {{ c.estatus }}
+            </span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-center py-8 text-sm text-gray-400">Sin compras recientes</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Cortes de caja -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden anim-up-2">
+      <div class="px-5 py-3 rounded-t-2xl" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Cortes de Caja — Recientes</h2>
+      </div>
+      <div class="px-5 py-3">
+        {% if cortes_recientes %}
+          {% for co in cortes_recientes[:5] %}
+          <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 gap-2">
+            <div>
+              <p class="text-xs font-semibold text-gray-800">
+                {{ co.fecha.strftime('%d/%m/%Y') if co.fecha else '' }} &bull; {{ co.turno }}
+              </p>
+              <p class="text-[0.6rem] text-gray-400">{{ co.nombre_usuario }}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm font-bold" style="color:#38230f;">${{ '%.2f' % co.totalVentas }}</p>
+              <p class="text-xs font-semibold
+                {% if co.diferencia > 0 %}text-green-600{% elif co.diferencia < 0 %}text-red-600{% else %}text-gray-400{% endif %}">
+                {% if co.diferencia > 0 %}+{% endif %}${{ '%.2f' % co.diferencia }}
+              </p>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-center py-8 text-sm text-gray-400">Sin cortes de caja recientes</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /container -->
+
+<script>
+/* ════ RELOJ ════ */
+(function() {
+  function tick() {
+    const now = new Date();
+    const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const el = document.getElementById('reloj');
+    if (el) el.textContent = `${dias[now.getDay()]} ${now.getDate()} ${meses[now.getMonth()]} — ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  }
+  tick();
+  setInterval(tick, 30000);
+})();
+
+/* ════ DATOS JINJA ════ */
+const DIAS7_LABELS = [{% for d in ventas_7d %}"{{ d.dia.strftime('%a %d') if d.dia else '' }}"{% if not loop.last %},{% endif %}{% endfor %}];
+const DIAS7_VALS   = [{% for d in ventas_7d %}{{ d.total_ingresos | float }}{% if not loop.last %},{% endif %}{% endfor %}];
+const PAGO_HOY_LABELS = [{% for p in pago_hoy %}"{{ p.metodoPago }}"{% if not loop.last %},{% endif %}{% endfor %}];
+const PAGO_HOY_VALS   = [{% for p in pago_hoy %}{{ p.total_ingresos | float }}{% if not loop.last %},{% endif %}{% endfor %}];
+const HORA_LABELS = [{% for h in ventas_por_hora %}"{{ h.hora }}:00"{% if not loop.last %},{% endif %}{% endfor %}];
+const HORA_VALS   = [{% for h in ventas_por_hora %}{{ h.total_ingresos | float }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+/* Tendencia 7 días */
+if (DIAS7_LABELS.length > 0) {
+  new Chart(document.getElementById('chartSemana'), {
+    type: 'line',
+    data: {
+      labels: DIAS7_LABELS,
+      datasets: [{
+        data: DIAS7_VALS,
+        borderColor: '#f29f05',
+        backgroundColor: 'rgba(242,159,5,0.10)',
+        borderWidth: 2,
+        pointBackgroundColor: '#38230f',
+        pointRadius: 3.5,
+        pointHoverRadius: 5,
+        tension: 0.45,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' $' + c.parsed.y.toFixed(2) } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#b0a090' } },
+        y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 9 }, color: '#b0a090', callback: v => '$' + v.toFixed(0) } }
+      }
+    }
+  });
+}
+
+/* Donut método de pago */
+if (PAGO_HOY_LABELS.length > 0) {
+  new Chart(document.getElementById('chartPagoHoy'), {
+    type: 'doughnut',
+    data: {
+      labels: PAGO_HOY_LABELS,
+      datasets: [{ data: PAGO_HOY_VALS, backgroundColor: ['#f29f05','#38230f','#7a6040'], borderWidth: 2, borderColor: '#fff', hoverOffset: 5 }]
+    },
+    options: {
+      responsive: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' $' + c.parsed.toFixed(2) } } },
+      cutout: '65%',
+    }
+  });
+}
+
+/* Barras por hora */
+if (HORA_LABELS.length > 0) {
+  new Chart(document.getElementById('chartHoras'), {
+    type: 'bar',
+    data: {
+      labels: HORA_LABELS,
+      datasets: [{
+        data: HORA_VALS,
+        backgroundColor: HORA_VALS.map(v => v === Math.max(...HORA_VALS) ? '#f29f05' : 'rgba(56,35,15,0.15)'),
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' $' + c.parsed.y.toFixed(2) } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 8 }, color: '#b0a090' } },
+        y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 9 }, color: '#b0a090', callback: v => '$' + v.toFixed(0) } }
+      }
+    }
+  });
+}
+</script>
+
+{% endblock %}

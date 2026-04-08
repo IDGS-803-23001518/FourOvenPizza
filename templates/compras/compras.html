@@ -850,7 +850,7 @@
     let contextoInsumo = '';
 
     function getUnidadBase(tipoMP) {
-        const tipoMap = { 'Solido': 'Masa', 'Liquido': 'Volumen' };
+        const tipoMap = { 'Solido': 'Solido', 'Liquido': 'Liquido' };
         const tipoU = tipoMap[tipoMP] || null;
         if (!tipoU) return null;
         const candidatas = UNIDADES_MEDIDA.filter(u => u.tipo === tipoU);
@@ -868,7 +868,7 @@
     function getUnidadBaseTexto(idMateriaP) {
         const tipo = getTipoMateriaPrima(idMateriaP);
         if (tipo === 'Solido') return 'gramos';
-        if (tipo === 'Liquido') return 'mililitros';
+        if (tipo === 'Liquido') return 'mililitros';    
         return 'unidades';
     }
 
@@ -1056,7 +1056,7 @@
     }
 
     function poblarUnidades(tipoMP) {
-        const tipoMap = { 'Solido': 'Masa', 'Liquido': 'Volumen' };
+        const tipoMap = { 'Solido': 'Solido', 'Liquido': 'Liquido' };
         const tipoU = tipoMap[tipoMP] || null;
         const unidBase = tipoMP === 'Solido' ? 'g' : tipoMP === 'Liquido' ? 'ml' : 'unidad';
         const uSelect = document.getElementById('insumo-unidad');
