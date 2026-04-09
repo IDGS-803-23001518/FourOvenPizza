@@ -45,7 +45,7 @@ def _alertas_stock():
 
 @dashboard.route("/")
 @dashboard.route("/dashboard")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador", "Ventas")
 def index():
     hoy      = date.today()
     hoy_str  = hoy.isoformat()

@@ -63,8 +63,8 @@ def _segundos_desde_creacion(id_orden):
 # ── Vista ADMINISTRADOR ────────────────────────────────────────────────────────
 
 @produccion.route("/produccion")
-@rol_requerido("Administrador")
-def listado_ordenes():
+@rol_requerido("Administrador","Ventas","Cocinero")
+def listado_ordenes():  
     estado_f    = request.args.get("estado",    "").strip() or None
     fecha_ini_f = request.args.get("fecha_ini", "").strip() or None
     fecha_fin_f = request.args.get("fecha_fin", "").strip() or None
@@ -95,7 +95,7 @@ def listado_ordenes():
 
 
 @produccion.route("/produccion/registrar", methods=["POST"])
-@rol_requerido("Administrador","Cocinero")
+@rol_requerido("Administrador","Cocinero","Ventas")
 def registrar_orden():
     try:
         detalles_raw = request.form.get("detalles_json", "[]").strip()
@@ -145,7 +145,7 @@ def registrar_orden():
 
 
 @produccion.route("/produccion/editar/<int:id_orden>", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero","Ventas")
 def editar_orden(id_orden):
     try:
         seg = _segundos_desde_creacion(id_orden)
@@ -199,7 +199,7 @@ def editar_orden(id_orden):
 
 
 @produccion.route("/produccion/cancelar/<int:id_orden>", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero","Ventas")
 def cancelar_orden(id_orden):
     try:
         db.session.execute(
@@ -227,7 +227,7 @@ def cancelar_orden(id_orden):
 
 
 @produccion.route("/produccion/ver/<int:id_orden>")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero","Ventas")
 def ver_orden(id_orden):
     """Fragmento HTML para el modal Ver (admin)."""
     try:
@@ -246,7 +246,7 @@ def ver_orden(id_orden):
 
 
 @produccion.route("/produccion/detalle-json/<int:id_orden>")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero","Ventas")
 def detalle_orden_json(id_orden):
     try:
         detalle = _detalle_orden(id_orden)

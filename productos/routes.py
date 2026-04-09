@@ -175,7 +175,7 @@ def _validar_activacion_producto(id_producto):
 # ── Rutas ──────────────────────────────────────────────────────────────────────
 
 @productos.route("/productos")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def listado_productos():
     nombre = request.args.get("nombre", "").strip()
     precio_inicio = request.args.get("precio_inicio", "").strip()
@@ -257,7 +257,7 @@ def listado_productos():
 
 
 @productos.route("/registrar-producto", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def registrar_producto():
     datos_formulario = {}
     try:
@@ -322,7 +322,7 @@ def registrar_producto():
 
 
 @productos.route("/editar-producto/<int:id>", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def editar_producto(id):
     datos_formulario = {"id": id}
     try:
@@ -391,7 +391,7 @@ def editar_producto(id):
 
 
 @productos.route("/cambiar-estatus-producto/<int:id>/<int:estatus>")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def cambiar_estatus_producto(id, estatus):
     """
     Igual que materias primas: recibe el estatus actual en la URL y lo invierte.
@@ -432,7 +432,7 @@ def cambiar_estatus_producto(id, estatus):
 
 
 @productos.route("/productosTerminados")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador", "Cocinero", "Ventas")
 def listado_productos_terminados():
     """
     Lista solo productos ACTIVOS con receta activa.
@@ -522,7 +522,7 @@ def listado_productos_terminados():
 
 
 @productos.route("/productos-terminados/actualizar-stock/<int:id>", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Ventas","Cocinero")
 def actualizar_stock_producto_terminado(id):
     """
     Recibe el nuevo stock desde el formulario (campo 'nuevo_stock')
