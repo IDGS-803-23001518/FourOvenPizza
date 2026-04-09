@@ -17,8 +17,6 @@ from productos.routes import productos
 from caja.routes import caja
 from dashboard.routes import dashboard
 from models import db
-
-# Importar la función de registro de acceso
 from autentificacion.routes import registrar_acceso
 
 app = Flask(__name__)
@@ -57,9 +55,7 @@ def verificar_sesion():
         if isinstance(ultima, str):
             ultima = datetime.fromisoformat(ultima)
         
-        # Verificar si la sesión expiró por inactividad
         if (ahora - ultima) > timedelta(minutes=10):
-            # Registrar logout por inactividad ANTES de limpiar la sesión
             registrar_acceso(
                 session.get('usuario_id'),
                 session.get('usuario_nombre'),
@@ -67,12 +63,10 @@ def verificar_sesion():
                 'SESION_EXPIRADA'
             )
             
-            # Limpiar sesión y redirigir al login
             session.clear()
             flash('Tu sesión ha expirado por inactividad.', 'warning')
             return redirect(url_for('autentificacion.login'))
     
-    # Actualizar la última actividad
     session['ultima_actividad'] = ahora.isoformat()
     session.modified = True
 
@@ -88,13 +82,11 @@ def inicio():
     if not session.get('usuario_id'):
         return redirect(url_for('autentificacion.login'))
     
-    # Redirigir según el rol del usuario
     rol = session.get('usuario_rol')
     
     if rol == 'Administrador':
         return redirect(url_for('dashboard.index'))
     elif rol == 'Ventas':
-        # Si tienes una página principal para ventas
         return render_template("inicio.html")  # O la vista que corresponda
     elif rol == 'Cocinero':
         # Si tienes una página principal para cocinero
