@@ -221,7 +221,7 @@ def registrar_corte():
 # ── Vista Utilidades / Reportes ────────────────────────────────────────
 
 @caja.route("/caja/utilidades")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador", "Ventas")
 def utilidades():
     fecha_fin_d = date.today()
     fecha_ini_d = fecha_fin_d - timedelta(days=30)

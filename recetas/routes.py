@@ -118,7 +118,7 @@ def _obtener_alertas_ingredientes_desactivados(detalles_receta):
 
 
 @recetas.route("/recetas/producto/<int:id_producto>")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def ver_receta_producto(id_producto):
     producto = Productos.query.get_or_404(id_producto)
     receta = _obtener_receta_producto(id_producto)
@@ -150,7 +150,7 @@ def ver_receta_producto(id_producto):
 
 
 @recetas.route("/recetas/producto/<int:id_producto>/guardar", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def guardar_receta_producto(id_producto):
     producto = Productos.query.get_or_404(id_producto)
     descripcion = request.form.get("descripcion", "").strip()
@@ -178,7 +178,7 @@ def guardar_receta_producto(id_producto):
 
 
 @recetas.route("/recetas/producto/<int:id_producto>/detalle", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def agregar_detalle_receta(id_producto):
     Productos.query.get_or_404(id_producto)
     datos_formulario = {}
@@ -225,7 +225,7 @@ def agregar_detalle_receta(id_producto):
 
 
 @recetas.route("/recetas/detalle/<int:id_detalle>/editar", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def editar_detalle_receta(id_detalle):
     detalle = DetalleReceta.query.get_or_404(id_detalle)
     receta = detalle.receta
@@ -253,7 +253,7 @@ def editar_detalle_receta(id_detalle):
 
 
 @recetas.route("/recetas/detalle/<int:id_detalle>/eliminar", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def eliminar_detalle_receta(id_detalle):
     detalle = DetalleReceta.query.get_or_404(id_detalle)
     receta = detalle.receta
@@ -293,7 +293,7 @@ def eliminar_detalle_receta(id_detalle):
 
 
 @recetas.route("/recetas/producto/<int:id_producto>/eliminar", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def eliminar_receta_completa(id_producto):
     producto = Productos.query.get_or_404(id_producto)
     receta = _obtener_receta_producto(id_producto)
