@@ -1242,8 +1242,19 @@ BEGIN
       AND (
             p_estatus_receta IS NULL
             OR p_estatus_receta = 'todos'
-            OR (p_estatus_receta = '1' AND EXISTS (SELECT 1 FROM recetas r2 WHERE r2.idProducto = p.idProducto))
-            OR (p_estatus_receta = '0' AND NOT EXISTS (SELECT 1 FROM recetas r3 WHERE r3.idProducto = p.idProducto))
+            -- MODIFICACIÓN: Verifica que tenga al menos 4 ingredientes
+            OR (p_estatus_receta = '1' AND EXISTS (
+                SELECT 1 FROM recetas r2 
+                JOIN detalleReceta dr ON dr.idReceta = r2.idReceta
+                WHERE r2.idProducto = p.idProducto
+                HAVING COUNT(dr.idDetalleR) >= 4
+            ))
+            OR (p_estatus_receta = '0' AND NOT EXISTS (
+                SELECT 1 FROM recetas r3 
+                JOIN detalleReceta dr ON dr.idReceta = r3.idReceta
+                WHERE r3.idProducto = p.idProducto
+                HAVING COUNT(dr.idDetalleR) >= 4
+            ))
           )
     ORDER BY p.nombre ASC;
 END$$
@@ -1532,10 +1543,6 @@ sp_main: BEGIN
     DECLARE v_nombre_mp         VARCHAR(100);
     DECLARE v_nombre_producto   VARCHAR(100);
     DECLARE v_tiene_receta      INT DEFAULT 0;
-    DECLARE v_det_idx           INT DEFAULT 0;
-    DECLARE v_det_total         INT DEFAULT 0;
-    DECLARE v_mp_idx            INT DEFAULT 0;
-    DECLARE v_mp_total          INT DEFAULT 0;
 
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -1568,11 +1575,9 @@ sp_main: BEGIN
         SET v_idx = 0;
 
         WHILE v_idx < v_total_items DO
-
             SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
             SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
 
-            -- Validar que el producto exista, esté activo
             IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = v_idProducto AND estatus = 1) THEN
                 SET p_resultado  = CONCAT('ERROR: Producto ID ', v_idProducto, ' no existe o está inactivo');
                 SET p_idGenerado = 0;
@@ -1580,7 +1585,6 @@ sp_main: BEGIN
                 LEAVE sp_main;
             END IF;
 
-            -- Validar que tenga receta
             SELECT COUNT(*) INTO v_tiene_receta FROM recetas WHERE idProducto = v_idProducto;
             IF v_tiene_receta = 0 THEN
                 SELECT nombre INTO v_nombre_producto FROM productos WHERE idProducto = v_idProducto;
@@ -1590,7 +1594,6 @@ sp_main: BEGIN
                 LEAVE sp_main;
             END IF;
 
-            -- Validar cantidad
             IF v_cantidad <= 0 THEN
                 SET p_resultado  = 'ERROR: La cantidad de cada producto debe ser mayor a 0';
                 SET p_idGenerado = 0;
@@ -1601,8 +1604,7 @@ sp_main: BEGIN
             SET v_idx = v_idx + 1;
         END WHILE;
 
-        -- ── Paso 2: Verificar stock de materias primas ──
-        -- Usamos tabla temporal para acumular consumo total por materia prima
+        -- Verificar stock de materias primas
         CREATE TEMPORARY TABLE IF NOT EXISTS tmp_consumo_mp (
             idMateriaP INT,
             total_requerido DECIMAL(10,2)
@@ -1611,24 +1613,17 @@ sp_main: BEGIN
 
         SET v_idx = 0;
         WHILE v_idx < v_total_items DO
-
             SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
             SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
-
-            -- Obtener receta del producto
             SELECT idReceta INTO v_idReceta FROM recetas WHERE idProducto = v_idProducto LIMIT 1;
-
-            -- Acumular consumo: cantidad_receta * unidades_pedidas
             INSERT INTO tmp_consumo_mp (idMateriaP, total_requerido)
             SELECT dr.idMateriaP, dr.cantidad * v_cantidad
             FROM detalleReceta dr
             WHERE dr.idReceta = v_idReceta
             ON DUPLICATE KEY UPDATE total_requerido = total_requerido + (dr.cantidad * v_cantidad);
-
             SET v_idx = v_idx + 1;
         END WHILE;
 
-        -- Verificar que el stock sea suficiente para cada materia prima acumulada
         SELECT t.idMateriaP, t.total_requerido, mp.stock, mp.nombre
         INTO v_idMateriaP, v_cantidad_receta, v_stock_mp, v_nombre_mp
         FROM tmp_consumo_mp t
@@ -1639,8 +1634,7 @@ sp_main: BEGIN
         IF v_stock_mp IS NOT NULL AND v_stock_mp < v_cantidad_receta THEN
             DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp;
             SET p_resultado  = CONCAT('ERROR: Stock insuficiente de "', v_nombre_mp,
-                                      '". Disponible: ', v_stock_mp,
-                                      ', requerido: ', v_cantidad_receta);
+                                      '". Disponible: ', v_stock_mp, ', requerido: ', v_cantidad_receta);
             SET p_idGenerado = 0;
             ROLLBACK;
             LEAVE sp_main;
@@ -1648,26 +1642,48 @@ sp_main: BEGIN
 
         DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp;
 
-        -- ── Paso 3: Insertar la orden ──
+        -- Insertar la orden
         INSERT INTO ordenesProduccion (idUsuario, estado, fecha)
         VALUES (p_ejecutadoPor, 'En proceso', NOW());
-
         SET p_idGenerado = LAST_INSERT_ID();
 
-        -- ── Paso 4: Insertar el detalle ──
+        -- Insertar el detalle
         SET v_idx = 0;
         WHILE v_idx < v_total_items DO
-
             SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
             SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
-
             INSERT INTO detalleProduccion (idProducto, idOrden, cantidad)
             VALUES (v_idProducto, p_idGenerado, v_cantidad);
-
             SET v_idx = v_idx + 1;
         END WHILE;
 
         SET p_resultado = 'SUCCESS: Orden de producción registrada correctamente';
+
+        -- NUEVO: Descontar materias primas al crear la orden
+        CREATE TEMPORARY TABLE IF NOT EXISTS tmp_consumo_insert (
+            idMateriaP INT,
+            total_requerido DECIMAL(10,2)
+        );
+        DELETE FROM tmp_consumo_insert;
+
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+            SELECT idReceta INTO v_idReceta FROM recetas WHERE idProducto = v_idProducto LIMIT 1;
+            INSERT INTO tmp_consumo_insert (idMateriaP, total_requerido)
+            SELECT dr.idMateriaP, dr.cantidad * v_cantidad
+            FROM detalleReceta dr
+            WHERE dr.idReceta = v_idReceta
+            ON DUPLICATE KEY UPDATE total_requerido = total_requerido + (dr.cantidad * v_cantidad);
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        UPDATE materiasPrimas mp
+        JOIN tmp_consumo_insert t ON t.idMateriaP = mp.idMateriaP
+        SET mp.stock = mp.stock - t.total_requerido;
+
+        DROP TEMPORARY TABLE IF EXISTS tmp_consumo_insert;
 
         INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
         VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'OrdenesProduccion', 'CREAR',
@@ -1702,10 +1718,10 @@ sp_main: BEGIN
 
         UPDATE ordenesProduccion SET estado = p_estado WHERE idOrden = p_idOrden;
 
-        -- Al terminar: descontar materias primas y sumar stock a productos
-        IF p_estado = 'Terminada' THEN
-
-            -- Descontar stock de materias primas
+        -- MODIFICADO: Cambió la lógica de descuentos
+        -- Al cancelar: restablecer materias primas (ya fueron descontadas al crear)
+        -- Al terminar: solo sumar stock a productos terminados (materias ya descontadas al crear)
+        IF p_estado = 'Cancelada' THEN
             UPDATE materiasPrimas mp
             JOIN (
                 SELECT dr.idMateriaP, SUM(dr.cantidad * dp.cantidad) AS total_consumido
@@ -1715,14 +1731,13 @@ sp_main: BEGIN
                 WHERE dp.idOrden = p_idOrden
                 GROUP BY dr.idMateriaP
             ) consumo ON consumo.idMateriaP = mp.idMateriaP
-            SET mp.stock = mp.stock - consumo.total_consumido;
+            SET mp.stock = mp.stock + consumo.total_consumido;
 
-            -- Sumar stock a productos terminados
+        ELSEIF p_estado = 'Terminada' THEN
             UPDATE productos p
             JOIN detalleProduccion dp ON dp.idProducto = p.idProducto
             SET p.stock = p.stock + dp.cantidad
             WHERE dp.idOrden = p_idOrden;
-
         END IF;
 
         SET p_idGenerado = p_idOrden;
@@ -1752,7 +1767,6 @@ sp_main: BEGIN
             LEAVE sp_main;
         END IF;
 
-        -- Verificar que no haya pasado más de 1 minuto desde la creación
         IF TIMESTAMPDIFF(SECOND, (SELECT fecha FROM ordenesProduccion WHERE idOrden = p_idOrden), NOW()) > 60 THEN
             SET p_resultado  = 'ERROR: El tiempo de edición ha expirado (máximo 1 minuto)';
             SET p_idGenerado = 0;
@@ -1770,7 +1784,6 @@ sp_main: BEGIN
         SET v_total_items = JSON_LENGTH(p_detalles);
         SET v_idx = 0;
 
-        -- Validar productos y recetas del nuevo detalle
         WHILE v_idx < v_total_items DO
             SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
             SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
@@ -1812,14 +1825,11 @@ sp_main: BEGIN
         WHILE v_idx < v_total_items DO
             SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
             SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
-
             SELECT idReceta INTO v_idReceta FROM recetas WHERE idProducto = v_idProducto LIMIT 1;
-
             INSERT INTO tmp_consumo_mp2 (idMateriaP, total_requerido)
             SELECT dr.idMateriaP, dr.cantidad * v_cantidad
             FROM detalleReceta dr WHERE dr.idReceta = v_idReceta
             ON DUPLICATE KEY UPDATE total_requerido = total_requerido + (dr.cantidad * v_cantidad);
-
             SET v_idx = v_idx + 1;
         END WHILE;
 
@@ -1834,8 +1844,7 @@ sp_main: BEGIN
         IF v_stock_mp IS NOT NULL AND v_stock_mp < v_cantidad_receta THEN
             DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp2;
             SET p_resultado  = CONCAT('ERROR: Stock insuficiente de "', v_nombre_mp,
-                                      '". Disponible: ', v_stock_mp,
-                                      ', requerido: ', v_cantidad_receta);
+                                      '". Disponible: ', v_stock_mp, ', requerido: ', v_cantidad_receta);
             SET p_idGenerado = 0;
             ROLLBACK;
             LEAVE sp_main;
@@ -1843,17 +1852,14 @@ sp_main: BEGIN
 
         DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp2;
 
-        -- Reemplazar detalle
         DELETE FROM detalleProduccion WHERE idOrden = p_idOrden;
 
         SET v_idx = 0;
         WHILE v_idx < v_total_items DO
             SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
             SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
-
             INSERT INTO detalleProduccion (idProducto, idOrden, cantidad)
             VALUES (v_idProducto, p_idOrden, v_cantidad);
-
             SET v_idx = v_idx + 1;
         END WHILE;
 
