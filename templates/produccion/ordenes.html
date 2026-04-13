@@ -1,6 +1,76 @@
 {% extends layout %} 
 {% block container %}
 
+<!-- ══════════════ ESTILOS PAGINACIÓN ══════════════ -->
+<style>
+  .pag-hidden { display: none !important; }
+
+  .pag-wrapper {
+    display: flex; flex-wrap: wrap; align-items: center;
+    justify-content: space-between; gap: 0.75rem;
+    padding: 0.85rem 1.25rem; background: #fff;
+    border-top: 1px solid #f0e8dc;
+    border-radius: 0 0 1rem 1rem;
+  }
+  .pag-info { font-size: 0.78rem; color: #6b7280; }
+  .pag-info strong { color: #38230f; }
+  .pag-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+  .pag-por-pagina { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #6b7280; }
+  .pag-select {
+    border: 1px solid #d1d5db; border-radius: 0.5rem;
+    padding: 0.3rem 2rem 0.3rem 0.75rem; font-size: 0.8rem;
+    font-weight: 600; color: #38230f; background-color: #fff;
+    cursor: pointer; outline: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2338230f' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em;
+  }
+  .pag-select:focus { box-shadow: 0 0 0 2px rgba(242,159,5,0.35); border-color: #f29f05; }
+  .pag-botones { display: flex; align-items: center; gap: 0.25rem; }
+  .pag-btn {
+    min-width: 2rem; height: 2rem; border-radius: 0.4rem;
+    border: 1px solid #e5e7eb; background: #fff;
+    color: #38230f; font-size: 0.78rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; padding: 0 0.4rem;
+  }
+  .pag-btn:hover:not(:disabled) { background: #f29f05; color: #fff; border-color: #f29f05; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  .pag-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .pag-btn-active { background: #38230f !important; color: #fff !important; border-color: #38230f !important; }
+  .pag-ellipsis { padding: 0 0.2rem; color: #9ca3af; font-size: 0.78rem; user-select: none; }
+
+  @media (max-width: 767px) {
+    #tabla-ordenes-desktop { display: none !important; }
+    #cards-ordenes { display: block !important; }
+    #pag-ordenes-desktop { display: none !important; }
+  }
+  @media (min-width: 768px) {
+    #tabla-ordenes-desktop { display: block !important; }
+    #cards-ordenes { display: none !important; }
+    #pag-ordenes-cards { display: none !important; }
+  }
+
+  .orden-row, .orden-card { transition: opacity 0.2s ease; }
+
+  /* Cards móvil */
+  .orden-card {
+    background: #fff; border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #f0e8dc; overflow: hidden;
+  }
+  .orden-card-header {
+    background: #38230f; padding: 0.75rem 1rem;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
+  @media (max-width: 767px) {
+    #pag-ordenes-cards .pag-wrapper {
+      border-radius: 0.75rem; margin-top: 0.5rem;
+    }
+    #pag-ordenes-cards .pag-btn {
+      min-width: 2.4rem; height: 2.4rem; font-size: 0.9rem;
+    }
+  }
+</style>
+
 <nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
   style="border-bottom: 3px solid #f29f05;">
   <div class="container flex flex-wrap items-center justify-between mx-auto">
@@ -79,8 +149,8 @@
     </form>
   </div>
 
-  <!-- Tabla de órdenes -->
-  <div class="rounded-2xl overflow-hidden shadow-md mb-8">
+  <!-- ── TABLA DESKTOP ── -->
+  <div class="rounded-2xl overflow-hidden shadow-md mb-2" id="tabla-ordenes-desktop">
     <div class="overflow-x-auto">
       <table class="w-full text-sm text-left">
         <thead>
@@ -94,9 +164,14 @@
             <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Acciones</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="tabla-ordenes-body">
           {% for o in ordenes %}
-          <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150">
+          <tr class="orden-row bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150"
+              data-id="{{ o.idOrden }}"
+              data-estado="{{ o.estado }}"
+              data-usuario="{{ o.nombre_usuario }}"
+              data-segundos="{{ o.segundos_desde_creacion }}"
+              data-ts="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}">
             <td class="px-5 py-3 font-bold" style="color:#38230f;">#{{ o.idOrden }}</td>
             <td class="px-5 py-3 text-gray-700">{{ o.fecha.strftime('%d/%m/%Y %H:%M') if o.fecha else '—' }}</td>
             <td class="px-5 py-3 text-gray-700">{{ o.nombre_usuario }}</td>
@@ -119,7 +194,6 @@
             </td>
             <td class="px-5 py-3">
               <div class="flex gap-2 items-center">
-
                 <!-- Ver -->
                 <button type="button" onclick="abrirVer({{ o.idOrden }})"
                   class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
@@ -130,11 +204,7 @@
                   </svg>
                 </button>
 
-                {# Botón editar:
-                   - Solo visible si la orden está En proceso Y quedan segundos.
-                   - data-ts-creacion: timestamp Unix (segundos) de la fecha de creación.
-                     El JS calcula el tiempo restante como: 60 - (Date.now()/1000 - ts_creacion)
-                     Esto garantiza que el timer NO se reinicia al abrir/cerrar el modal. #}
+                <!-- Editar (solo si En proceso y <= 60s) -->
                 {% if o.estado == 'En proceso' and o.segundos_desde_creacion <= 60 %}
                 <button type="button"
                   class="btn-editar flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
@@ -159,12 +229,11 @@
                   </svg>
                 </button>
                 {% endif %}
-
               </div>
             </td>
           </tr>
           {% else %}
-          <tr>
+          <tr id="fila-vacia-desktop">
             <td colspan="7" class="text-center py-12 text-gray-400 text-sm font-semibold bg-white">
               No se encontraron órdenes con los filtros seleccionados.
             </td>
@@ -173,8 +242,105 @@
         </tbody>
       </table>
     </div>
+    <!-- Paginación desktop (se inyecta aquí por JS) -->
+    <div id="pag-ordenes-desktop"></div>
   </div>
-</div>
+
+  <!-- ── CARDS MÓVIL ── -->
+  <div id="cards-ordenes" class="space-y-3 mb-4" style="display:none;">
+    {% for o in ordenes %}
+    <div class="orden-card"
+         data-id="{{ o.idOrden }}"
+         data-estado="{{ o.estado }}"
+         data-segundos="{{ o.segundos_desde_creacion }}"
+         data-ts="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}">
+      <!-- Cabecera -->
+      <div class="orden-card-header">
+        <span class="text-white font-bold text-sm">#{{ o.idOrden }}</span>
+        {% if o.estado == 'En proceso' %}
+          <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block"></span>En proceso
+          </span>
+        {% elif o.estado == 'Terminada' %}
+          <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>Terminada
+          </span>
+        {% else %}
+          <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>Cancelada
+          </span>
+        {% endif %}
+      </div>
+      <!-- Cuerpo -->
+      <div class="p-4">
+        <div class="grid grid-cols-2 gap-2 mb-3 text-sm">
+          <div>
+            <p class="text-xs text-gray-500 font-semibold uppercase">Fecha</p>
+            <p class="text-gray-800 font-medium">{{ o.fecha.strftime('%d/%m/%Y %H:%M') if o.fecha else '—' }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 font-semibold uppercase">Registrada por</p>
+            <p class="text-gray-800 font-medium">{{ o.nombre_usuario }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 font-semibold uppercase">Productos</p>
+            <p class="text-gray-800 font-medium">{{ o.total_productos }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 font-semibold uppercase">Unidades</p>
+            <p class="text-gray-800 font-medium">{{ o.total_unidades | int }}</p>
+          </div>
+        </div>
+        <!-- Acciones -->
+        <div class="flex gap-2 border-t border-gray-100 pt-3">
+          <button type="button" onclick="abrirVer({{ o.idOrden }})"
+            class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
+            style="background-color:#2563eb;">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
+              <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clip-rule="evenodd"/>
+            </svg>
+            Ver
+          </button>
+
+          {% if o.estado == 'En proceso' and o.segundos_desde_creacion <= 60 %}
+          <button type="button"
+            class="btn-editar flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
+            style="background-color:#f29f05;"
+            data-id="{{ o.idOrden }}"
+            data-ts-creacion="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}"
+            onclick="abrirEditar(this)">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Editar
+          </button>
+          {% endif %}
+
+          {% if o.estado == 'En proceso' %}
+          <button type="button" onclick="abrirCancelar({{ o.idOrden }})"
+            class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
+            style="background-color:#e53e3e;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            Cancelar
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="text-center py-12 text-gray-400 text-sm font-semibold bg-white rounded-2xl shadow">
+      No se encontraron órdenes con los filtros seleccionados.
+    </div>
+    {% endfor %}
+  </div>
+  <!-- Paginación cards (se inyecta aquí por JS) -->
+  <div id="pag-ordenes-cards"></div>
+
+</div><!-- /container -->
 
 
 <!-- ══════════════ MODAL REGISTRAR ══════════════ -->
@@ -192,7 +358,6 @@
     <div class="p-6">
       <div id="errorRegistro" class="hidden mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm font-semibold"></div>
 
-      <!-- Selector -->
       <div class="grid grid-cols-1 sm:grid-cols-[1fr_120px_auto] gap-3 items-end mb-4 pb-4 border-b border-gray-100">
         <div>
           <label class="block text-xs font-semibold text-gray-700 mb-1">Producto <span class="text-red-500">*</span></label>
@@ -218,7 +383,6 @@
         </div>
       </div>
 
-      <!-- Tabla productos de la orden -->
       <div class="mb-4">
         <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Productos en la orden</p>
         <div class="rounded-xl overflow-hidden border border-gray-200">
@@ -290,8 +454,6 @@
         <h3 class="text-base font-bold text-white tracking-wide">
           EDITAR ORDEN <span id="editOrdenNum" class="font-normal opacity-80"></span>
         </h3>
-        <!-- El timer muestra segundos reales calculados desde ts_creacion del servidor,
-             no desde cuando se abrió el modal. -->
         <p class="text-xs text-amber-300 mt-0.5">
           Tiempo restante: <span id="timerDisplay" class="font-bold tabular-nums">--</span>
         </p>
@@ -303,70 +465,81 @@
       </button>
     </div>
     <div class="p-6">
-      <div id="errorEditar" class="hidden mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm font-semibold"></div>
-
-      <!-- Selector -->
-      <div class="grid grid-cols-1 sm:grid-cols-[1fr_120px_auto] gap-3 items-end mb-4 pb-4 border-b border-gray-100">
-        <div>
-          <label class="block text-xs font-semibold text-gray-700 mb-1">Producto</label>
-          <select id="editSelProducto"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
-            <option value="">Selecciona un producto...</option>
-            {% for p in productos_disponibles %}
-            <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}">
-              {{ p.nombre }} — {{ p.tamano }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-700 mb-1">Cantidad</label>
-          <input type="number" id="editInputCantidad" min="1" step="1" value="1"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
-        </div>
-        <div class="flex items-end">
-          <button type="button" onclick="agregarProductoEditar()"
-            class="w-full text-white font-bold px-4 py-2 rounded-lg transition hover:brightness-110 text-sm"
-            style="background-color:#f29f05;">+ Agregar</button>
-        </div>
+      <!-- Spinner de carga -->
+      <div id="editarLoading" class="flex items-center justify-center py-10 gap-3">
+        <svg class="animate-spin w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-gray-500 text-sm font-medium">Cargando datos de la orden...</span>
       </div>
 
-      <div class="mb-4">
-        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Productos en la orden</p>
-        <div class="rounded-xl overflow-hidden border border-gray-200">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="bg-gray-50">
-                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Producto</th>
-                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Tamaño</th>
-                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Cantidad</th>
-                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Quitar</th>
-              </tr>
-            </thead>
-            <tbody id="tablaEditarBody">
-              <tr id="filaVaciaEditar">
-                <td colspan="4" class="text-center py-6 text-gray-400 text-xs font-semibold">No hay productos añadidos.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <!-- Contenido real (oculto hasta que carga) -->
+      <div id="editarContenido" class="hidden">
+        <div id="errorEditar" class="hidden mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm font-semibold"></div>
 
-      <form id="formEditarOrden" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="detalles_json" id="hiddenDetallesEditar" value="[]">
-        <div class="flex gap-3">
-          <button type="button" onclick="cerrarModal('modalEditar')"
-            class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
-            Cancelar
-          </button>
-          <button type="button" onclick="enviarOrdenEditar()"
-            class="flex-1 px-4 py-2 rounded-lg text-white font-bold transition hover:brightness-110"
-            style="background-color:#38230f;">
-            Guardar cambios
-          </button>
+        <div class="grid grid-cols-1 sm:grid-cols-[1fr_120px_auto] gap-3 items-end mb-4 pb-4 border-b border-gray-100">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Producto</label>
+            <select id="editSelProducto"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+              <option value="">Selecciona un producto...</option>
+              {% for p in productos_disponibles %}
+              <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}">
+                {{ p.nombre }} — {{ p.tamano }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Cantidad</label>
+            <input type="number" id="editInputCantidad" min="1" step="1" value="1"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+          </div>
+          <div class="flex items-end">
+            <button type="button" onclick="agregarProductoEditar()"
+              class="w-full text-white font-bold px-4 py-2 rounded-lg transition hover:brightness-110 text-sm"
+              style="background-color:#f29f05;">+ Agregar</button>
+          </div>
         </div>
-      </form>
+
+        <div class="mb-4">
+          <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Productos en la orden</p>
+          <div class="rounded-xl overflow-hidden border border-gray-200">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-gray-50">
+                  <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Producto</th>
+                  <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Tamaño</th>
+                  <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Cantidad</th>
+                  <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Quitar</th>
+                </tr>
+              </thead>
+              <tbody id="tablaEditarBody">
+                <tr id="filaVaciaEditar">
+                  <td colspan="4" class="text-center py-6 text-gray-400 text-xs font-semibold">No hay productos añadidos.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <form id="formEditarOrden" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="detalles_json" id="hiddenDetallesEditar" value="[]">
+          <div class="flex gap-3">
+            <button type="button" onclick="cerrarModal('modalEditar')"
+              class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition">
+              Cancelar
+            </button>
+            <button type="button" onclick="enviarOrdenEditar()"
+              class="flex-1 px-4 py-2 rounded-lg text-white font-bold transition hover:brightness-110"
+              style="background-color:#38230f;">
+              Guardar cambios
+            </button>
+          </div>
+        </form>
+      </div><!-- /editarContenido -->
     </div>
   </div>
 </div>
@@ -406,10 +579,101 @@
 /* ════════════════════════════════════════════════
    ESTADO GLOBAL
 ════════════════════════════════════════════════ */
-let ordenItems   = [];   // productos del modal Registro
-let editarItems  = [];   // productos del modal Editar
+let ordenItems   = [];
+let editarItems  = [];
 let timerInterval = null;
-let _tsCreacionEditar = 0;  // timestamp Unix de creación de la orden que se edita
+let _tsCreacionEditar = 0;
+let _idOrdenEditando  = 0;
+
+/* ════════════════════════════════════════════════
+   PAGINACIÓN GENÉRICA
+════════════════════════════════════════════════ */
+function crearPaginacion(opciones) {
+  const { contenedorItems, itemsSelector, contenedorPagId } = opciones;
+  let paginaActual = 1;
+  let porPagina    = 10;
+  const gName      = '__pag_' + contenedorPagId.replace(/-/g, '_');
+
+  function obtenerItems() {
+    return Array.from(contenedorItems.querySelectorAll(itemsSelector))
+      .filter(el => !el.classList.contains('filtro-hidden'));
+  }
+
+  function mostrarItems() {
+    const items      = obtenerItems();
+    const total      = items.length;
+    const totalPags  = Math.max(1, Math.ceil(total / porPagina));
+    if (paginaActual > totalPags) paginaActual = totalPags;
+
+    const ini = (paginaActual - 1) * porPagina;
+    const fin = ini + porPagina;
+
+    items.forEach((el, i) => {
+      el.classList.toggle('pag-hidden', i < ini || i >= fin);
+    });
+    renderControles(total, totalPags, ini, fin);
+  }
+
+  function renderControles(total, totalPags, ini, fin) {
+    let ctrl = document.getElementById(contenedorPagId);
+    if (!ctrl) return;
+
+    const mostradoIni = total === 0 ? 0 : ini + 1;
+    const mostradoFin = Math.min(fin, total);
+    const delta = 2;
+    let rango = [];
+    for (let i = Math.max(1, paginaActual - delta); i <= Math.min(totalPags, paginaActual + delta); i++) rango.push(i);
+
+    let botonesHTML = '';
+    if (rango[0] > 1) {
+      botonesHTML += `<button class="pag-btn" onclick="${gName}.irA(1)">1</button>`;
+      if (rango[0] > 2) botonesHTML += `<span class="pag-ellipsis">…</span>`;
+    }
+    rango.forEach(p => {
+      botonesHTML += `<button class="pag-btn ${p === paginaActual ? 'pag-btn-active' : ''}" onclick="${gName}.irA(${p})">${p}</button>`;
+    });
+    if (rango[rango.length - 1] < totalPags) {
+      if (rango[rango.length - 1] < totalPags - 1) botonesHTML += `<span class="pag-ellipsis">…</span>`;
+      botonesHTML += `<button class="pag-btn" onclick="${gName}.irA(${totalPags})">${totalPags}</button>`;
+    }
+
+    ctrl.className = 'pag-wrapper';
+    ctrl.innerHTML = `
+      <div class="pag-info">Mostrando <strong>${mostradoIni}–${mostradoFin}</strong> de <strong>${total}</strong> registros</div>
+      <div class="pag-controls">
+        <div class="pag-por-pagina">
+          Mostrar
+          <select class="pag-select" onchange="${gName}.cambiarPorPagina(this.value)">
+            <option value="10" ${porPagina===10?'selected':''}>10</option>
+            <option value="15" ${porPagina===15?'selected':''}>15</option>
+            <option value="20" ${porPagina===20?'selected':''}>20</option>
+            <option value="50" ${porPagina===50?'selected':''}>50</option>
+          </select>
+          por página
+        </div>
+        <div class="pag-botones">
+          <button class="pag-btn" onclick="${gName}.irA(${paginaActual-1})" ${paginaActual<=1?'disabled':''}>‹</button>
+          ${botonesHTML}
+          <button class="pag-btn" onclick="${gName}.irA(${paginaActual+1})" ${paginaActual>=totalPags?'disabled':''}>›</button>
+        </div>
+      </div>`;
+  }
+
+  const api = {
+    refresh() { paginaActual = 1; mostrarItems(); },
+    irA(p) {
+      const items = obtenerItems();
+      const totalPags = Math.max(1, Math.ceil(items.length / porPagina));
+      if (p < 1 || p > totalPags) return;
+      paginaActual = p;
+      mostrarItems();
+    },
+    cambiarPorPagina(val) { porPagina = parseInt(val); paginaActual = 1; mostrarItems(); }
+  };
+  window[gName] = api;
+  mostrarItems();
+  return api;
+}
 
 /* ════════════════════════════════════════════════
    MODALES
@@ -418,11 +682,9 @@ function abrirModal(id) {
   document.getElementById(id).classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
-
 function cerrarModal(id) {
   document.getElementById(id).classList.add('hidden');
   document.body.style.overflow = '';
-  // Al cerrar el modal Editar, limpiar timer sin tocar ts ni items
   if (id === 'modalEditar' && timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
@@ -435,9 +697,7 @@ function cerrarModal(id) {
   });
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    ['modalRegistro','modalVer','modalEditar','modalCancelar'].forEach(cerrarModal);
-  }
+  if (e.key === 'Escape') ['modalRegistro','modalVer','modalEditar','modalCancelar'].forEach(cerrarModal);
 });
 
 /* ════════════════════════════════════════════════
@@ -459,6 +719,7 @@ function agregarProductoOrden() {
   renderTabla('tablaOrdenBody', 'filaVaciaOrden', ordenItems, 'registro');
   ocultarError('errorRegistro');
 }
+
 function enviarOrdenRegistro() {
   if (ordenItems.length === 0) { mostrarError('errorRegistro', 'Agrega al menos un producto.'); return; }
   document.getElementById('hiddenDetallesRegistro').value = JSON.stringify(ordenItems);
@@ -466,49 +727,76 @@ function enviarOrdenRegistro() {
 }
 
 /* ════════════════════════════════════════════════
-   EDITAR — Timer basado en ts_creacion del servidor
-   El tiempo restante siempre es: 60 - (ahora_unix - ts_creacion)
-   Así, abrir/cerrar el modal no reinicia el contador.
+   EDITAR — carga datos vía fetch al abrir
 ════════════════════════════════════════════════ */
-function abrirEditar(btn) {
+async function abrirEditar(btn) {
   const idOrden    = parseInt(btn.dataset.id, 10);
-  const tsCreacion = parseInt(btn.dataset.tsCreacion, 10); // Unix segundos
+  const tsCreacion = parseInt(btn.dataset.tsCreacion, 10);
 
-  // Guardar para el ticker
   _tsCreacionEditar = tsCreacion;
+  _idOrdenEditando  = idOrden;
 
+  // Resetear UI
   document.getElementById('editOrdenNum').textContent = '#' + idOrden;
   document.getElementById('formEditarOrden').action   = `/produccion/editar/${idOrden}`;
   ocultarError('errorEditar');
+  editarItems = [];
 
-  // Iniciar / reiniciar el timer tick
+  // Mostrar spinner, ocultar contenido
+  document.getElementById('editarLoading').classList.remove('hidden');
+  document.getElementById('editarContenido').classList.add('hidden');
+
+  abrirModal('modalEditar');
+
+  // ── FETCH de los datos actuales de la orden ──
+  try {
+    const resp = await fetch(`/produccion/detalle-json/${idOrden}`);
+    const data = await resp.json();
+
+    if (data.ok && data.items && data.items.length > 0) {
+      editarItems = data.items.map(it => ({
+        idProducto: it.idProducto,
+        nombre:     it.nombre,
+        tamano:     it.tamano,
+        cantidad:   it.cantidad,
+      }));
+    } else if (!data.ok) {
+      console.error('Error al cargar detalle:', data.error);
+    }
+  } catch (err) {
+    console.error('Fetch error:', err);
+  }
+
+  // Renderizar tabla con los datos cargados
+  renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar');
+
+  // Mostrar contenido, ocultar spinner
+  document.getElementById('editarLoading').classList.add('hidden');
+  document.getElementById('editarContenido').classList.remove('hidden');
+
+  // Iniciar timer
   if (timerInterval) clearInterval(timerInterval);
   actualizarTimerDisplay(idOrden);
   timerInterval = setInterval(() => actualizarTimerDisplay(idOrden), 1000);
-
-  abrirModal('modalEditar');
 }
 
 function actualizarTimerDisplay(idOrden) {
-  const ahoraUnix  = Math.floor(Date.now() / 1000);
+  const ahoraUnix     = Math.floor(Date.now() / 1000);
   const transcurridos = ahoraUnix - _tsCreacionEditar;
   const restantes     = 60 - transcurridos;
   const el            = document.getElementById('timerDisplay');
 
   if (restantes <= 0) {
-    // Tiempo expirado: cerrar modal, limpiar timer, ocultar botón
     clearInterval(timerInterval);
     timerInterval = null;
     cerrarModal('modalEditar');
-    // Ocultar el botón editar de esa orden en la tabla
     document.querySelectorAll('.btn-editar').forEach(b => {
       if (parseInt(b.dataset.id, 10) === idOrden) b.style.display = 'none';
     });
     return;
   }
-
-  el.textContent    = restantes + 's';
-  el.style.color    = restantes <= 15 ? '#fc8181' : '#fbd38d';
+  el.textContent = restantes + 's';
+  el.style.color = restantes <= 15 ? '#fc8181' : '#fbd38d';
 }
 
 function agregarProductoEditar() {
@@ -527,6 +815,7 @@ function agregarProductoEditar() {
   renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar');
   ocultarError('errorEditar');
 }
+
 function enviarOrdenEditar() {
   if (editarItems.length === 0) { mostrarError('errorEditar', 'Agrega al menos un producto.'); return; }
   document.getElementById('hiddenDetallesEditar').value = JSON.stringify(editarItems);
@@ -561,7 +850,7 @@ function abrirCancelar(idOrden) {
 }
 
 /* ════════════════════════════════════════════════
-   RENDER TABLA DE PRODUCTOS (registro / editar)
+   RENDER TABLA DE PRODUCTOS
 ════════════════════════════════════════════════ */
 function renderTabla(tbodyId, filaVaciaId, items, modo) {
   const tbody     = document.getElementById(tbodyId);
@@ -610,9 +899,31 @@ function mostrarError(id, msg) { const e = document.getElementById(id); e.textCo
 function ocultarError(id)      { document.getElementById(id).classList.add('hidden'); }
 
 /* ════════════════════════════════════════════════
-   INIT — reapertura de modales por error de sesión
+   INIT
 ════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', function () {
+
+  // ── Paginación Desktop ──
+  const tbodyDesktop = document.getElementById('tabla-ordenes-body');
+  if (tbodyDesktop) {
+    crearPaginacion({
+      contenedorItems:  tbodyDesktop,
+      itemsSelector:    '.orden-row',
+      contenedorPagId:  'pag-ordenes-desktop',
+    });
+  }
+
+  // ── Paginación Cards Móvil ──
+  const cardsContenedor = document.getElementById('cards-ordenes');
+  if (cardsContenedor) {
+    crearPaginacion({
+      contenedorItems:  cardsContenedor,
+      itemsSelector:    '.orden-card',
+      contenedorPagId:  'pag-ordenes-cards',
+    });
+  }
+
+  // ── Reapertura de modales por error de sesión ──
   {% if form_error and form_error.modal == 'registro' %}
   mostrarError('errorRegistro', {{ form_error.mensaje | tojson }});
   {% if form_error.detalles %}
@@ -623,14 +934,17 @@ document.addEventListener('DOMContentLoaded', function () {
   {% endif %}
 
   {% if form_error and form_error.modal == 'edicion' and detalle_editar %}
-  mostrarError('errorEditar', {{ form_error.mensaje | tojson }});
   editarItems = {{ detalle_editar.detalles | tojson }};
   renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar');
   document.getElementById('formEditarOrden').action = `/produccion/editar/{{ detalle_editar.id_orden }}`;
+  document.getElementById('editOrdenNum').textContent = '#{{ detalle_editar.id_orden }}';
+  document.getElementById('editarLoading').classList.add('hidden');
+  document.getElementById('editarContenido').classList.remove('hidden');
+  mostrarError('errorEditar', {{ form_error.mensaje | tojson }});
   abrirModal('modalEditar');
   {% endif %}
 
-  /* Auto-submit del filtro de estado */
+  // ── Auto-submit filtro estado ──
   document.getElementById('filtrosForm')?.querySelectorAll('select').forEach(s => {
     s.addEventListener('change', () => document.getElementById('filtrosForm').submit());
   });

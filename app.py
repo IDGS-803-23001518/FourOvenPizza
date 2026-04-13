@@ -44,7 +44,6 @@ db.init_app(app)
 
 @app.before_request
 def verificar_sesion():
-    # Si no hay sesión, no hacer nada
     if not session.get('usuario_id'):
         return
 
@@ -87,12 +86,10 @@ def inicio():
     if rol == 'Administrador':
         return redirect(url_for('dashboard.index'))
     elif rol == 'Ventas':
-        return render_template("inicio.html")  # O la vista que corresponda
+        return render_template("inicio.html")
     elif rol == 'Cocinero':
-        # Si tienes una página principal para cocinero
-        return render_template("inicio.html")  # O la vista que corresponda
+        return render_template("inicio.html")
     else:
-        # Por defecto, mostrar una página de bienvenida
         return render_template("inicio.html")
 
 

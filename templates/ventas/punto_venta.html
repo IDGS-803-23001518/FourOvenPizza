@@ -28,7 +28,7 @@
             <span class="ml-3">
               <a href="#" onclick="descargarTicket()" 
                 class="underline font-bold text-green-800 hover:text-green-900">
-                📄 Descargar Ticket
+                Descargar Ticket
               </a>
             </span>
             {% endif %}
@@ -38,8 +38,8 @@
     {% endif %}
   {% endwith %}
 
-  <!-- Layout: formulario izquierda + tabla derecha -->
-  <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_440px] gap-6">
+  <!-- Layout: formulario izquierda + tablas derecha -->
+  <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_460px] gap-6">
 
     <!-- ══════════════ FORMULARIO NUEVA VENTA ══════════════ -->
     <div>
@@ -151,7 +151,7 @@
 
             <!-- Nota de stock -->
             <div id="notaStock" class="hidden mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-700 font-semibold">
-              ℹ️ Algunos productos no tienen suficiente stock. Se enviará una orden de producción automáticamente a cocina.
+              Algunos productos no tienen suficiente stock. Se enviará una orden de producción automáticamente a cocina.
             </div>
 
             <!-- Botones -->
@@ -163,7 +163,7 @@
               <button type="button" onclick="enviarVenta()"
                 class="flex-2 flex-grow px-6 py-3 rounded-xl text-white font-bold transition hover:brightness-110 text-sm shadow-md"
                 style="background-color:#38230f;">
-                🧾 Registrar Venta
+                Registrar Venta
               </button>
             </div>
           </form>
@@ -172,28 +172,29 @@
       </div>
     </div>
 
-    <!-- ══════════════ TABLA VENTAS DEL DÍA ══════════════ -->
-    <div>
+    <!-- ══════════════ COLUMNA DERECHA: ambas tablas ══════════════ -->
+    <div class="flex flex-col gap-6">
+
+      <!-- ── VENTAS PUNTO DE VENTA ── -->
       <div class="bg-white rounded-2xl shadow-md overflow-hidden">
         <div class="px-5 py-3 flex items-center justify-between" style="background-color:#38230f;">
-          <h2 class="text-sm font-bold text-white tracking-wide">VENTAS DE HOY</h2>
-          <span class="text-xs text-amber-300 font-semibold">{{ ventas_hoy | length }} registro(s)</span>
+          <h2 class="text-sm font-bold text-white tracking-wide">VENTAS DE HOY — PUNTO DE VENTA</h2>
+          <span class="text-xs text-amber-300 font-semibold">{{ ventas_hoy | length }}</span>
         </div>
 
         {% if ventas_hoy %}
-        <div class="divide-y divide-gray-100 max-h-[calc(100vh-240px)] overflow-y-auto">
+        <div class="divide-y divide-gray-100 max-h-72 overflow-y-auto">
           {% for v in ventas_hoy %}
-          <div class="p-4 hover:bg-amber-50 transition-colors duration-100" 
+          <div class="p-3 hover:bg-amber-50 transition-colors duration-100"
                style="animation: fadeUp .25s ease both; animation-delay: {{ loop.index0 * 0.04 }}s">
-            
-            <div class="flex items-start justify-between gap-2 mb-2">
+
+            <div class="flex items-start justify-between gap-2 mb-1.5">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="text-xs font-black shrink-0" style="color:#38230f;">#{{ v.idVenta }}</span>
                 <span class="text-xs font-semibold text-gray-800 truncate">
                   {{ v.nombreCliente or 'Consumidor final' }}
                 </span>
               </div>
-              <!-- Badge estado -->
               {% if v.estado == 'En proceso' %}
               <span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 shrink-0">
                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block"></span>En proceso
@@ -219,45 +220,36 @@
                 <span>{{ v.metodoPago }}</span>
                 <span class="font-bold" style="color:#f29f05;">${{ '%.2f' % v.total }}</span>
               </div>
-
-              <!-- Acciones -->
               <div class="flex gap-1.5 shrink-0">
-                <!-- Ver -->
                 <button type="button" onclick="abrirVer({{ v.idVenta }})"
-                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110 hover:shadow-sm"
+                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110"
                   style="background-color:#2563eb;" title="Ver detalle">
                   <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
                     <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clip-rule="evenodd"/>
                   </svg>
                 </button>
-
                 {% if v.estado == 'Lista para entregar' %}
-                <!-- Confirmar -->
-                <button type="button" onclick="abrirConfirmar({{ v.idVenta }}, '{{ v.nombreCliente or 'Consumidor final' }}')"
-                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110 hover:shadow-sm"
+                <button type="button" onclick="abrirConfirmar({{ v.idVenta }}, '{{ v.nombreCliente or 'Consumidor final' }}', 'punto')"
+                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110"
                   style="background-color:#38230f;" title="Confirmar venta">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                   </svg>
                 </button>
-                <!-- Descargar ticket (si confirmada ya existe) -->
                 {% endif %}
-
                 {% if v.estado == 'Confirmada' %}
                 <a href="{{ url_for('ventas.descargar_ticket', id_venta=v.idVenta) }}"
-                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110 hover:shadow-sm"
+                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110"
                   style="background-color:#7c3aed;" title="Descargar ticket">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                   </svg>
                 </a>
                 {% endif %}
-
                 {% if v.estado in ['En proceso', 'Lista para entregar'] %}
-                <!-- Cancelar -->
-                <button type="button" onclick="abrirCancelar({{ v.idVenta }}, '{{ v.nombreCliente or 'Consumidor final' }}')"
-                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110 hover:shadow-sm"
+                <button type="button" onclick="abrirCancelar({{ v.idVenta }}, '{{ v.nombreCliente or 'Consumidor final' }}', 'punto')"
+                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110"
                   style="background-color:#e53e3e;" title="Cancelar venta">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -270,14 +262,123 @@
           {% endfor %}
         </div>
         {% else %}
-        <div class="text-center py-12 text-gray-400 text-xs font-semibold">
-          <div class="text-3xl mb-2">🍕</div>
-          Sin ventas registradas hoy
+        <div class="text-center py-8 text-gray-400 text-xs font-semibold">
+          <div class="text-2xl mb-1">🍕</div>
+          Sin ventas de mostrador hoy
         </div>
         {% endif %}
-
       </div>
-    </div>
+
+      <!-- ── VENTAS EN LÍNEA ── -->
+      <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+        <div class="px-5 py-3 flex items-center justify-between" style="background-color:#1e3a5f;">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/>
+            </svg>
+            <h2 class="text-sm font-bold text-white tracking-wide">PEDIDOS EN LÍNEA — HOY</h2>
+          </div>
+          <span class="text-xs text-blue-300 font-semibold">{{ ventas_online_hoy | length }}</span>
+        </div>
+
+        {% if ventas_online_hoy %}
+        <div class="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+          {% for v in ventas_online_hoy %}
+          <div class="p-3 hover:bg-blue-50 transition-colors duration-100"
+               style="animation: fadeUp .25s ease both; animation-delay: {{ loop.index0 * 0.04 }}s">
+
+            <div class="flex items-start justify-between gap-2 mb-1.5">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-xs font-black shrink-0" style="color:#1e3a5f;">#{{ v.idVenta }}</span>
+                <!-- Nombre y dirección del cliente en línea -->
+                {% set partes = (v.nombreCliente or '').split(' | Dir: ') %}
+                <div class="min-w-0">
+                  <span class="text-xs font-semibold text-gray-800 block truncate">{{ partes[0] }}</span>
+                  {% if partes | length > 1 %}
+                  <span class="text-xs text-gray-400 block truncate">{{ partes[1] }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              {% if v.estado == 'En proceso' %}
+              <span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 shrink-0">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block"></span>En proceso
+              </span>
+              {% elif v.estado == 'Lista para entregar' %}
+              <span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>Lista
+              </span>
+              {% elif v.estado == 'Confirmada' %}
+              <span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>Confirmada
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>Cancelada
+              </span>
+              {% endif %}
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3 text-xs text-gray-500">
+                <span>{{ v.fecha.strftime('%H:%M') if v.fecha else '' }}</span>
+                <span>{{ v.metodoPago }}</span>
+                <span class="font-bold" style="color:#1e3a5f;">${{ '%.2f' % v.total }}</span>
+              </div>
+              <div class="flex gap-1.5 shrink-0">
+                <!-- Ver detalle -->
+                <button type="button" onclick="abrirVer({{ v.idVenta }})"
+                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110"
+                  style="background-color:#2563eb;" title="Ver detalle">
+                  <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
+                    <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clip-rule="evenodd"/>
+                  </svg>
+                </button>
+                <!-- Ver dirección -->
+                {% set partes_dir = (v.nombreCliente or '').split(' | Dir: ') %}
+                {% if partes_dir | length > 1 %}
+                <button type="button"
+                  onclick="abrirDireccion('{{ partes_dir[0] | replace("'", "\\'") }}', '{{ partes_dir[1] | replace("'", "\\'") }}')"
+                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110"
+                  style="background-color:#0891b2;" title="Ver dirección de entrega">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                </button>
+                {% endif %}
+                {% if v.estado == 'Lista para entregar' %}
+                <button type="button" onclick="abrirConfirmar({{ v.idVenta }}, '{{ partes_dir[0] | replace("'", "\\'") }}', 'online')"
+                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110"
+                  style="background-color:#1e3a5f;" title="Confirmar entrega">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </button>
+                {% endif %}
+                {% if v.estado in ['En proceso', 'Lista para entregar'] %}
+                <button type="button" onclick="abrirCancelar({{ v.idVenta }}, '{{ partes_dir[0] | replace("'", "\\'") }}', 'online')"
+                  class="flex items-center justify-center w-7 h-7 rounded-lg text-white transition hover:scale-110"
+                  style="background-color:#e53e3e;" title="Cancelar pedido">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-gray-400 text-xs font-semibold">
+          <div class="text-2xl mb-1">📦</div>
+          Sin pedidos en línea hoy
+        </div>
+        {% endif %}
+      </div>
+
+    </div><!-- fin columna derecha -->
   </div>
 </div>
 
@@ -301,6 +402,30 @@
 </div>
 
 
+<!-- ══════════════ MODAL DIRECCIÓN ══════════════ -->
+<div id="modalDireccion" class="hidden fixed inset-0 z-50 flex items-center justify-center"
+  style="background-color:rgba(0,0,0,0.35);">
+  <div class="bg-white rounded-2xl shadow-xl p-6 w-96 text-center">
+    <div class="flex justify-center mb-3">
+      <div class="w-12 h-12 rounded-full bg-cyan-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </div>
+    </div>
+    <h3 class="text-base font-bold text-gray-800 mb-1">Dirección de entrega</h3>
+    <p id="dirCliente" class="text-sm font-semibold text-gray-700 mb-1"></p>
+    <p id="dirDireccion" class="text-sm text-gray-500 mb-5 bg-gray-50 rounded-xl px-4 py-3 leading-relaxed"></p>
+    <button type="button" onclick="cerrarModal('modalDireccion')"
+      class="w-full px-4 py-2.5 rounded-xl text-white font-bold transition hover:brightness-110 text-sm"
+      style="background-color:#1e3a5f;">
+      Cerrar
+    </button>
+  </div>
+</div>
+
+
 <!-- ══════════════ MODAL CONFIRMAR ══════════════ -->
 <div id="modalConfirmar" class="hidden fixed inset-0 z-50 flex items-center justify-center"
   style="background-color:rgba(0,0,0,0.35);">
@@ -314,7 +439,7 @@
     </div>
     <h3 class="text-base font-bold text-gray-800 mb-1">Confirmar venta</h3>
     <p id="confirmarMensaje" class="text-sm text-gray-500 mb-2"></p>
-    <p class="text-xs text-gray-400 mb-5">Se generará el ticket, se registrará el ingreso en caja y la venta quedará como confirmada.</p>
+    <p class="text-xs text-gray-400 mb-5">Se registrará el ingreso en caja y la venta quedará como confirmada.</p>
     <div class="flex gap-3">
       <button type="button" onclick="cerrarModal('modalConfirmar')"
         class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition">
@@ -383,13 +508,13 @@ function cerrarModal(id) {
   document.getElementById(id).classList.add('hidden');
   document.body.style.overflow = '';
 }
-['modalVer','modalConfirmar','modalCancelar'].forEach(id => {
+['modalVer','modalConfirmar','modalCancelar','modalDireccion'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(e) {
     if (e.target === this) cerrarModal(id);
   });
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') ['modalVer','modalConfirmar','modalCancelar'].forEach(cerrarModal);
+  if (e.key === 'Escape') ['modalVer','modalConfirmar','modalCancelar','modalDireccion'].forEach(cerrarModal);
 });
 
 /* ════════════ AGREGAR PRODUCTO ════════════ */
@@ -498,7 +623,7 @@ function enviarVenta() {
   document.getElementById('formVenta').submit();
 }
 
-/* ════════════ MODALES DE ACCIÓN ════════════ */
+/* ════════════ MODAL VER ════════════ */
 function abrirVer(idVenta) {
   document.getElementById('verTitulo').textContent = 'DETALLE VENTA #' + idVenta;
   document.getElementById('verContenido').innerHTML = '<p class="text-center text-gray-400 py-6 text-sm">Cargando...</p>';
@@ -510,16 +635,33 @@ function abrirVer(idVenta) {
       document.getElementById('verContenido').innerHTML = '<p class="text-red-500 text-sm text-center py-6">Error al cargar.</p>';
     });
 }
-function abrirConfirmar(idVenta, cliente) {
+
+/* ════════════ MODAL DIRECCIÓN ════════════ */
+function abrirDireccion(cliente, direccion) {
+  document.getElementById('dirCliente').textContent = cliente;
+  document.getElementById('dirDireccion').textContent = direccion;
+  abrirModal('modalDireccion');
+}
+
+/* ════════════ MODAL CONFIRMAR ════════════ */
+function abrirConfirmar(idVenta, cliente, tipo) {
   document.getElementById('confirmarMensaje').textContent =
     `¿Confirmas la entrega de la venta #${idVenta} a "${cliente}"?`;
-  document.getElementById('formConfirmar').action = `/ventas/confirmar/${idVenta}`;
+  const url = tipo === 'online'
+    ? `/ventas/online/confirmar/${idVenta}`
+    : `/ventas/confirmar/${idVenta}`;
+  document.getElementById('formConfirmar').action = url;
   abrirModal('modalConfirmar');
 }
-function abrirCancelar(idVenta, cliente) {
+
+/* ════════════ MODAL CANCELAR ════════════ */
+function abrirCancelar(idVenta, cliente, tipo) {
   document.getElementById('cancelarMensaje').textContent =
     `¿Cancelas la venta #${idVenta} de "${cliente}"? El stock será restituido.`;
-  document.getElementById('formCancelar').action = `/ventas/cancelar/${idVenta}`;
+  const url = tipo === 'online'
+    ? `/ventas/online/cancelar/${idVenta}`
+    : `/ventas/cancelar/${idVenta}`;
+  document.getElementById('formCancelar').action = url;
   abrirModal('modalCancelar');
 }
 

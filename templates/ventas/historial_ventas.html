@@ -1,252 +1,49 @@
 {% extends layout %} 
 {% block container %}
 
-<!-- ── Estilos de paginación ──────────────────────────────────────── -->
 <style>
-    .pag-hidden {
-        display: none !important;
-    }
-
+    .pag-hidden { display: none !important; }
     .pag-wrapper {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        padding: 0.85rem 1.25rem;
-        background: #fff;
-        border-top: 1px solid #f0e8dc;
-        border-radius: 0 0 1rem 1rem;
+        display: flex; flex-wrap: wrap; align-items: center;
+        justify-content: space-between; gap: 0.75rem;
+        padding: 0.85rem 1.25rem; background: #fff;
+        border-top: 1px solid #f0e8dc; border-radius: 0 0 1rem 1rem;
     }
-
-    .pag-info {
-        font-size: 0.78rem;
-        color: #6b7280;
-    }
-
-    .pag-info strong {
-        color: #38230f;
-    }
-
-    .pag-controls {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .pag-por-pagina {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-size: 0.78rem;
-        color: #6b7280;
-    }
-
+    .pag-info { font-size: 0.78rem; color: #6b7280; }
+    .pag-info strong { color: #38230f; }
+    .pag-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+    .pag-por-pagina { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #6b7280; }
     .pag-select {
-        border: 1px solid #d1d5db;
-        border-radius: 0.4rem;
-        padding: 0.2rem 0.5rem;
-        font-size: 0.78rem;
-        color: #38230f;
-        font-weight: 600;
-        cursor: pointer;
-        outline: none;
-    }
-
-    .pag-select:focus {
-        box-shadow: 0 0 0 2px rgba(242, 159, 5, 0.35);
-        border-color: #f29f05;
-    }
-
-    .pag-botones {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-
-    .pag-btn {
-        min-width: 2rem;
-        height: 2rem;
-        border-radius: 0.4rem;
-        border: 1px solid #e5e7eb;
-        background: #fff;
-        color: #38230f;
-        font-size: 0.78rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.15s;
-        padding: 0 0.4rem;
-    }
-
-    .pag-btn:hover:not(:disabled) {
-        background: #f29f05;
-        color: #fff;
-        border-color: #f29f05;
-    }
-
-    .pag-btn:disabled {
-        opacity: 0.35;
-        cursor: not-allowed;
-    }
-
-    .pag-btn-active {
-        background: #38230f !important;
-        color: #fff !important;
-        border-color: #38230f !important;
-    }
-
-    .pag-ellipsis {
-        padding: 0 0.2rem;
-        color: #9ca3af;
-        font-size: 0.78rem;
-        user-select: none;
-    }
-
-    /* Control de visibilidad para paginación */
-    #pag-ventas {
-        transition: display 0.3s ease;
-    }
-
-    /* Asegurar que los elementos ocultos no ocupen espacio */
-    .pag-hidden {
-        display: none !important;
-    }
-
-    /* ── Mejora del select ── */
-    .pag-select {
-        border: 1px solid #d1d5db;
-        border-radius: 0.5rem;
-        padding: 0.4rem 0.75rem;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #38230f;
-        background-color: #fff;
-        cursor: pointer;
-        outline: none;
-        font-family: inherit;
-        appearance: none;
+        border: 1px solid #d1d5db; border-radius: 0.5rem;
+        padding: 0.4rem 2rem 0.4rem 0.75rem; font-size: 0.8rem;
+        font-weight: 600; color: #38230f; background-color: #fff;
+        cursor: pointer; outline: none; appearance: none;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2338230f' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 0.5rem center;
-        background-size: 1.2em;
-        padding-right: 2rem;
+        background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em;
     }
-
-    .pag-select option {
-        font-weight: normal;
-        font-size: 0.85rem;
-        padding: 0.5rem;
+    .pag-select:focus { box-shadow: 0 0 0 2px rgba(242,159,5,0.35); border-color: #f29f05; }
+    .pag-botones { display: flex; align-items: center; gap: 0.25rem; }
+    .pag-btn {
+        min-width: 2rem; height: 2rem; border-radius: 0.4rem;
+        border: 1px solid #e5e7eb; background: #fff; color: #38230f;
+        font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s; padding: 0 0.4rem;
     }
-
-    /* ── Estilos para desktop ── */
-    @media (min-width: 768px) {
-        .pag-select {
-            font-size: 0.8rem;
-            padding: 0.3rem 2rem 0.3rem 0.75rem;
-            font-weight: 500;
-        }
-
-        .pag-btn {
-            min-width: 2.2rem;
-            height: 2.2rem;
-            font-size: 0.85rem;
-        }
-
-        .pag-btn:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-    }
-
-    /* ── Estilos para móvil ── */
-    @media (max-width: 767px) {
-        .pag-wrapper {
-            flex-direction: column;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-        }
-
-        .pag-info {
-            font-size: 0.7rem;
-            text-align: center;
-            width: 100%;
-        }
-
-        .pag-controls {
-            flex-direction: column;
-            gap: 0.75rem;
-            width: 100%;
-        }
-
-        .pag-por-pagina {
-            width: 100%;
-            justify-content: center;
-            font-size: 0.75rem;
-        }
-
-        .pag-select {
-            font-size: 0.85rem;
-            padding: 0.5rem 2rem 0.5rem 0.75rem;
-            min-width: 70px;
-        }
-
-        .pag-botones {
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-        }
-
-        .pag-btn {
-            min-width: 2.5rem;
-            height: 2.5rem;
-            font-size: 0.9rem;
-            font-weight: 600;
-            border-radius: 0.5rem;
-            padding: 0 0.6rem;
-            touch-action: manipulation;
-        }
-
-        .pag-botones .pag-btn:first-child,
-        .pag-botones .pag-btn:last-child {
-            min-width: 3rem;
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
-
-        .pag-btn-active {
-            background: #f29f05 !important;
-            border-color: #f29f05 !important;
-            color: #fff !important;
-            transform: scale(1.05);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .pag-btn:active {
-            transform: scale(0.95);
-            transition: transform 0.05s;
-        }
-
-        .pag-ellipsis {
-            padding: 0 0.3rem;
-            font-size: 0.9rem;
-        }
-    }
-
-    /* ── Animación suave para cambios de página ── */
-    .venta-row {
-        transition: opacity 0.2s ease;
-    }
-
+    .pag-btn:hover:not(:disabled) { background: #f29f05; color: #fff; border-color: #f29f05; }
+    .pag-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .pag-btn-active { background: #38230f !important; color: #fff !important; border-color: #38230f !important; }
+    .pag-ellipsis { padding: 0 0.2rem; color: #9ca3af; font-size: 0.78rem; user-select: none; }
     @keyframes fadeUp {
-        from {
-            opacity: 0;
-            transform: translateY(12px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 767px) {
+        .pag-wrapper { flex-direction: column; gap: 0.75rem; padding: 0.75rem 1rem; }
+        .pag-info { font-size: 0.7rem; text-align: center; width: 100%; }
+        .pag-controls { flex-direction: column; gap: 0.75rem; width: 100%; }
+        .pag-por-pagina { width: 100%; justify-content: center; }
+        .pag-botones { justify-content: center; flex-wrap: wrap; gap: 0.4rem; }
+        .pag-btn { min-width: 2.5rem; height: 2.5rem; font-size: 0.9rem; border-radius: 0.5rem; }
+        .pag-btn-active { background: #f29f05 !important; border-color: #f29f05 !important; }
     }
 </style>
 
@@ -256,8 +53,7 @@
         <div class="flex-1 flex justify-center">
             <div class="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2 rounded-full">
                 <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Historial de</span>
-                <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap"
-                    style="color:#f29f05;">Ventas</span>
+                <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap" style="color:#f29f05;">Ventas</span>
             </div>
         </div>
     </div>
@@ -273,19 +69,26 @@
         <form method="GET" action="{{ url_for('ventas.historial_ventas') }}" id="filtrosForm"
             class="flex flex-wrap gap-3 items-end p-4 sm:p-5">
 
+            <!-- Tipo de venta -->
+            <div class="flex flex-col min-w-[140px]">
+                <label class="text-xs font-semibold text-gray-700 mb-1">Tipo de venta</label>
+                <select name="tipo"
+                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+                    <option value="" {% if not filtros.tipo %}selected{% endif %}>Todos</option>
+                    <option value="Punto venta" {% if filtros.tipo == 'Punto venta' %}selected{% endif %}>Punto de venta</option>
+                    <option value="En línea" {% if filtros.tipo == 'En línea' %}selected{% endif %}>En línea</option>
+                </select>
+            </div>
+
             <div class="flex flex-col min-w-[140px]">
                 <label class="text-xs font-semibold text-gray-700 mb-1">Estado</label>
                 <select name="estado"
                     class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
                     <option value="" {% if not filtros.estado %}selected{% endif %}>Todos</option>
-                    <option value="En proceso" {% if filtros.estado == 'En proceso' %}selected{% endif %}>En proceso
-                    </option>
-                    <option value="Lista para entregar" {% if filtros.estado == 'Lista para entregar' %}selected{% endif %}>
-                        Lista para entregar</option>
-                    <option value="Confirmada" {% if filtros.estado == 'Confirmada' %}selected{% endif %}>Confirmada
-                    </option>
-                    <option value="Cancelada" {% if filtros.estado == 'Cancelada' %}selected{% endif %}>Cancelada
-                    </option>
+                    <option value="En proceso" {% if filtros.estado == 'En proceso' %}selected{% endif %}>En proceso</option>
+                    <option value="Lista para entregar" {% if filtros.estado == 'Lista para entregar' %}selected{% endif %}>Lista para entregar</option>
+                    <option value="Confirmada" {% if filtros.estado == 'Confirmada' %}selected{% endif %}>Confirmada</option>
+                    <option value="Cancelada" {% if filtros.estado == 'Cancelada' %}selected{% endif %}>Cancelada</option>
                 </select>
             </div>
 
@@ -294,10 +97,8 @@
                 <select name="metodo_pago"
                     class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
                     <option value="" {% if not filtros.metodo_pago %}selected{% endif %}>Todos</option>
-                    <option value="Efectivo" {% if filtros.metodo_pago == 'Efectivo' %}selected{% endif %}>Efectivo
-                    </option>
-                    <option value="Tarjeta" {% if filtros.metodo_pago == 'Tarjeta' %}selected{% endif %}>Tarjeta
-                    </option>
+                    <option value="Efectivo" {% if filtros.metodo_pago == 'Efectivo' %}selected{% endif %}>Efectivo</option>
+                    <option value="Tarjeta" {% if filtros.metodo_pago == 'Tarjeta' %}selected{% endif %}>Tarjeta</option>
                 </select>
             </div>
 
@@ -350,19 +151,16 @@
             </div>
             {% endif %}
         </div>
-
         <div class="bg-white rounded-2xl shadow-sm border border-blue-100 p-4 text-center"
             style="animation: fadeUp .2s ease both; animation-delay:.05s">
             <div class="text-2xl font-black text-blue-600">{{ en_proceso | length }}</div>
             <div class="text-xs font-semibold text-gray-500 mt-1">En proceso</div>
         </div>
-
         <div class="bg-white rounded-2xl shadow-sm border border-amber-100 p-4 text-center"
             style="animation: fadeUp .2s ease both; animation-delay:.1s">
             <div class="text-2xl font-black text-amber-600">{{ listas | length }}</div>
             <div class="text-xs font-semibold text-gray-500 mt-1">Listas para entregar</div>
         </div>
-
         <div class="bg-white rounded-2xl shadow-sm border border-red-100 p-4 text-center"
             style="animation: fadeUp .2s ease both; animation-delay:.15s">
             <div class="text-2xl font-black text-red-500">{{ canceladas | length }}</div>
@@ -371,7 +169,7 @@
     </div>
     {% endif %}
 
-    <!-- Tabla de ventas -->
+    <!-- Tabla -->
     <div class="rounded-2xl overflow-hidden shadow-md mb-8">
         <div class="overflow-x-auto">
             <table class="w-full text-sm text-left" id="tabla-ventas">
@@ -379,8 +177,9 @@
                     <tr style="background-color:#38230f;">
                         <th class="px-5 py-3 text-white font-bold uppercase tracking-wide"># Venta</th>
                         <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Fecha</th>
-                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Cliente</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Cliente / Dirección</th>
                         <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Atendido por</th>
+                        <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Tipo</th>
                         <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Pago</th>
                         <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Total</th>
                         <th class="px-5 py-3 text-white font-bold uppercase tracking-wide">Estado</th>
@@ -389,72 +188,109 @@
                 </thead>
                 <tbody id="ventas-body">
                     {% for v in ventas %}
+                    {% set es_online = v.tipo == 'En línea' %}
+                    {% set partes = (v.nombreCliente or '').split(' | Dir: ') %}
+                    {% set nombre_cliente = partes[0] %}
+                    {% set direccion = partes[1] if partes | length > 1 else '' %}
                     <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150 venta-row"
-                        data-id="{{ v.idVenta }}" data-fecha="{{ v.fecha.strftime('%d/%m/%Y') if v.fecha else '—' }}"
-                        data-cliente="{{ v.nombreCliente or 'Consumidor final' }}"
-                        data-atendido="{{ v.nombre_usuario }}" data-pago="{{ v.metodoPago }}"
-                        data-total="{{ v.total }}" data-estado="{{ v.estado }}"
                         style="animation: fadeUp .3s ease both; animation-delay: {{ loop.index0 * 0.03 }}s">
 
                         <td class="px-5 py-3 font-bold" style="color:#38230f;">#{{ v.idVenta }}</td>
+
                         <td class="px-5 py-3 text-gray-700 text-xs">
                             {{ v.fecha.strftime('%d/%m/%Y') if v.fecha else '—' }}<br>
                             <span class="text-gray-400">{{ v.fecha.strftime('%H:%M') if v.fecha else '' }}</span>
                         </td>
-                        <td class="px-5 py-3 text-gray-700 font-semibold">{{ v.nombreCliente or 'Consumidor final' }}</td>
-                        <td class="px-5 py-3 text-gray-500 text-xs">{{ v.nombre_usuario }}</td>
-                        <td class="px-5 py-3 text-gray-700 text-xs">
-                            {{ v.metodoPago }}
+
+                        <!-- Cliente + dirección si es online -->
+                        <td class="px-5 py-3">
+                            <p class="font-semibold text-gray-700 text-sm">{{ nombre_cliente or 'Consumidor final' }}</p>
+                            {% if es_online and direccion %}
+                            <p class="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                <span class="truncate max-w-[180px]" title="{{ direccion }}">{{ direccion }}</span>
+                            </p>
+                            {% endif %}
                         </td>
+
+                        <td class="px-5 py-3 text-gray-500 text-xs">{{ v.nombre_usuario }}</td>
+
+                        <!-- Badge tipo -->
+                        <td class="px-5 py-3">
+                            {% if es_online %}
+                            <span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/>
+                                </svg>
+                                En línea
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                                Mostrador
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <td class="px-5 py-3 text-gray-700 text-xs">{{ v.metodoPago }}</td>
+
                         <td class="px-5 py-3 font-bold" style="color:#f29f05;">${{ '%.2f' % v.total }}</td>
+
                         <td class="px-5 py-3">
                             {% if v.estado == 'En proceso' %}
-                            <span
-                                class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
-                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block"></span>En
-                                proceso
+                            <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block"></span>En proceso
                             </span>
                             {% elif v.estado == 'Lista para entregar' %}
-                            <span
-                                class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+                            <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span>Lista p/entregar
                             </span>
                             {% elif v.estado == 'Confirmada' %}
-                            <span
-                                class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
+                            <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
                                 <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>Confirmada
                             </span>
                             {% else %}
-                            <span
-                                class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+                            <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
                                 <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>Cancelada
                             </span>
                             {% endif %}
                         </td>
+
                         <td class="px-5 py-3">
                             <div class="flex gap-2 items-center">
                                 <!-- Ver detalle -->
                                 <button type="button" onclick="abrirVer({{ v.idVenta }})"
-                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition hover:scale-110 hover:shadow-md"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition hover:scale-110"
                                     style="background-color:#2563eb;" title="Ver detalle">
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path
-                                            d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-                                        <path fill-rule="evenodd"
-                                            d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z"
-                                            clip-rule="evenodd" />
+                                        <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
+                                        <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clip-rule="evenodd"/>
                                     </svg>
                                 </button>
-
-                                <!-- Descargar ticket (solo confirmadas) -->
+                                <!-- Ver dirección (solo en línea con dirección) -->
+                                {% if es_online and direccion %}
+                                <button type="button"
+                                    onclick="abrirDireccion('{{ nombre_cliente | replace("'", "\\'") }}', '{{ direccion | replace("'", "\\'") }}')"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition hover:scale-110"
+                                    style="background-color:#0891b2;" title="Ver dirección">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                </button>
+                                {% endif %}
+                                <!-- Ticket (solo confirmadas) -->
                                 {% if v.estado == 'Confirmada' %}
                                 <a href="{{ url_for('ventas.descargar_ticket', id_venta=v.idVenta) }}"
-                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition hover:scale-110 hover:shadow-md"
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition hover:scale-110"
                                     style="background-color:#7c3aed;" title="Descargar ticket">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                     </svg>
                                 </a>
                                 {% endif %}
@@ -463,7 +299,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" class="text-center py-14 text-gray-400 text-sm font-semibold bg-white">
+                        <td colspan="9" class="text-center py-14 text-gray-400 text-sm font-semibold bg-white">
                             No se encontraron ventas con los filtros seleccionados.
                         </td>
                     </tr>
@@ -475,7 +311,7 @@
 </div>
 
 
-<!-- ══════════════ MODAL VER DETALLE ══════════════ -->
+<!-- MODAL VER DETALLE -->
 <div id="modalVer" class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
     style="background-color:rgba(0,0,0,0.35);">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 my-8 overflow-hidden">
@@ -483,7 +319,7 @@
             <h3 class="text-base font-bold text-white tracking-wide" id="verTitulo">DETALLE DE VENTA</h3>
             <button onclick="cerrarModal('modalVer')" class="text-white hover:text-gray-300 transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
         </div>
@@ -493,19 +329,39 @@
     </div>
 </div>
 
+<!-- MODAL DIRECCIÓN -->
+<div id="modalDireccion" class="hidden fixed inset-0 z-50 flex items-center justify-center"
+    style="background-color:rgba(0,0,0,0.35);">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-96 text-center">
+        <div class="flex justify-center mb-3">
+            <div class="w-12 h-12 rounded-full bg-cyan-100 flex items-center justify-center">
+                <svg class="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </div>
+        </div>
+        <h3 class="text-base font-bold text-gray-800 mb-1">Dirección de entrega</h3>
+        <p id="dirCliente" class="text-sm font-semibold text-gray-700 mb-2"></p>
+        <p id="dirDireccion" class="text-sm text-gray-500 mb-5 bg-gray-50 rounded-xl px-4 py-3 leading-relaxed text-left"></p>
+        <button type="button" onclick="cerrarModal('modalDireccion')"
+            class="w-full px-4 py-2.5 rounded-xl text-white font-bold transition hover:brightness-110 text-sm"
+            style="background-color:#1e3a5f;">
+            Cerrar
+        </button>
+    </div>
+</div>
+
 <script>
-    /* ── Paginación ─────────────────────────── */
     let pagVentas = null;
 
     function crearPaginacion(opciones) {
         const { contenedorItems, itemsSelector, contenedorId, selectorId } = opciones;
         let paginaActual = 1;
         let porPagina = 10;
-
         const globalName = '__pag_' + selectorId.replace(/-/g, '_');
 
         function obtenerItems() {
-            // Obtener solo las filas que NO están ocultas por filtros
             return Array.from(contenedorItems.querySelectorAll(itemsSelector))
                 .filter(item => !item.classList.contains('filtro-hidden'));
         }
@@ -514,160 +370,113 @@
             const items = obtenerItems();
             const total = items.length;
             const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
-
             if (paginaActual > totalPaginas) paginaActual = totalPaginas;
-
             const inicio = (paginaActual - 1) * porPagina;
             const fin = inicio + porPagina;
-
             items.forEach((el, i) => {
-                if (i < inicio || i >= fin) {
-                    el.classList.add('pag-hidden');
-                } else {
-                    el.classList.remove('pag-hidden');
-                }
+                el.classList.toggle('pag-hidden', i < inicio || i >= fin);
             });
-
             renderControles(total, totalPaginas, inicio, fin);
         }
 
         function renderControles(total, totalPaginas, inicio, fin) {
             const contenedor = document.getElementById(contenedorId);
             if (!contenedor) return;
-
             let ctrl = document.getElementById(selectorId);
             if (!ctrl) {
                 ctrl = document.createElement('div');
                 ctrl.id = selectorId;
                 contenedor.parentNode.insertBefore(ctrl, contenedor.nextSibling);
             }
-
             const mostradoIni = total === 0 ? 0 : inicio + 1;
             const mostradoFin = Math.min(fin, total);
-
             let botonesHTML = '';
             const delta = 2;
             let rango = [];
-
-            for (let i = Math.max(1, paginaActual - delta); i <= Math.min(totalPaginas, paginaActual + delta); i++) {
-                rango.push(i);
-            }
-
+            for (let i = Math.max(1, paginaActual - delta); i <= Math.min(totalPaginas, paginaActual + delta); i++) rango.push(i);
             if (rango[0] > 1) {
                 botonesHTML += `<button class="pag-btn" onclick="${globalName}.irA(1)">1</button>`;
                 if (rango[0] > 2) botonesHTML += `<span class="pag-ellipsis">…</span>`;
             }
-
             rango.forEach(p => {
                 botonesHTML += `<button class="pag-btn ${p === paginaActual ? 'pag-btn-active' : ''}" onclick="${globalName}.irA(${p})">${p}</button>`;
             });
-
             if (rango[rango.length - 1] < totalPaginas) {
                 if (rango[rango.length - 1] < totalPaginas - 1) botonesHTML += `<span class="pag-ellipsis">…</span>`;
                 botonesHTML += `<button class="pag-btn" onclick="${globalName}.irA(${totalPaginas})">${totalPaginas}</button>`;
             }
-
             ctrl.className = 'pag-wrapper';
             ctrl.innerHTML = `
-        <div class="pag-info">Mostrando <strong>${mostradoIni}–${mostradoFin}</strong> de <strong>${total}</strong> registros</div>
-        <div class="pag-controls">
-            <div class="pag-por-pagina">
-                Mostrar
-                <select class="pag-select" onchange="${globalName}.cambiarPorPagina(this.value)">
-                    <option value="10" ${porPagina === 10 ? 'selected' : ''}>10</option>
-                    <option value="15" ${porPagina === 15 ? 'selected' : ''}>15</option>
-                    <option value="20" ${porPagina === 20 ? 'selected' : ''}>20</option>
-                    <option value="50" ${porPagina === 50 ? 'selected' : ''}>50</option>
-                </select>
-                por página
-            </div>
-            <div class="pag-botones">
-                <button class="pag-btn" onclick="${globalName}.irA(${paginaActual - 1})" ${paginaActual <= 1 ? 'disabled' : ''}>‹</button>
-                ${botonesHTML}
-                <button class="pag-btn" onclick="${globalName}.irA(${paginaActual + 1})" ${paginaActual >= totalPaginas ? 'disabled' : ''}>›</button>
-            </div>
-        </div>`;
+                <div class="pag-info">Mostrando <strong>${mostradoIni}–${mostradoFin}</strong> de <strong>${total}</strong> registros</div>
+                <div class="pag-controls">
+                    <div class="pag-por-pagina">
+                        Mostrar
+                        <select class="pag-select" onchange="${globalName}.cambiarPorPagina(this.value)">
+                            <option value="10" ${porPagina===10?'selected':''}>10</option>
+                            <option value="15" ${porPagina===15?'selected':''}>15</option>
+                            <option value="20" ${porPagina===20?'selected':''}>20</option>
+                            <option value="50" ${porPagina===50?'selected':''}>50</option>
+                        </select>
+                        por página
+                    </div>
+                    <div class="pag-botones">
+                        <button class="pag-btn" onclick="${globalName}.irA(${paginaActual-1})" ${paginaActual<=1?'disabled':''}>‹</button>
+                        ${botonesHTML}
+                        <button class="pag-btn" onclick="${globalName}.irA(${paginaActual+1})" ${paginaActual>=totalPaginas?'disabled':''}>›</button>
+                    </div>
+                </div>`;
         }
 
         const api = {
-            refresh() {
-                paginaActual = 1;
-                mostrarItems();
-            },
+            refresh() { paginaActual = 1; mostrarItems(); },
             irA(p) {
                 if (p < 1) return;
-                const items = obtenerItems();
-                const totalPaginas = Math.max(1, Math.ceil(items.length / porPagina));
+                const totalPaginas = Math.max(1, Math.ceil(obtenerItems().length / porPagina));
                 if (p > totalPaginas) return;
                 paginaActual = p;
                 mostrarItems();
             },
-            cambiarPorPagina(val) {
-                porPagina = parseInt(val);
-                paginaActual = 1;
-                mostrarItems();
-            }
+            cambiarPorPagina(val) { porPagina = parseInt(val); paginaActual = 1; mostrarItems(); }
         };
-
         window[globalName] = api;
         mostrarItems();
         return api;
     }
 
-    function abrirModal(id) {
-        document.getElementById(id).classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
+    function abrirModal(id) { document.getElementById(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+    function cerrarModal(id) { document.getElementById(id).classList.add('hidden'); document.body.style.overflow = ''; }
 
-    function cerrarModal(id) {
-        document.getElementById(id).classList.add('hidden');
-        document.body.style.overflow = '';
-    }
-
-    document.getElementById('modalVer').addEventListener('click', function (e) {
-        if (e.target === this) cerrarModal('modalVer');
+    ['modalVer', 'modalDireccion'].forEach(id => {
+        document.getElementById(id).addEventListener('click', function(e) { if (e.target === this) cerrarModal(id); });
     });
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') cerrarModal('modalVer');
-    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') ['modalVer','modalDireccion'].forEach(cerrarModal); });
 
     function abrirVer(idVenta) {
         document.getElementById('verTitulo').textContent = 'DETALLE VENTA #' + idVenta;
-        document.getElementById('verContenido').innerHTML =
-            '<p class="text-center text-gray-400 py-6 text-sm">Cargando...</p>';
+        document.getElementById('verContenido').innerHTML = '<p class="text-center text-gray-400 py-6 text-sm">Cargando...</p>';
         abrirModal('modalVer');
         fetch(`/ventas/historial/ver/${idVenta}`)
             .then(r => r.text())
-            .then(html => {
-                document.getElementById('verContenido').innerHTML = html;
-            })
+            .then(html => { document.getElementById('verContenido').innerHTML = html; })
             .catch(() => {
-                document.getElementById('verContenido').innerHTML =
-                    '<p class="text-red-500 text-sm text-center py-6">Error al cargar.</p>';
+                document.getElementById('verContenido').innerHTML = '<p class="text-red-500 text-sm text-center py-6">Error al cargar.</p>';
             });
     }
 
-    /* Auto-submit filtros */
+    function abrirDireccion(cliente, direccion) {
+        document.getElementById('dirCliente').textContent = cliente;
+        document.getElementById('dirDireccion').textContent = direccion;
+        abrirModal('modalDireccion');
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('filtrosForm');
         let timer = null;
         form?.querySelectorAll('input[type="text"], input[type="date"]').forEach(el => {
-            el.addEventListener('input', () => {
-                clearTimeout(timer);
-                timer = setTimeout(() => form.submit(), 400);
-            });
+            el.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => form.submit(), 400); });
         });
-        form?.querySelectorAll('select').forEach(el => {
-            el.addEventListener('change', () => form.submit());
-        });
-    });
-</script>
+        form?.querySelectorAll('select').forEach(el => { el.addEventListener('change', () => form.submit()); });
 
-<script>
-    /* ── Paginación ─────────────────────────── */
-    // Esta función debe ejecutarse después de que el DOM esté listo
-    document.addEventListener('DOMContentLoaded', function () {
-        // Inicializar paginación para la tabla de ventas
         const tablaVentas = document.getElementById('tabla-ventas');
         if (tablaVentas) {
             pagVentas = crearPaginacion({
