@@ -1,5 +1,5 @@
 from flask import Flask, render_template, redirect, url_for, session, request, flash
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_mail import Mail
 from datetime import datetime, timedelta, timezone
 from config import DevelopmentConfig
@@ -42,8 +42,16 @@ app.register_blueprint(dashboard)
 db.init_app(app)
 
 
+# Rutas públicas que no deben disparar la verificación de sesión
+RUTAS_PUBLICAS = {'autentificacion.login', 'autentificacion.logout', 'autentificacion.reset_contrasenia', 'static'}
+
+
 @app.before_request
 def verificar_sesion():
+    # No verificar en rutas públicas para evitar bucles y doble registro
+    if request.endpoint in RUTAS_PUBLICAS:
+        return
+
     if not session.get('usuario_id'):
         return
 
@@ -53,19 +61,26 @@ def verificar_sesion():
     if ultima:
         if isinstance(ultima, str):
             ultima = datetime.fromisoformat(ultima)
-        
+
         if (ahora - ultima) > timedelta(minutes=10):
+            # Guardar datos antes de limpiar la sesión
+            usuario_id = session.get('usuario_id')
+            usuario_nombre = session.get('usuario_nombre')
+
+            # Limpiar primero para que el redirect no vuelva a entrar aquí
+            session.clear()
+
+            # Registrar UNA SOLA VEZ después de limpiar
             registrar_acceso(
-                session.get('usuario_id'),
-                session.get('usuario_nombre'),
+                usuario_id,
+                usuario_nombre,
                 'LOGOUT_INACTIVIDAD',
                 'SESION_EXPIRADA'
             )
-            
-            session.clear()
+
             flash('Tu sesión ha expirado por inactividad.', 'warning')
             return redirect(url_for('autentificacion.login'))
-    
+
     session['ultima_actividad'] = ahora.isoformat()
     session.modified = True
 
@@ -77,12 +92,11 @@ def index():
 
 @app.route("/inicio")
 def inicio():
-    """Redirige al dashboard o página principal según el rol del usuario"""
     if not session.get('usuario_id'):
         return redirect(url_for('autentificacion.login'))
-    
+
     rol = session.get('usuario_rol')
-    
+
     if rol == 'Administrador':
         return redirect(url_for('dashboard.index'))
     elif rol == 'Ventas':
@@ -95,14 +109,13 @@ def inicio():
 
 @app.route("/dashboard-redirect")
 def dashboard_redirect():
-    """Redirección específica para el dashboard (solo administradores)"""
     if not session.get('usuario_id'):
         return redirect(url_for('autentificacion.login'))
-    
+
     if session.get('usuario_rol') != 'Administrador':
         flash('No tienes permisos para acceder al dashboard.', 'danger')
         return redirect(url_for('inicio'))
-    
+
     return redirect(url_for('dashboard.index'))
 
 
@@ -115,6 +128,13 @@ def inject_layout():
     }
     rol = session.get('usuario_rol', 'Administrador')
     return {'layout': layouts.get(rol, 'layoutAdmin.html')}
+
+
+@app.errorhandler(CSRFError)
+def manejar_csrf_error(e):
+    # Token expirado (típicamente por sesión expirada): redirigir al login limpiamente
+    flash('Tu sesión ha expirado. Por favor inicia sesión de nuevo.', 'warning')
+    return redirect(url_for('autentificacion.login'))
 
 
 @app.errorhandler(404)

@@ -59,6 +59,53 @@ def _segundos_desde_creacion(id_orden):
     ).fetchone()
     return int(row[0]) if row and row[0] is not None else 9999
 
+def _cancelar_venta_por_orden(id_venta):
+    """
+    Cancela la venta asociada a una orden de producción cancelada.
+    Devuelve el stock de productos que ya estaban reservados.
+    El SP ya devolvió las materias primas al cancelar la orden.
+    """
+    try:
+        from models import Ventas as VentasModel, VentaStockReservado
+
+        venta = VentasModel.query.get(id_venta)
+        if not venta or venta.estado not in ("En proceso", "Lista para entregar"):
+            return
+
+        reservas = VentaStockReservado.query.filter_by(idVenta=id_venta).all()
+
+        # Devolver stock de productos que ya estaban apartados
+        for r in reservas:
+            prod = Productos.query.get(r.idProducto)
+            if prod and r.cantidadReservada > 0:
+                prod.stock = float(prod.stock or 0) + r.cantidadReservada
+
+        # Limpiar reservas
+        db.session.execute(
+            text("DELETE FROM ventaStockReservado WHERE idVenta = :vid"),
+            {"vid": id_venta},
+        )
+
+        venta.estado = "Cancelada"
+
+        db.session.execute(
+            text("""
+                INSERT INTO bitacora_eventos
+                    (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+                SELECT :uid, u.nombre, 'Ventas', 'CANCELAR_POR_ORDEN',
+                       'venta', CONCAT('ID:', :vid, ' | Orden cancelada'), NOW(), '127.0.0.1'
+                FROM usuarios u WHERE u.idUsuario = :uid
+            """),
+            {"uid": session.get("usuario_id"), "vid": id_venta},
+        )
+
+        db.session.commit()
+        flash(f"La venta #{id_venta} fue cancelada automáticamente al cancelar su orden de producción.", "warning")
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Advertencia: no se pudo cancelar la venta #{id_venta}: {e}", "warning")
+
 
 # ── Vista ADMINISTRADOR ────────────────────────────────────────────────────────
 
@@ -202,6 +249,10 @@ def editar_orden(id_orden):
 @rol_requerido("Administrador","Cocinero","Ventas")
 def cancelar_orden(id_orden):
     try:
+        orden = OrdenesProduccion.query.get_or_404(id_orden)
+        origen   = orden.origen or "Manual"
+        id_venta = orden.idVentaOrigen
+
         db.session.execute(
             text(
                 "CALL sp_gestion_ordenes_produccion("
@@ -218,6 +269,11 @@ def cancelar_orden(id_orden):
         resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
+
+        # ── NUEVO: si era orden de venta, cancelar la venta también ──
+        if categoria == "success" and origen == "Venta" and id_venta:
+            _cancelar_venta_por_orden(id_venta)
+
         flash(mensaje, categoria)
     except Exception as e:
         db.session.rollback()
@@ -456,6 +512,10 @@ def terminar_orden(id_orden):
 @rol_requerido("Cocinero", "Administrador")
 def cancelar_orden_cocina(id_orden):
     try:
+        orden = OrdenesProduccion.query.get_or_404(id_orden)
+        origen   = orden.origen or "Manual"
+        id_venta = orden.idVentaOrigen
+
         db.session.execute(
             text(
                 "CALL sp_gestion_ordenes_produccion("
@@ -472,6 +532,11 @@ def cancelar_orden_cocina(id_orden):
         resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
         db.session.commit()
         mensaje, categoria = _texto_resultado(resultado)
+
+        # ── NUEVO: si era orden de venta, cancelar la venta también ──
+        if categoria == "success" and origen == "Venta" and id_venta:
+            _cancelar_venta_por_orden(id_venta)
+
         flash(mensaje, categoria)
     except Exception as e:
         db.session.rollback()

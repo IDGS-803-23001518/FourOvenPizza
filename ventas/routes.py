@@ -342,6 +342,20 @@ def registrar_venta():
                 )
                 db.session.add(dp)
 
+            # ── NUEVO: Descontar materias primas al crear la orden ──
+            # (igual que en órdenes manuales, para apartar el stock)
+            for f in faltantes:
+                db.session.execute(
+                    text("""
+                        UPDATE materiasPrimas mp
+                        JOIN detalleReceta dr ON dr.idMateriaP = mp.idMateriaP
+                        JOIN recetas r ON r.idReceta = dr.idReceta
+                        SET mp.stock = mp.stock - (dr.cantidad * :cant)
+                        WHERE r.idProducto = :id_producto
+                    """),
+                    {"cant": f["cantidad"], "id_producto": f["idProducto"]},
+                )
+
             # Vincular la orden a las reservas de esta venta
             db.session.execute(
                 text("UPDATE ventaStockReservado SET idOrdenProduccion = :oid WHERE idVenta = :vid"),

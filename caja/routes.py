@@ -41,23 +41,46 @@ def _raw_call(sql, params=()):
 
 
 def _resumen_dia(fecha: str):
-    """
-    sp_corte_caja_resumen devuelve 2 result sets:
-      RS1 -> totales de ventas del dia
-      RS2 -> movimientos informativos
-    """
     rs = _raw_call("CALL sp_corte_caja_resumen(%s)", (fecha or None,))
-
-    ventas_row  = rs[0][0] if len(rs) > 0 and rs[0] else {}
-    movimientos = rs[1]    if len(rs) > 1 else []
+    ventas_row = rs[0][0] if len(rs) > 0 and rs[0] else {}
 
     resumen = {
         "total_ventas":   float(ventas_row.get("total_ventas",   0) or 0),
         "total_efectivo": float(ventas_row.get("total_efectivo", 0) or 0),
         "total_tarjeta":  float(ventas_row.get("total_tarjeta",  0) or 0),
+        "total_egresos":  float(ventas_row.get("total_egresos",  0) or 0),  # ← agrega este
         "num_ventas":     int(ventas_row.get("num_ventas",       0) or 0),
     }
-    return resumen, movimientos
+
+    # ── NUEVO: solo ventas de punto de venta del día ──────────────────
+    movimientos = db.session.execute(
+        text("""
+            SELECT
+                v.idVenta        AS idMovimiento,
+                v.fecha,
+                'Ingreso'        AS tipo,
+                u.nombre         AS nombre_usuario,
+                v.metodoPago,
+                v.nombreCliente,
+                COALESCE(SUM(dv.cantidad * dv.precio), 0) AS monto,
+                CONCAT(
+                    'Venta #', v.idVenta,
+                    ' — ', v.nombreCliente,
+                    ' (', v.metodoPago, ')'
+                ) AS descripcion
+            FROM ventas v
+            JOIN usuarios u ON u.idUsuario = v.idUsuario
+            JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+            WHERE v.tipo = 'Punto venta'
+              AND v.estado = 'Confirmada'
+              AND DATE(v.fecha) = :fecha
+            GROUP BY v.idVenta, v.fecha, u.nombre, v.metodoPago, v.nombreCliente
+            ORDER BY v.fecha DESC
+        """),
+        {"fecha": fecha}
+    ).mappings().all()
+
+    return resumen, [dict(m) for m in movimientos]
 
 
 def _alertas_stock():
@@ -103,12 +126,34 @@ def corte_caja():
         """)
     ).mappings().all()
 
+    # ── NUEVA VALIDACIÓN ──────────────────────────────────────────────
+    # Busca la fecha del último corte registrado
+    ultimo_corte = db.session.execute(
+        text("SELECT fechaCreacion FROM corteCaja ORDER BY fechaCreacion DESC LIMIT 1")
+    ).fetchone()
+
+    # Busca si hubo ventas confirmadas DESPUÉS del último corte
+    if ultimo_corte:
+        ventas_nuevas = db.session.execute(
+            text("""
+                SELECT COUNT(*) FROM ventas
+                WHERE estado = 'Confirmada'
+                  AND fecha > :fecha_corte
+            """),
+            {"fecha_corte": ultimo_corte[0]}
+        ).scalar()
+        corte_bloqueado = (ventas_nuevas == 0)
+    else:
+        corte_bloqueado = False  # Nunca se ha hecho un corte → permitir
+    # ─────────────────────────────────────────────────────────────────
+
     return render_template(
         "caja/corte_caja.html",
         fecha_hoy=fecha_hoy,
         resumen=resumen,
         movimientos=movimientos,
         cortes=cortes,
+        corte_bloqueado=corte_bloqueado,   # <── nuevo
     )
 
 
@@ -116,6 +161,24 @@ def corte_caja():
 @rol_requerido("Administrador", "Ventas")
 def registrar_corte():
     try:
+        ultimo_corte = db.session.execute(
+            text("SELECT fechaCreacion FROM corteCaja ORDER BY fechaCreacion DESC LIMIT 1")
+        ).fetchone()
+
+        if ultimo_corte:
+            ventas_nuevas = db.session.execute(
+                text("""
+                    SELECT COUNT(*) FROM ventas
+                    WHERE estado = 'Confirmada'
+                      AND fecha > :fecha_corte
+                """),
+                {"fecha_corte": ultimo_corte[0]}
+            ).scalar()
+
+            if ventas_nuevas == 0:
+                flash("No se puede registrar un nuevo corte: no hay ventas nuevas desde el último corte.", "danger")
+                return redirect(url_for("caja.corte_caja"))
+
         fecha            = request.form.get("fecha", date.today().isoformat())
         turno            = request.form.get("turno", "General")
         efectivo_inicial = float(request.form.get("efectivo_inicial", 0) or 0)
