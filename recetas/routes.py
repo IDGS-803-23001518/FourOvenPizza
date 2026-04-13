@@ -1,10 +1,11 @@
+import json
 from decimal import Decimal, InvalidOperation
 
 from flask import redirect, render_template, request, session, url_for, flash
 from sqlalchemy import text
 
 from autentificacion.routes import rol_requerido
-from models import BitacoraEventos, DetalleReceta, MateriasPrimas, Productos, Recetas, Usuarios, db
+from models import BitacoraEventos, DetalleReceta, MateriasPrimas, MiniRecetas, DetalleMiniReceta, Productos, Recetas, Usuarios, db
 
 from . import recetas
 
@@ -106,9 +107,6 @@ def _asegurar_receta_por_sp(id_producto, descripcion=""):
 
 
 def _obtener_alertas_ingredientes_desactivados(detalles_receta):
-    """
-    Retorna la lista de nombres de materias primas desactivadas presentes en la receta.
-    """
     desactivadas = []
     for detalle in detalles_receta:
         mp = detalle.materia_prima
@@ -117,8 +115,43 @@ def _obtener_alertas_ingredientes_desactivados(detalles_receta):
     return desactivadas
 
 
+def _obtener_mini_recetas_data():
+    """
+    Retorna (lista_activas, dict_json) para pasar al template.
+    lista_activas  → objetos MiniRecetas con estatus=1
+    dict_json      → JSON serializable con detalles de cada mini receta
+    """
+    mini_recetas_activas = (
+        MiniRecetas.query
+        .filter_by(estatus=1)
+        .order_by(MiniRecetas.nombre.asc())
+        .all()
+    )
+
+    data = {}
+    for mr in mini_recetas_activas:
+        detalles_ordenados = sorted(
+            mr.detalles,
+            key=lambda d: d.materia_prima.nombre if d.materia_prima else ""
+        )
+        data[str(mr.idMiniReceta)] = {
+            "nombre": mr.nombre,
+            "detalles": [
+                {
+                    "idMateriaP": d.idMateriaP,
+                    "nombre": d.materia_prima.nombre if d.materia_prima else str(d.idMateriaP),
+                    "cantidad": float(d.cantidad),
+                    "unidad": "ml" if (d.materia_prima and d.materia_prima.tipo == "Liquido") else "g",
+                }
+                for d in detalles_ordenados
+            ],
+        }
+
+    return mini_recetas_activas, json.dumps(data)
+
+
 @recetas.route("/recetas/producto/<int:id_producto>")
-@rol_requerido("Administrador","Cocinero")
+@rol_requerido("Administrador", "Cocinero")
 def ver_receta_producto(id_producto):
     producto = Productos.query.get_or_404(id_producto)
     receta = _obtener_receta_producto(id_producto)
@@ -130,27 +163,32 @@ def ver_receta_producto(id_producto):
     form_error = session.pop("recetas_form_error", None)
     mensaje_receta = session.pop("recetas_mensaje", None)
     alertas_stock = _obtener_alertas_stock_receta(receta.idReceta) if receta else []
-
-    # ── NUEVA LÓGICA: Alertas de ingredientes desactivados ──
     ingredientes_desactivados = _obtener_alertas_ingredientes_desactivados(detalles_receta)
-
-    # ── NUEVA LÓGICA: Alerta de receta corta (menos de 4 insumos) ──
     receta_corta = receta is not None and len(detalles_receta) < MINIMO_INSUMOS_RECETA
+
+    # Mini recetas activas y sus datos para el template
+    mini_recetas_activas, mini_recetas_data_json = _obtener_mini_recetas_data()
 
     return render_template(
         "recetas/detalle.html",
-        producto=producto, receta=receta, detalles_receta=detalles_receta,
+        producto=producto,
+        receta=receta,
+        detalles_receta=detalles_receta,
         tamano_producto=_obtener_tamano_producto(producto),
-        materias_primas=materias_primas, form_error=form_error,
-        mensaje_receta=mensaje_receta, alertas_stock=alertas_stock,
+        materias_primas=materias_primas,
+        form_error=form_error,
+        mensaje_receta=mensaje_receta,
+        alertas_stock=alertas_stock,
         ingredientes_desactivados=ingredientes_desactivados,
         receta_corta=receta_corta,
         minimo_insumos=MINIMO_INSUMOS_RECETA,
+        mini_recetas_activas=mini_recetas_activas,
+        mini_recetas_data_json=mini_recetas_data_json,
     )
 
 
 @recetas.route("/recetas/producto/<int:id_producto>/guardar", methods=["POST"])
-@rol_requerido("Administrador","Cocinero")
+@rol_requerido("Administrador", "Cocinero")
 def guardar_receta_producto(id_producto):
     producto = Productos.query.get_or_404(id_producto)
     descripcion = request.form.get("descripcion", "").strip()
@@ -178,7 +216,7 @@ def guardar_receta_producto(id_producto):
 
 
 @recetas.route("/recetas/producto/<int:id_producto>/detalle", methods=["POST"])
-@rol_requerido("Administrador","Cocinero")
+@rol_requerido("Administrador", "Cocinero")
 def agregar_detalle_receta(id_producto):
     Productos.query.get_or_404(id_producto)
     datos_formulario = {}
@@ -207,7 +245,6 @@ def agregar_detalle_receta(id_producto):
             db.session.commit()
             _guardar_mensaje_receta(mensaje, categoria)
 
-            # ── Alerta de receta corta tras agregar insumo ──
             receta_actualizada = _obtener_receta_producto(id_producto)
             if receta_actualizada:
                 total_insumos = DetalleReceta.query.filter_by(idReceta=receta_actualizada.idReceta).count()
@@ -224,8 +261,93 @@ def agregar_detalle_receta(id_producto):
     return redirect(url_for("recetas.ver_receta_producto", id_producto=id_producto))
 
 
+@recetas.route("/recetas/producto/<int:id_producto>/mini-receta", methods=["POST"])
+@rol_requerido("Administrador", "Cocinero")
+def aplicar_mini_receta(id_producto):
+    """
+    Agrega automáticamente todos los insumos de una mini receta a la receta del producto.
+    Si un insumo ya existe, actualiza su cantidad; si no, lo inserta.
+    """
+    Productos.query.get_or_404(id_producto)
+    try:
+        id_mini_receta = int(request.form.get("idMiniReceta", 0))
+        if not id_mini_receta:
+            flash("Selecciona una mini receta válida.", "danger")
+            return redirect(url_for("recetas.ver_receta_producto", id_producto=id_producto))
+
+        mini_receta = MiniRecetas.query.filter_by(idMiniReceta=id_mini_receta, estatus=1).first()
+        if not mini_receta:
+            flash("La mini receta seleccionada no existe o está inactiva.", "danger")
+            return redirect(url_for("recetas.ver_receta_producto", id_producto=id_producto))
+
+        if not mini_receta.detalles:
+            flash("La mini receta no tiene insumos definidos.", "danger")
+            return redirect(url_for("recetas.ver_receta_producto", id_producto=id_producto))
+
+        # Asegurar que existe la receta del producto
+        receta = _asegurar_receta_por_sp(id_producto)
+
+        agregados = 0
+        omitidos = 0
+        for detalle_mr in mini_receta.detalles:
+            # Verificar si ya existe ese insumo en la receta
+            ya_existe = DetalleReceta.query.filter_by(
+                idReceta=receta.idReceta,
+                idMateriaP=detalle_mr.idMateriaP
+            ).first()
+
+            if ya_existe:
+                omitidos += 1
+                continue
+
+            db.session.execute(
+                text("CALL sp_gestion_detalle_receta(:accion,:idDetalleR,:idReceta,:idMateriaP,:cantidad,:ip,:usuario,@p_resultado,@p_idGenerado)"),
+                {
+                    "accion": "INSERT",
+                    "idDetalleR": None,
+                    "idReceta": receta.idReceta,
+                    "idMateriaP": detalle_mr.idMateriaP,
+                    "cantidad": detalle_mr.cantidad,
+                    "ip": request.remote_addr,
+                    "usuario": session["usuario_id"],
+                },
+            )
+            resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
+            if resultado and resultado.startswith("SUCCESS"):
+                agregados += 1
+            else:
+                db.session.rollback()
+                _, msg = _texto_resultado(resultado)
+                flash(f"Error al agregar insumo: {msg}", "danger")
+                return redirect(url_for("recetas.ver_receta_producto", id_producto=id_producto))
+
+        db.session.commit()
+        _registrar_bitacora("Recetas", "Aplicar mini receta", "Mini Receta", mini_receta.nombre)
+        db.session.commit()
+
+        if agregados > 0 and omitidos == 0:
+            flash(f"Mini receta «{mini_receta.nombre}» aplicada: {agregados} insumo(s) agregado(s).", "success")
+        elif agregados > 0 and omitidos > 0:
+            flash(
+                f"Mini receta «{mini_receta.nombre}» aplicada: {agregados} insumo(s) nuevo(s) agregado(s), "
+                f"{omitidos} ya existía(n) y no se modificaron.",
+                "success",
+            )
+        else:
+            flash(
+                f"Todos los insumos de «{mini_receta.nombre}» ya están presentes en la receta. No se realizaron cambios.",
+                "warning",
+            )
+
+    except Exception as exc:
+        db.session.rollback()
+        flash(str(exc), "danger")
+
+    return redirect(url_for("recetas.ver_receta_producto", id_producto=id_producto))
+
+
 @recetas.route("/recetas/detalle/<int:id_detalle>/editar", methods=["POST"])
-@rol_requerido("Administrador","Cocinero")
+@rol_requerido("Administrador", "Cocinero")
 def editar_detalle_receta(id_detalle):
     detalle = DetalleReceta.query.get_or_404(id_detalle)
     receta = detalle.receta
@@ -253,7 +375,7 @@ def editar_detalle_receta(id_detalle):
 
 
 @recetas.route("/recetas/detalle/<int:id_detalle>/eliminar", methods=["POST"])
-@rol_requerido("Administrador","Cocinero")
+@rol_requerido("Administrador", "Cocinero")
 def eliminar_detalle_receta(id_detalle):
     detalle = DetalleReceta.query.get_or_404(id_detalle)
     receta = detalle.receta
@@ -275,7 +397,6 @@ def eliminar_detalle_receta(id_detalle):
             db.session.commit()
         _guardar_mensaje_receta(mensaje, categoria)
 
-        # ── Alerta de receta corta tras eliminar insumo ──
         receta_actualizada = _obtener_receta_producto(id_producto)
         if receta_actualizada and categoria == "success":
             total_insumos = DetalleReceta.query.filter_by(idReceta=receta_actualizada.idReceta).count()
@@ -293,12 +414,12 @@ def eliminar_detalle_receta(id_detalle):
 
 
 @recetas.route("/recetas/producto/<int:id_producto>/eliminar", methods=["POST"])
-@rol_requerido("Administrador","Cocinero")
+@rol_requerido("Administrador", "Cocinero")
 def eliminar_receta_completa(id_producto):
     producto = Productos.query.get_or_404(id_producto)
     receta = _obtener_receta_producto(id_producto)
     if not receta:
-        session["recetas_mensaje"] = {"mensaje": "No hay receta para eliminar.", "categoria": "danger"}
+        flash("No hay receta para eliminar.", "danger")
         return redirect(url_for("recetas.ver_receta_producto", id_producto=id_producto))
     try:
         db.session.execute(
@@ -312,8 +433,9 @@ def eliminar_receta_completa(id_producto):
         if categoria == "success":
             _registrar_bitacora("Recetas", "Eliminar receta", "Producto", producto.nombre)
             db.session.commit()
-        session["recetas_mensaje"] = {"mensaje": mensaje, "categoria": categoria}
+        flash(mensaje, categoria)
     except Exception as exc:
         db.session.rollback()
-        session["recetas_mensaje"] = {"mensaje": str(exc), "categoria": "danger"}
-    return redirect(url_for("productos.listado_productos"))
+        flash(str(exc), "danger")
+    # Redirigir siempre a la misma página de receta para ver el resultado
+    return redirect(url_for("recetas.ver_receta_producto", id_producto=id_producto))

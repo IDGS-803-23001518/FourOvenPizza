@@ -16,6 +16,7 @@ from mermas.routes import mermas
 from productos.routes import productos
 from caja.routes import caja
 from dashboard.routes import dashboard
+from miniRecetas.routes import miniRecetas
 from models import db
 from autentificacion.routes import registrar_acceso
 
@@ -38,6 +39,7 @@ app.register_blueprint(ventas)
 app.register_blueprint(mermas)
 app.register_blueprint(caja)
 app.register_blueprint(dashboard)
+app.register_blueprint(miniRecetas)
 
 db.init_app(app)
 

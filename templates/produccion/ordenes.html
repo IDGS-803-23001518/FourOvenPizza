@@ -1,83 +1,189 @@
-{% extends layout %} 
+{% extends layout %}
 {% block container %}
 
 <!-- ══════════════ ESTILOS PAGINACIÓN ══════════════ -->
 <style>
-  .pag-hidden { display: none !important; }
+  .pag-hidden {
+    display: none !important;
+  }
 
   .pag-wrapper {
-    display: flex; flex-wrap: wrap; align-items: center;
-    justify-content: space-between; gap: 0.75rem;
-    padding: 0.85rem 1.25rem; background: #fff;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 1.25rem;
+    background: #fff;
     border-top: 1px solid #f0e8dc;
     border-radius: 0 0 1rem 1rem;
   }
-  .pag-info { font-size: 0.78rem; color: #6b7280; }
-  .pag-info strong { color: #38230f; }
-  .pag-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
-  .pag-por-pagina { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #6b7280; }
+
+  .pag-info {
+    font-size: 0.78rem;
+    color: #6b7280;
+  }
+
+  .pag-info strong {
+    color: #38230f;
+  }
+
+  .pag-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .pag-por-pagina {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: #6b7280;
+  }
+
   .pag-select {
-    border: 1px solid #d1d5db; border-radius: 0.5rem;
-    padding: 0.3rem 2rem 0.3rem 0.75rem; font-size: 0.8rem;
-    font-weight: 600; color: #38230f; background-color: #fff;
-    cursor: pointer; outline: none; appearance: none;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    padding: 0.3rem 2rem 0.3rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #38230f;
+    background-color: #fff;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2338230f' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em;
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1.2em;
   }
-  .pag-select:focus { box-shadow: 0 0 0 2px rgba(242,159,5,0.35); border-color: #f29f05; }
-  .pag-botones { display: flex; align-items: center; gap: 0.25rem; }
+
+  .pag-select:focus {
+    box-shadow: 0 0 0 2px rgba(242, 159, 5, 0.35);
+    border-color: #f29f05;
+  }
+
+  .pag-botones {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
   .pag-btn {
-    min-width: 2rem; height: 2rem; border-radius: 0.4rem;
-    border: 1px solid #e5e7eb; background: #fff;
-    color: #38230f; font-size: 0.78rem; font-weight: 600;
-    cursor: pointer; transition: all 0.15s; padding: 0 0.4rem;
+    min-width: 2rem;
+    height: 2rem;
+    border-radius: 0.4rem;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #38230f;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 0 0.4rem;
   }
-  .pag-btn:hover:not(:disabled) { background: #f29f05; color: #fff; border-color: #f29f05; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-  .pag-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-  .pag-btn-active { background: #38230f !important; color: #fff !important; border-color: #38230f !important; }
-  .pag-ellipsis { padding: 0 0.2rem; color: #9ca3af; font-size: 0.78rem; user-select: none; }
+
+  .pag-btn:hover:not(:disabled) {
+    background: #f29f05;
+    color: #fff;
+    border-color: #f29f05;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .pag-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .pag-btn-active {
+    background: #38230f !important;
+    color: #fff !important;
+    border-color: #38230f !important;
+  }
+
+  .pag-ellipsis {
+    padding: 0 0.2rem;
+    color: #9ca3af;
+    font-size: 0.78rem;
+    user-select: none;
+  }
 
   @media (max-width: 767px) {
-    #tabla-ordenes-desktop { display: none !important; }
-    #cards-ordenes { display: block !important; }
-    #pag-ordenes-desktop { display: none !important; }
-  }
-  @media (min-width: 768px) {
-    #tabla-ordenes-desktop { display: block !important; }
-    #cards-ordenes { display: none !important; }
-    #pag-ordenes-cards { display: none !important; }
+    #tabla-ordenes-desktop {
+      display: none !important;
+    }
+
+    #cards-ordenes {
+      display: block !important;
+    }
+
+    #pag-ordenes-desktop {
+      display: none !important;
+    }
   }
 
-  .orden-row, .orden-card { transition: opacity 0.2s ease; }
+  @media (min-width: 768px) {
+    #tabla-ordenes-desktop {
+      display: block !important;
+    }
+
+    #cards-ordenes {
+      display: none !important;
+    }
+
+    #pag-ordenes-cards {
+      display: none !important;
+    }
+  }
+
+  .orden-row,
+  .orden-card {
+    transition: opacity 0.2s ease;
+  }
 
   /* Cards móvil */
   .orden-card {
-    background: #fff; border-radius: 1rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    border: 1px solid #f0e8dc; overflow: hidden;
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0e8dc;
+    overflow: hidden;
   }
+
   .orden-card-header {
-    background: #38230f; padding: 0.75rem 1rem;
-    display: flex; justify-content: space-between; align-items: center;
+    background: #38230f;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   @media (max-width: 767px) {
     #pag-ordenes-cards .pag-wrapper {
-      border-radius: 0.75rem; margin-top: 0.5rem;
+      border-radius: 0.75rem;
+      margin-top: 0.5rem;
     }
+
     #pag-ordenes-cards .pag-btn {
-      min-width: 2.4rem; height: 2.4rem; font-size: 0.9rem;
+      min-width: 2.4rem;
+      height: 2.4rem;
+      font-size: 0.9rem;
     }
   }
 </style>
 
-<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
+<nav
+  class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
   style="border-bottom: 3px solid #f29f05;">
   <div class="container flex flex-wrap items-center justify-between mx-auto">
     <div class="flex-1 flex justify-center">
       <div class="flex items-center space-x-2 sm:space-x-3 bg-opacity-20 px-3 sm:px-6 py-2 rounded-full">
         <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Órdenes de</span>
-        <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap" style="color:#f29f05;">Producción</span>
+        <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap"
+          style="color:#f29f05;">Producción</span>
       </div>
     </div>
   </div>
@@ -87,17 +193,17 @@
 
   <!-- Flash -->
   {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <div class="mb-4 space-y-2">
-        {% for category, message in messages %}
-          <div class="px-4 py-3 rounded-xl text-sm font-semibold shadow-md
+  {% if messages %}
+  <div class="mb-4 space-y-2">
+    {% for category, message in messages %}
+    <div class="px-4 py-3 rounded-xl text-sm font-semibold shadow-md
             {% if category == 'success' %}bg-green-100 text-green-700 border border-green-300
             {% else %}bg-red-100 text-red-700 border border-red-300{% endif %}">
-            {{ message }}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% endwith %}
 
   <!-- Botón registrar -->
@@ -120,10 +226,10 @@
         <label class="text-xs font-semibold text-gray-700 mb-1">Estado</label>
         <select name="estado"
           class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
-          <option value=""           {% if not filtros.estado %}selected{% endif %}>Todos</option>
-          <option value="En proceso" {% if filtros.estado == 'En proceso' %}selected{% endif %}>En proceso</option>
-          <option value="Terminada"  {% if filtros.estado == 'Terminada'  %}selected{% endif %}>Terminada</option>
-          <option value="Cancelada"  {% if filtros.estado == 'Cancelada'  %}selected{% endif %}>Cancelada</option>
+          <option value="" {% if not filtros.estado %}selected{% endif %}>Todos</option>
+          <option value="En proceso" {% if filtros.estado=='En proceso' %}selected{% endif %}>En proceso</option>
+          <option value="Terminada" {% if filtros.estado=='Terminada' %}selected{% endif %}>Terminada</option>
+          <option value="Cancelada" {% if filtros.estado=='Cancelada' %}selected{% endif %}>Cancelada</option>
         </select>
       </div>
       <div class="flex flex-col min-w-[140px]">
@@ -167,11 +273,9 @@
         <tbody id="tabla-ordenes-body">
           {% for o in ordenes %}
           <tr class="orden-row bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150"
-              data-id="{{ o.idOrden }}"
-              data-estado="{{ o.estado }}"
-              data-usuario="{{ o.nombre_usuario }}"
-              data-segundos="{{ o.segundos_desde_creacion }}"
-              data-ts="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}">
+            data-id="{{ o.idOrden }}" data-estado="{{ o.estado }}" data-usuario="{{ o.nombre_usuario }}"
+            data-segundos="{{ o.segundos_desde_creacion }}"
+            data-ts="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}">
             <td class="px-5 py-3 font-bold" style="color:#38230f;">#{{ o.idOrden }}</td>
             <td class="px-5 py-3 text-gray-700">{{ o.fecha.strftime('%d/%m/%Y %H:%M') if o.fecha else '—' }}</td>
             <td class="px-5 py-3 text-gray-700">{{ o.nombre_usuario }}</td>
@@ -179,17 +283,20 @@
             <td class="px-5 py-3 text-gray-700">{{ o.total_unidades | int }}</td>
             <td class="px-5 py-3">
               {% if o.estado == 'En proceso' %}
-                <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
-                  <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block"></span>En proceso
-                </span>
+              <span
+                class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block"></span>En proceso
+              </span>
               {% elif o.estado == 'Terminada' %}
-                <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
-                  <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>Terminada
-                </span>
+              <span
+                class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>Terminada
+              </span>
               {% else %}
-                <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
-                  <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>Cancelada
-                </span>
+              <span
+                class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>Cancelada
+              </span>
               {% endif %}
             </td>
             <td class="px-5 py-3">
@@ -199,36 +306,35 @@
                   class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
                   style="background-color:#2563eb;" title="Ver detalle">
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
-                    <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clip-rule="evenodd"/>
+                    <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                    <path fill-rule="evenodd"
+                      d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z"
+                      clip-rule="evenodd" />
                   </svg>
                 </button>
 
                 <!-- Editar (solo si En proceso y <= 60s) -->
-                {% if o.estado == 'En proceso' and o.segundos_desde_creacion <= 60 %}
-                <button type="button"
+                {% if o.estado == 'En proceso' and o.segundos_desde_creacion <= 60 %} <button type="button"
                   class="btn-editar flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
-                  style="background-color:#f29f05;" title="Editar orden"
-                  data-id="{{ o.idOrden }}"
-                  data-ts-creacion="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}"
-                  onclick="abrirEditar(this)">
+                  style="background-color:#f29f05;" title="Editar orden" data-id="{{ o.idOrden }}"
+                  data-ts-creacion="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}" onclick="abrirEditar(this)">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round"
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </svg>
-                </button>
-                {% endif %}
+                  </button>
+                  {% endif %}
 
-                <!-- Cancelar -->
-                {% if o.estado == 'En proceso' %}
-                <button type="button" onclick="abrirCancelar({{ o.idOrden }})"
-                  class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
-                  style="background-color:#e53e3e;" title="Cancelar orden">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                  </svg>
-                </button>
-                {% endif %}
+                  <!-- Cancelar -->
+                  {% if o.estado == 'En proceso' %}
+                  <button type="button" onclick="abrirCancelar({{ o.idOrden }})"
+                    class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all hover:scale-110 hover:shadow-md"
+                    style="background-color:#e53e3e;" title="Cancelar orden">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  {% endif %}
               </div>
             </td>
           </tr>
@@ -249,26 +355,26 @@
   <!-- ── CARDS MÓVIL ── -->
   <div id="cards-ordenes" class="space-y-3 mb-4" style="display:none;">
     {% for o in ordenes %}
-    <div class="orden-card"
-         data-id="{{ o.idOrden }}"
-         data-estado="{{ o.estado }}"
-         data-segundos="{{ o.segundos_desde_creacion }}"
-         data-ts="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}">
+    <div class="orden-card" data-id="{{ o.idOrden }}" data-estado="{{ o.estado }}"
+      data-segundos="{{ o.segundos_desde_creacion }}" data-ts="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}">
       <!-- Cabecera -->
       <div class="orden-card-header">
         <span class="text-white font-bold text-sm">#{{ o.idOrden }}</span>
         {% if o.estado == 'En proceso' %}
-          <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
-            <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block"></span>En proceso
-          </span>
+        <span
+          class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
+          <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block"></span>En proceso
+        </span>
         {% elif o.estado == 'Terminada' %}
-          <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
-            <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>Terminada
-          </span>
+        <span
+          class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
+          <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>Terminada
+        </span>
         {% else %}
-          <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
-            <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>Cancelada
-          </span>
+        <span
+          class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+          <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>Cancelada
+        </span>
         {% endif %}
       </div>
       <!-- Cuerpo -->
@@ -297,37 +403,36 @@
             class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
             style="background-color:#2563eb;">
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
-              <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clip-rule="evenodd"/>
+              <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+              <path fill-rule="evenodd"
+                d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z"
+                clip-rule="evenodd" />
             </svg>
             Ver
           </button>
 
-          {% if o.estado == 'En proceso' and o.segundos_desde_creacion <= 60 %}
-          <button type="button"
+          {% if o.estado == 'En proceso' and o.segundos_desde_creacion <= 60 %} <button type="button"
             class="btn-editar flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
-            style="background-color:#f29f05;"
-            data-id="{{ o.idOrden }}"
-            data-ts-creacion="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}"
-            onclick="abrirEditar(this)">
+            style="background-color:#f29f05;" data-id="{{ o.idOrden }}"
+            data-ts-creacion="{{ (o.fecha.timestamp() | int) if o.fecha else 0 }}" onclick="abrirEditar(this)">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round"
-                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
             Editar
-          </button>
-          {% endif %}
+            </button>
+            {% endif %}
 
-          {% if o.estado == 'En proceso' %}
-          <button type="button" onclick="abrirCancelar({{ o.idOrden }})"
-            class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
-            style="background-color:#e53e3e;">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-            Cancelar
-          </button>
-          {% endif %}
+            {% if o.estado == 'En proceso' %}
+            <button type="button" onclick="abrirCancelar({{ o.idOrden }})"
+              class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-sm font-semibold transition hover:brightness-110"
+              style="background-color:#e53e3e;">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Cancelar
+            </button>
+            {% endif %}
         </div>
       </div>
     </div>
@@ -351,7 +456,7 @@
       <h3 class="text-base font-bold text-white tracking-wide">NUEVA ORDEN DE PRODUCCIÓN</h3>
       <button onclick="cerrarModal('modalRegistro')" class="text-white hover:text-gray-300 transition">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
@@ -360,19 +465,24 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-[1fr_120px_auto] gap-3 items-end mb-4 pb-4 border-b border-gray-100">
         <div>
-          <label class="block text-xs font-semibold text-gray-700 mb-1">Producto <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Producto <span
+              class="text-red-500">*</span></label>
           <select id="selProducto"
             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
             <option value="">Selecciona un producto...</option>
             {% for p in productos_disponibles %}
-            <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}">
+            <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}"
+              data-capacidad="{{ p.capacidad_produccion }}">
               {{ p.nombre }} — {{ p.tamano }}
-            </option>
-            {% endfor %}
+              {% if p.capacidad_produccion <= 0 %} (⚠ sin insumos) {% else %} (prod. {{ p.capacidad_produccion }}) {%
+                endif %} </option>
+                {% endfor %}
           </select>
+          <div id="capacidad-badge" class="hidden mt-1 text-xs font-semibold px-2 py-1 rounded-lg"></div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-700 mb-1">Cantidad <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Cantidad <span
+              class="text-red-500">*</span></label>
           <input type="number" id="inputCantidad" min="1" step="1" value="1"
             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
         </div>
@@ -434,7 +544,7 @@
       <h3 class="text-base font-bold text-white tracking-wide" id="verTitulo">DETALLE DE ORDEN</h3>
       <button onclick="cerrarModal('modalVer')" class="text-white hover:text-gray-300 transition">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
@@ -460,7 +570,7 @@
       </div>
       <button onclick="cerrarModal('modalEditar')" class="text-white hover:text-gray-300 transition">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
@@ -468,8 +578,8 @@
       <!-- Spinner de carga -->
       <div id="editarLoading" class="flex items-center justify-center py-10 gap-3">
         <svg class="animate-spin w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
         </svg>
         <span class="text-gray-500 text-sm font-medium">Cargando datos de la orden...</span>
       </div>
@@ -485,11 +595,14 @@
               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
               <option value="">Selecciona un producto...</option>
               {% for p in productos_disponibles %}
-              <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}">
+              <option value="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tamano="{{ p.tamano }}"
+                data-capacidad="{{ p.capacidad_produccion }}">
                 {{ p.nombre }} — {{ p.tamano }}
-              </option>
-              {% endfor %}
+                {% if p.capacidad_produccion <= 0 %} (⚠ sin insumos) {% else %} (prod. {{ p.capacidad_produccion }}) {%
+                  endif %} </option>
+                  {% endfor %}
             </select>
+            <div id="capacidad-badge-edit" class="hidden mt-1 text-xs font-semibold px-2 py-1 rounded-lg"></div>
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-700 mb-1">Cantidad</label>
@@ -517,7 +630,8 @@
               </thead>
               <tbody id="tablaEditarBody">
                 <tr id="filaVaciaEditar">
-                  <td colspan="4" class="text-center py-6 text-gray-400 text-xs font-semibold">No hay productos añadidos.</td>
+                  <td colspan="4" class="text-center py-6 text-gray-400 text-xs font-semibold">No hay productos
+                    añadidos.</td>
                 </tr>
               </tbody>
             </table>
@@ -552,7 +666,7 @@
     <div class="flex justify-center mb-3">
       <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
         <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </div>
     </div>
@@ -576,297 +690,333 @@
 
 
 <script>
-/* ════════════════════════════════════════════════
-   ESTADO GLOBAL
-════════════════════════════════════════════════ */
-let ordenItems   = [];
-let editarItems  = [];
-let timerInterval = null;
-let _tsCreacionEditar = 0;
-let _idOrdenEditando  = 0;
+  /* ════════════════════════════════════════════════
+     ESTADO GLOBAL
+  ════════════════════════════════════════════════ */
+  let ordenItems = [];
+  let editarItems = [];
+  let timerInterval = null;
+  let _tsCreacionEditar = 0;
+  let _idOrdenEditando = 0;
 
-/* ════════════════════════════════════════════════
-   PAGINACIÓN GENÉRICA
-════════════════════════════════════════════════ */
-function crearPaginacion(opciones) {
-  const { contenedorItems, itemsSelector, contenedorPagId } = opciones;
-  let paginaActual = 1;
-  let porPagina    = 10;
-  const gName      = '__pag_' + contenedorPagId.replace(/-/g, '_');
+  /* ════════════════════════════════════════════════
+     PAGINACIÓN GENÉRICA
+  ════════════════════════════════════════════════ */
+  function crearPaginacion(opciones) {
+    const { contenedorItems, itemsSelector, contenedorPagId } = opciones;
+    let paginaActual = 1;
+    let porPagina = 10;
+    const gName = '__pag_' + contenedorPagId.replace(/-/g, '_');
 
-  function obtenerItems() {
-    return Array.from(contenedorItems.querySelectorAll(itemsSelector))
-      .filter(el => !el.classList.contains('filtro-hidden'));
-  }
-
-  function mostrarItems() {
-    const items      = obtenerItems();
-    const total      = items.length;
-    const totalPags  = Math.max(1, Math.ceil(total / porPagina));
-    if (paginaActual > totalPags) paginaActual = totalPags;
-
-    const ini = (paginaActual - 1) * porPagina;
-    const fin = ini + porPagina;
-
-    items.forEach((el, i) => {
-      el.classList.toggle('pag-hidden', i < ini || i >= fin);
-    });
-    renderControles(total, totalPags, ini, fin);
-  }
-
-  function renderControles(total, totalPags, ini, fin) {
-    let ctrl = document.getElementById(contenedorPagId);
-    if (!ctrl) return;
-
-    const mostradoIni = total === 0 ? 0 : ini + 1;
-    const mostradoFin = Math.min(fin, total);
-    const delta = 2;
-    let rango = [];
-    for (let i = Math.max(1, paginaActual - delta); i <= Math.min(totalPags, paginaActual + delta); i++) rango.push(i);
-
-    let botonesHTML = '';
-    if (rango[0] > 1) {
-      botonesHTML += `<button class="pag-btn" onclick="${gName}.irA(1)">1</button>`;
-      if (rango[0] > 2) botonesHTML += `<span class="pag-ellipsis">…</span>`;
-    }
-    rango.forEach(p => {
-      botonesHTML += `<button class="pag-btn ${p === paginaActual ? 'pag-btn-active' : ''}" onclick="${gName}.irA(${p})">${p}</button>`;
-    });
-    if (rango[rango.length - 1] < totalPags) {
-      if (rango[rango.length - 1] < totalPags - 1) botonesHTML += `<span class="pag-ellipsis">…</span>`;
-      botonesHTML += `<button class="pag-btn" onclick="${gName}.irA(${totalPags})">${totalPags}</button>`;
+    function obtenerItems() {
+      return Array.from(contenedorItems.querySelectorAll(itemsSelector))
+        .filter(el => !el.classList.contains('filtro-hidden'));
     }
 
-    ctrl.className = 'pag-wrapper';
-    ctrl.innerHTML = `
+    function mostrarItems() {
+      const items = obtenerItems();
+      const total = items.length;
+      const totalPags = Math.max(1, Math.ceil(total / porPagina));
+      if (paginaActual > totalPags) paginaActual = totalPags;
+
+      const ini = (paginaActual - 1) * porPagina;
+      const fin = ini + porPagina;
+
+      items.forEach((el, i) => {
+        el.classList.toggle('pag-hidden', i < ini || i >= fin);
+      });
+      renderControles(total, totalPags, ini, fin);
+    }
+
+    function renderControles(total, totalPags, ini, fin) {
+      let ctrl = document.getElementById(contenedorPagId);
+      if (!ctrl) return;
+
+      const mostradoIni = total === 0 ? 0 : ini + 1;
+      const mostradoFin = Math.min(fin, total);
+      const delta = 2;
+      let rango = [];
+      for (let i = Math.max(1, paginaActual - delta); i <= Math.min(totalPags, paginaActual + delta); i++) rango.push(i);
+
+      let botonesHTML = '';
+      if (rango[0] > 1) {
+        botonesHTML += `<button class="pag-btn" onclick="${gName}.irA(1)">1</button>`;
+        if (rango[0] > 2) botonesHTML += `<span class="pag-ellipsis">…</span>`;
+      }
+      rango.forEach(p => {
+        botonesHTML += `<button class="pag-btn ${p === paginaActual ? 'pag-btn-active' : ''}" onclick="${gName}.irA(${p})">${p}</button>`;
+      });
+      if (rango[rango.length - 1] < totalPags) {
+        if (rango[rango.length - 1] < totalPags - 1) botonesHTML += `<span class="pag-ellipsis">…</span>`;
+        botonesHTML += `<button class="pag-btn" onclick="${gName}.irA(${totalPags})">${totalPags}</button>`;
+      }
+
+      ctrl.className = 'pag-wrapper';
+      ctrl.innerHTML = `
       <div class="pag-info">Mostrando <strong>${mostradoIni}–${mostradoFin}</strong> de <strong>${total}</strong> registros</div>
       <div class="pag-controls">
         <div class="pag-por-pagina">
           Mostrar
           <select class="pag-select" onchange="${gName}.cambiarPorPagina(this.value)">
-            <option value="10" ${porPagina===10?'selected':''}>10</option>
-            <option value="15" ${porPagina===15?'selected':''}>15</option>
-            <option value="20" ${porPagina===20?'selected':''}>20</option>
-            <option value="50" ${porPagina===50?'selected':''}>50</option>
+            <option value="10" ${porPagina === 10 ? 'selected' : ''}>10</option>
+            <option value="15" ${porPagina === 15 ? 'selected' : ''}>15</option>
+            <option value="20" ${porPagina === 20 ? 'selected' : ''}>20</option>
+            <option value="50" ${porPagina === 50 ? 'selected' : ''}>50</option>
           </select>
           por página
         </div>
         <div class="pag-botones">
-          <button class="pag-btn" onclick="${gName}.irA(${paginaActual-1})" ${paginaActual<=1?'disabled':''}>‹</button>
+          <button class="pag-btn" onclick="${gName}.irA(${paginaActual - 1})" ${paginaActual <= 1 ? 'disabled' : ''}>‹</button>
           ${botonesHTML}
-          <button class="pag-btn" onclick="${gName}.irA(${paginaActual+1})" ${paginaActual>=totalPags?'disabled':''}>›</button>
+          <button class="pag-btn" onclick="${gName}.irA(${paginaActual + 1})" ${paginaActual >= totalPags ? 'disabled' : ''}>›</button>
         </div>
       </div>`;
-  }
-
-  const api = {
-    refresh() { paginaActual = 1; mostrarItems(); },
-    irA(p) {
-      const items = obtenerItems();
-      const totalPags = Math.max(1, Math.ceil(items.length / porPagina));
-      if (p < 1 || p > totalPags) return;
-      paginaActual = p;
-      mostrarItems();
-    },
-    cambiarPorPagina(val) { porPagina = parseInt(val); paginaActual = 1; mostrarItems(); }
-  };
-  window[gName] = api;
-  mostrarItems();
-  return api;
-}
-
-/* ════════════════════════════════════════════════
-   MODALES
-════════════════════════════════════════════════ */
-function abrirModal(id) {
-  document.getElementById(id).classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
-function cerrarModal(id) {
-  document.getElementById(id).classList.add('hidden');
-  document.body.style.overflow = '';
-  if (id === 'modalEditar' && timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-}
-
-['modalRegistro','modalVer','modalEditar','modalCancelar'].forEach(id => {
-  document.getElementById(id).addEventListener('click', function(e) {
-    if (e.target === this) cerrarModal(id);
-  });
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') ['modalRegistro','modalVer','modalEditar','modalCancelar'].forEach(cerrarModal);
-});
-
-/* ════════════════════════════════════════════════
-   REGISTRO
-════════════════════════════════════════════════ */
-function agregarProductoOrden() {
-  const sel = document.getElementById('selProducto');
-  const qty = parseInt(document.getElementById('inputCantidad').value, 10);
-  if (!sel.value)      { mostrarError('errorRegistro', 'Selecciona un producto.'); return; }
-  if (!qty || qty < 1) { mostrarError('errorRegistro', 'La cantidad debe ser mayor a 0.'); return; }
-
-  const idP    = parseInt(sel.value, 10);
-  const nombre = sel.options[sel.selectedIndex].dataset.nombre;
-  const tamano = sel.options[sel.selectedIndex].dataset.tamano;
-  const existe = ordenItems.find(i => i.idProducto === idP);
-  if (existe) { existe.cantidad += qty; }
-  else        { ordenItems.push({ idProducto: idP, nombre, tamano, cantidad: qty }); }
-
-  renderTabla('tablaOrdenBody', 'filaVaciaOrden', ordenItems, 'registro');
-  ocultarError('errorRegistro');
-}
-
-function enviarOrdenRegistro() {
-  if (ordenItems.length === 0) { mostrarError('errorRegistro', 'Agrega al menos un producto.'); return; }
-  document.getElementById('hiddenDetallesRegistro').value = JSON.stringify(ordenItems);
-  document.getElementById('formRegistrarOrden').submit();
-}
-
-/* ════════════════════════════════════════════════
-   EDITAR — carga datos vía fetch al abrir
-════════════════════════════════════════════════ */
-async function abrirEditar(btn) {
-  const idOrden    = parseInt(btn.dataset.id, 10);
-  const tsCreacion = parseInt(btn.dataset.tsCreacion, 10);
-
-  _tsCreacionEditar = tsCreacion;
-  _idOrdenEditando  = idOrden;
-
-  // Resetear UI
-  document.getElementById('editOrdenNum').textContent = '#' + idOrden;
-  document.getElementById('formEditarOrden').action   = `/produccion/editar/${idOrden}`;
-  ocultarError('errorEditar');
-  editarItems = [];
-
-  // Mostrar spinner, ocultar contenido
-  document.getElementById('editarLoading').classList.remove('hidden');
-  document.getElementById('editarContenido').classList.add('hidden');
-
-  abrirModal('modalEditar');
-
-  // ── FETCH de los datos actuales de la orden ──
-  try {
-    const resp = await fetch(`/produccion/detalle-json/${idOrden}`);
-    const data = await resp.json();
-
-    if (data.ok && data.items && data.items.length > 0) {
-      editarItems = data.items.map(it => ({
-        idProducto: it.idProducto,
-        nombre:     it.nombre,
-        tamano:     it.tamano,
-        cantidad:   it.cantidad,
-      }));
-    } else if (!data.ok) {
-      console.error('Error al cargar detalle:', data.error);
     }
-  } catch (err) {
-    console.error('Fetch error:', err);
+
+    const api = {
+      refresh() { paginaActual = 1; mostrarItems(); },
+      irA(p) {
+        const items = obtenerItems();
+        const totalPags = Math.max(1, Math.ceil(items.length / porPagina));
+        if (p < 1 || p > totalPags) return;
+        paginaActual = p;
+        mostrarItems();
+      },
+      cambiarPorPagina(val) { porPagina = parseInt(val); paginaActual = 1; mostrarItems(); }
+    };
+    window[gName] = api;
+    mostrarItems();
+    return api;
   }
 
-  // Renderizar tabla con los datos cargados
-  renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar');
-
-  // Mostrar contenido, ocultar spinner
-  document.getElementById('editarLoading').classList.add('hidden');
-  document.getElementById('editarContenido').classList.remove('hidden');
-
-  // Iniciar timer
-  if (timerInterval) clearInterval(timerInterval);
-  actualizarTimerDisplay(idOrden);
-  timerInterval = setInterval(() => actualizarTimerDisplay(idOrden), 1000);
-}
-
-function actualizarTimerDisplay(idOrden) {
-  const ahoraUnix     = Math.floor(Date.now() / 1000);
-  const transcurridos = ahoraUnix - _tsCreacionEditar;
-  const restantes     = 60 - transcurridos;
-  const el            = document.getElementById('timerDisplay');
-
-  if (restantes <= 0) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-    cerrarModal('modalEditar');
-    document.querySelectorAll('.btn-editar').forEach(b => {
-      if (parseInt(b.dataset.id, 10) === idOrden) b.style.display = 'none';
-    });
-    return;
+  /* ════════════════════════════════════════════════
+     MODALES
+  ════════════════════════════════════════════════ */
+  function abrirModal(id) {
+    document.getElementById(id).classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
   }
-  el.textContent = restantes + 's';
-  el.style.color = restantes <= 15 ? '#fc8181' : '#fbd38d';
-}
+  function cerrarModal(id) {
+    document.getElementById(id).classList.add('hidden');
+    document.body.style.overflow = '';
+    if (id === 'modalEditar' && timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
 
-function agregarProductoEditar() {
-  const sel = document.getElementById('editSelProducto');
-  const qty = parseInt(document.getElementById('editInputCantidad').value, 10);
-  if (!sel.value)      { mostrarError('errorEditar', 'Selecciona un producto.'); return; }
-  if (!qty || qty < 1) { mostrarError('errorEditar', 'La cantidad debe ser mayor a 0.'); return; }
-
-  const idP    = parseInt(sel.value, 10);
-  const nombre = sel.options[sel.selectedIndex].dataset.nombre;
-  const tamano = sel.options[sel.selectedIndex].dataset.tamano;
-  const existe = editarItems.find(i => i.idProducto === idP);
-  if (existe) { existe.cantidad += qty; }
-  else        { editarItems.push({ idProducto: idP, nombre, tamano, cantidad: qty }); }
-
-  renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar');
-  ocultarError('errorEditar');
-}
-
-function enviarOrdenEditar() {
-  if (editarItems.length === 0) { mostrarError('errorEditar', 'Agrega al menos un producto.'); return; }
-  document.getElementById('hiddenDetallesEditar').value = JSON.stringify(editarItems);
-  document.getElementById('formEditarOrden').submit();
-}
-
-/* ════════════════════════════════════════════════
-   VER DETALLE
-════════════════════════════════════════════════ */
-function abrirVer(idOrden) {
-  document.getElementById('verTitulo').textContent = 'DETALLE ORDEN #' + idOrden;
-  document.getElementById('verContenido').innerHTML =
-    '<p class="text-center text-gray-400 py-6">Cargando...</p>';
-  abrirModal('modalVer');
-  fetch(`/produccion/ver/${idOrden}`)
-    .then(r => r.text())
-    .then(html => { document.getElementById('verContenido').innerHTML = html; })
-    .catch(() => {
-      document.getElementById('verContenido').innerHTML =
-        '<p class="text-red-500 text-sm text-center py-6">Error al cargar el detalle.</p>';
+  ['modalRegistro', 'modalVer', 'modalEditar', 'modalCancelar'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function (e) {
+      if (e.target === this) cerrarModal(id);
     });
-}
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') ['modalRegistro', 'modalVer', 'modalEditar', 'modalCancelar'].forEach(cerrarModal);
+  });
 
-/* ════════════════════════════════════════════════
-   CANCELAR
-════════════════════════════════════════════════ */
-function abrirCancelar(idOrden) {
-  document.getElementById('cancelarMensaje').textContent =
-    `¿Confirmas cancelar la orden #${idOrden}? Esta acción no se puede deshacer.`;
-  document.getElementById('formCancelar').action = `/produccion/cancelar/${idOrden}`;
-  abrirModal('modalCancelar');
-}
+  /* ════════════════════════════════════════════════
+     REGISTRO
+  ════════════════════════════════════════════════ */
+  function agregarProductoOrden() {
+    const sel = document.getElementById('selProducto');
+    const qty = parseInt(document.getElementById('inputCantidad').value, 10);
+    const capacidad = parseInt(sel.options[sel.selectedIndex].dataset.capacidad || '0', 10);
 
-/* ════════════════════════════════════════════════
-   RENDER TABLA DE PRODUCTOS
-════════════════════════════════════════════════ */
-function renderTabla(tbodyId, filaVaciaId, items, modo) {
-  const tbody     = document.getElementById(tbodyId);
-  const filaVacia = document.getElementById(filaVaciaId);
-  tbody.querySelectorAll('tr.fila-producto').forEach(r => r.remove());
+    if (!sel.value) { mostrarError('errorRegistro', 'Selecciona un producto.'); return; }
+    if (!qty || qty < 1) { mostrarError('errorRegistro', 'La cantidad debe ser mayor a 0.'); return; }
 
-  if (items.length === 0) { filaVacia.classList.remove('hidden'); return; }
-  filaVacia.classList.add('hidden');
+    const idP = parseInt(sel.value, 10);
+    const nombre = sel.options[sel.selectedIndex].dataset.nombre;
+    const tamano = sel.options[sel.selectedIndex].dataset.tamano;
+    const existe = ordenItems.find(i => i.idProducto === idP);
+    if (existe) { existe.cantidad += qty; }
+    else { ordenItems.push({ idProducto: idP, nombre, tamano, cantidad: qty }); }
+    const badge = document.getElementById('capacidad-badge');
+    if (sel.value) {
+      badge.classList.remove('hidden');
+      if (capacidad <= 0) {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-red-100 text-red-700';
+        badge.textContent = 'Sin materia prima suficiente para producir';
+      } else if (capacidad <= 5) {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-yellow-100 text-yellow-700';
+        badge.textContent = `Capacidad actual: ${capacidad} unidades producibles`;
+      } else {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-green-100 text-green-700';
+        badge.textContent = `Capacidad actual: ${capacidad} unidades producibles`;
+      }
+    } else {
+      badge.classList.add('hidden');
+    }
 
-  const fnCambiar = modo === 'registro' ? 'cambiarCantidadOrden'  : 'cambiarCantidadEditar';
-  const fnQuitar  = modo === 'registro' ? 'quitarItemOrden'        : 'quitarItemEditar';
+    renderTabla('tablaOrdenBody', 'filaVaciaOrden', ordenItems, 'registro');
+    ocultarError('errorRegistro');
+  }
 
-  items.forEach((item, idx) => {
-    const tr = document.createElement('tr');
-    tr.className = 'fila-producto border-b border-gray-100 hover:bg-amber-50 transition';
-    tr.innerHTML = `
+  function enviarOrdenRegistro() {
+    if (ordenItems.length === 0) { mostrarError('errorRegistro', 'Agrega al menos un producto.'); return; }
+    document.getElementById('hiddenDetallesRegistro').value = JSON.stringify(ordenItems);
+    document.getElementById('formRegistrarOrden').submit();
+  }
+
+  /* ════════════════════════════════════════════════
+     EDITAR — carga datos vía fetch al abrir
+  ════════════════════════════════════════════════ */
+  async function abrirEditar(btn) {
+    const idOrden = parseInt(btn.dataset.id, 10);
+    const tsCreacion = parseInt(btn.dataset.tsCreacion, 10);
+
+    _tsCreacionEditar = tsCreacion;
+    _idOrdenEditando = idOrden;
+
+    // Resetear UI
+    document.getElementById('editOrdenNum').textContent = '#' + idOrden;
+    document.getElementById('formEditarOrden').action = `/produccion/editar/${idOrden}`;
+    ocultarError('errorEditar');
+    editarItems = [];
+
+    // Mostrar spinner, ocultar contenido
+    document.getElementById('editarLoading').classList.remove('hidden');
+    document.getElementById('editarContenido').classList.add('hidden');
+
+    abrirModal('modalEditar');
+
+    // ── FETCH de los datos actuales de la orden ──
+    try {
+      const resp = await fetch(`/produccion/detalle-json/${idOrden}`);
+      const data = await resp.json();
+
+      if (data.ok && data.items && data.items.length > 0) {
+        editarItems = data.items.map(it => ({
+          idProducto: it.idProducto,
+          nombre: it.nombre,
+          tamano: it.tamano,
+          cantidad: it.cantidad,
+        }));
+      } else if (!data.ok) {
+        console.error('Error al cargar detalle:', data.error);
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+    }
+
+    // Renderizar tabla con los datos cargados
+    renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar');
+
+    // Mostrar contenido, ocultar spinner
+    document.getElementById('editarLoading').classList.add('hidden');
+    document.getElementById('editarContenido').classList.remove('hidden');
+
+    // Iniciar timer
+    if (timerInterval) clearInterval(timerInterval);
+    actualizarTimerDisplay(idOrden);
+    timerInterval = setInterval(() => actualizarTimerDisplay(idOrden), 1000);
+  }
+
+  function actualizarTimerDisplay(idOrden) {
+    const ahoraUnix = Math.floor(Date.now() / 1000);
+    const transcurridos = ahoraUnix - _tsCreacionEditar;
+    const restantes = 60 - transcurridos;
+    const el = document.getElementById('timerDisplay');
+
+    if (restantes <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      cerrarModal('modalEditar');
+      document.querySelectorAll('.btn-editar').forEach(b => {
+        if (parseInt(b.dataset.id, 10) === idOrden) b.style.display = 'none';
+      });
+      return;
+    }
+    el.textContent = restantes + 's';
+    el.style.color = restantes <= 15 ? '#fc8181' : '#fbd38d';
+  }
+
+  function agregarProductoEditar() {
+    const sel = document.getElementById('editSelProducto');
+    const qty = parseInt(document.getElementById('editInputCantidad').value, 10);
+    const capacidad = parseInt(sel.options[sel.selectedIndex].dataset.capacidad || '0', 10);
+
+    if (!sel.value) { mostrarError('errorEditar', 'Selecciona un producto.'); return; }
+    if (!qty || qty < 1) { mostrarError('errorEditar', 'La cantidad debe ser mayor a 0.'); return; }
+
+    const idP = parseInt(sel.value, 10);
+    const nombre = sel.options[sel.selectedIndex].dataset.nombre;
+    const tamano = sel.options[sel.selectedIndex].dataset.tamano;
+    const existe = editarItems.find(i => i.idProducto === idP);
+    if (existe) { existe.cantidad += qty; }
+    else { editarItems.push({ idProducto: idP, nombre, tamano, cantidad: qty }); }
+    const badge = document.getElementById('capacidad-badge-edit');
+    if (sel.value) {
+      badge.classList.remove('hidden');
+      if (capacidad <= 0) {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-red-100 text-red-700';
+        badge.textContent = 'Sin materia prima suficiente para producir';
+      } else if (capacidad <= 5) {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-yellow-100 text-yellow-700';
+        badge.textContent = `Capacidad actual: ${capacidad} unidades producibles`;
+      } else {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-green-100 text-green-700';
+        badge.textContent = `Capacidad actual: ${capacidad} unidades producibles`;
+      }
+    } else {
+      badge.classList.add('hidden');
+    }
+
+    renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar');
+    ocultarError('errorEditar');
+  }
+
+  function enviarOrdenEditar() {
+    if (editarItems.length === 0) { mostrarError('errorEditar', 'Agrega al menos un producto.'); return; }
+    document.getElementById('hiddenDetallesEditar').value = JSON.stringify(editarItems);
+    document.getElementById('formEditarOrden').submit();
+  }
+
+  /* ════════════════════════════════════════════════
+     VER DETALLE
+  ════════════════════════════════════════════════ */
+  function abrirVer(idOrden) {
+    document.getElementById('verTitulo').textContent = 'DETALLE ORDEN #' + idOrden;
+    document.getElementById('verContenido').innerHTML =
+      '<p class="text-center text-gray-400 py-6">Cargando...</p>';
+    abrirModal('modalVer');
+    fetch(`/produccion/ver/${idOrden}`)
+      .then(r => r.text())
+      .then(html => { document.getElementById('verContenido').innerHTML = html; })
+      .catch(() => {
+        document.getElementById('verContenido').innerHTML =
+          '<p class="text-red-500 text-sm text-center py-6">Error al cargar el detalle.</p>';
+      });
+  }
+
+  /* ════════════════════════════════════════════════
+     CANCELAR
+  ════════════════════════════════════════════════ */
+  function abrirCancelar(idOrden) {
+    document.getElementById('cancelarMensaje').textContent =
+      `¿Confirmas cancelar la orden #${idOrden}? Esta acción no se puede deshacer.`;
+    document.getElementById('formCancelar').action = `/produccion/cancelar/${idOrden}`;
+    abrirModal('modalCancelar');
+  }
+
+  /* ════════════════════════════════════════════════
+     RENDER TABLA DE PRODUCTOS
+  ════════════════════════════════════════════════ */
+  function renderTabla(tbodyId, filaVaciaId, items, modo) {
+    const tbody = document.getElementById(tbodyId);
+    const filaVacia = document.getElementById(filaVaciaId);
+    tbody.querySelectorAll('tr.fila-producto').forEach(r => r.remove());
+
+    if (items.length === 0) { filaVacia.classList.remove('hidden'); return; }
+    filaVacia.classList.add('hidden');
+
+    const fnCambiar = modo === 'registro' ? 'cambiarCantidadOrden' : 'cambiarCantidadEditar';
+    const fnQuitar = modo === 'registro' ? 'quitarItemOrden' : 'quitarItemEditar';
+
+    items.forEach((item, idx) => {
+      const tr = document.createElement('tr');
+      tr.className = 'fila-producto border-b border-gray-100 hover:bg-amber-50 transition';
+      tr.innerHTML = `
       <td class="px-4 py-2 font-semibold text-gray-800">${item.nombre}</td>
       <td class="px-4 py-2 text-gray-600">${item.tamano}</td>
       <td class="px-4 py-2 text-center">
@@ -886,46 +1036,80 @@ function renderTabla(tbodyId, filaVaciaId, items, modo) {
           </svg>
         </button>
       </td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function cambiarCantidadOrden(idx, d)  { ordenItems[idx].cantidad  = Math.max(1, ordenItems[idx].cantidad  + d); renderTabla('tablaOrdenBody',  'filaVaciaOrden',  ordenItems,  'registro'); }
-function cambiarCantidadEditar(idx, d) { editarItems[idx].cantidad = Math.max(1, editarItems[idx].cantidad + d); renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar'); }
-function quitarItemOrden(idx)          { ordenItems.splice(idx, 1);  renderTabla('tablaOrdenBody',  'filaVaciaOrden',  ordenItems,  'registro'); }
-function quitarItemEditar(idx)         { editarItems.splice(idx, 1); renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar'); }
-
-function mostrarError(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.classList.remove('hidden'); }
-function ocultarError(id)      { document.getElementById(id).classList.add('hidden'); }
-
-/* ════════════════════════════════════════════════
-   INIT
-════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', function () {
-
-  // ── Paginación Desktop ──
-  const tbodyDesktop = document.getElementById('tabla-ordenes-body');
-  if (tbodyDesktop) {
-    crearPaginacion({
-      contenedorItems:  tbodyDesktop,
-      itemsSelector:    '.orden-row',
-      contenedorPagId:  'pag-ordenes-desktop',
+      tbody.appendChild(tr);
     });
   }
 
-  // ── Paginación Cards Móvil ──
-  const cardsContenedor = document.getElementById('cards-ordenes');
-  if (cardsContenedor) {
-    crearPaginacion({
-      contenedorItems:  cardsContenedor,
-      itemsSelector:    '.orden-card',
-      contenedorPagId:  'pag-ordenes-cards',
-    });
-  }
+  function cambiarCantidadOrden(idx, d) { ordenItems[idx].cantidad = Math.max(1, ordenItems[idx].cantidad + d); renderTabla('tablaOrdenBody', 'filaVaciaOrden', ordenItems, 'registro'); }
+  function cambiarCantidadEditar(idx, d) { editarItems[idx].cantidad = Math.max(1, editarItems[idx].cantidad + d); renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar'); }
+  function quitarItemOrden(idx) { ordenItems.splice(idx, 1); renderTabla('tablaOrdenBody', 'filaVaciaOrden', ordenItems, 'registro'); }
+  function quitarItemEditar(idx) { editarItems.splice(idx, 1); renderTabla('tablaEditarBody', 'filaVaciaEditar', editarItems, 'editar'); }
 
-  // ── Reapertura de modales por error de sesión ──
-  {% if form_error and form_error.modal == 'registro' %}
-  mostrarError('errorRegistro', {{ form_error.mensaje | tojson }});
+  function mostrarError(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.classList.remove('hidden'); }
+  function ocultarError(id) { document.getElementById(id).classList.add('hidden'); }
+
+  /* ════════════════════════════════════════════════
+     INIT
+  ════════════════════════════════════════════════ */
+  document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Paginación Desktop ──
+    const tbodyDesktop = document.getElementById('tabla-ordenes-body');
+    if (tbodyDesktop) {
+      crearPaginacion({
+        contenedorItems: tbodyDesktop,
+        itemsSelector: '.orden-row',
+        contenedorPagId: 'pag-ordenes-desktop',
+      });
+    }
+
+    // ── Paginación Cards Móvil ──
+    const cardsContenedor = document.getElementById('cards-ordenes');
+    if (cardsContenedor) {
+      crearPaginacion({
+        contenedorItems: cardsContenedor,
+        itemsSelector: '.orden-card',
+        contenedorPagId: 'pag-ordenes-cards',
+      });
+    }
+
+    document.getElementById('selProducto')?.addEventListener('change', function () {
+      const badge = document.getElementById('capacidad-badge');
+      const cap = parseInt(this.options[this.selectedIndex]?.dataset.capacidad || '0', 10);
+      if (!this.value) { badge.classList.add('hidden'); return; }
+      badge.classList.remove('hidden');
+      if (cap <= 0) {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-red-100 text-red-700';
+        badge.textContent = 'Sin materia prima suficiente para producir';
+      } else if (cap <= 5) {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-yellow-100 text-yellow-700';
+        badge.textContent = `Capacidad actual: ${cap} unidades producibles`;
+      } else {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-green-100 text-green-700';
+        badge.textContent = `Capacidad actual: ${cap} unidades producibles`;
+      }
+    });
+
+    document.getElementById('editSelProducto')?.addEventListener('change', function () {
+      const badge = document.getElementById('capacidad-badge-edit');
+      const cap = parseInt(this.options[this.selectedIndex]?.dataset.capacidad || '0', 10);
+      if (!this.value) { badge.classList.add('hidden'); return; }
+      badge.classList.remove('hidden');
+      if (cap <= 0) {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-red-100 text-red-700';
+        badge.textContent = 'Sin materia prima suficiente para producir';
+      } else if (cap <= 5) {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-yellow-100 text-yellow-700';
+        badge.textContent = `Capacidad actual: ${cap} unidades producibles`;
+      } else {
+        badge.className = 'mt-1 text-xs font-semibold px-2 py-1 rounded-lg bg-green-100 text-green-700';
+        badge.textContent = `Capacidad actual: ${cap} unidades producibles`;
+      }
+    });
+
+    // ── Reapertura de modales por error de sesión ──
+    {% if form_error and form_error.modal == 'registro' %}
+    mostrarError('errorRegistro', {{ form_error.mensaje | tojson }});
   {% if form_error.detalles %}
   ordenItems = {{ form_error.detalles | tojson }};
   renderTabla('tablaOrdenBody', 'filaVaciaOrden', ordenItems, 'registro');

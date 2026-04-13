@@ -25,7 +25,8 @@ def _texto_resultado(resultado):
 
 
 def _productos_disponibles():
-    """Productos activos con receta activa."""
+    """Productos activos con receta activa, con capacidad de producción."""
+    from productos.routes import _capacidad_produccion   # import cruzado
     rows = db.session.execute(
         text(
             "CALL sp_listar_productos(:nombre,:precio_ini,:precio_fin,:estatus,:tamano,:estatus_receta)"
@@ -39,7 +40,12 @@ def _productos_disponibles():
             "estatus_receta": "1",
         },
     ).mappings().all()
-    return rows
+
+    resultado = []
+    for p in rows:
+        cap = _capacidad_produccion(p["idProducto"])
+        resultado.append({**p, "capacidad_produccion": cap})
+    return resultado
 
 
 def _detalle_orden(id_orden):

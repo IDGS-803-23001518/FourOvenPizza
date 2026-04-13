@@ -40,6 +40,7 @@ def _texto_resultado(resultado):
 
 def _productos_disponibles_venta():
     """Productos activos con receta activa (para punto de venta)."""
+    from productos.routes import _capacidad_produccion
     rows = db.session.execute(
         text(
             "CALL sp_listar_productos(:nombre,:precio_ini,:precio_fin,:estatus,:tamano,:estatus_receta)"
@@ -53,7 +54,12 @@ def _productos_disponibles_venta():
             "estatus_receta": "1",
         },
     ).mappings().all()
-    return rows
+
+    resultado = []
+    for p in rows:
+        cap = _capacidad_produccion(p["idProducto"])
+        resultado.append({**p, "capacidad_produccion": cap})
+    return resultado
 
 
 def _ventas_hoy():

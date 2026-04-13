@@ -366,3 +366,37 @@ class CajaMovimientos(db.Model):
     fecha = db.Column(db.DateTime, default=datetime.datetime.now)
 
     usuario = db.relationship('Usuarios', back_populates='caja_movimientos')
+
+# ================================================================
+# AGREGAR ESTAS CLASES AL ARCHIVO models.py EXISTENTE
+# ================================================================
+
+class MiniRecetas(db.Model):
+    __tablename__ = "miniRecetas"
+    idMiniReceta  = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nombre        = db.Column(db.String(100), nullable=False, unique=True)
+    descripcion   = db.Column(db.String(200), nullable=True)
+    estatus       = db.Column(db.Boolean, nullable=False, default=True)
+    fechaCreacion = db.Column(db.DateTime, default=datetime.datetime.now)
+
+    detalles = db.relationship(
+        'DetalleMiniReceta',
+        back_populates='mini_receta',
+        cascade='all, delete-orphan',
+        lazy='select',
+    )
+
+
+class DetalleMiniReceta(db.Model):
+    __tablename__ = "detalleMiniReceta"
+    idDetalleMR  = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    idMiniReceta = db.Column(db.Integer, db.ForeignKey('miniRecetas.idMiniReceta'), nullable=False)
+    idMateriaP   = db.Column(db.Integer, db.ForeignKey('materiasPrimas.idMateriaP'), nullable=False)
+    cantidad     = db.Column(db.Numeric(10, 2), nullable=False)
+
+    mini_receta  = db.relationship('MiniRecetas', back_populates='detalles')
+    materia_prima = db.relationship('MateriasPrimas', backref='detalles_mini_receta')
+
+    __table_args__ = (
+        db.UniqueConstraint('idMiniReceta', 'idMateriaP', name='uk_mini_receta_materia'),
+    )
