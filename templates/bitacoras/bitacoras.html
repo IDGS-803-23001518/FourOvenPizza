@@ -18,36 +18,28 @@
 
 <div class="container mx-auto px-4 sm:px-6 max-w-7xl mb-6">
 
-    <!-- Tabs -->
+    {# ── Tabs ── #}
     <div class="flex gap-2 mb-0">
-        <a href="{{ url_for('bitacoras.index', tab='accesos') }}"
+        {% for t, label in [('accesos','Accesos'), ('eventos','Eventos'), ('sistema','Sistema')] %}
+        <a href="{{ url_for('bitacoras.index', tab=t) }}"
             class="px-5 py-2.5 rounded-t-xl text-sm font-semibold transition-all duration-200
-                   {% if tab == 'accesos' %}text-white{% else %}bg-white text-gray-500 hover:text-gray-700{% endif %}"
-            style="{% if tab == 'accesos' %}background-color: #38230f;{% endif %}">
-            Accesos
+                   {% if tab == t %}text-white{% else %}bg-white text-gray-500 hover:text-gray-700{% endif %}"
+            style="{% if tab == t %}background-color: #38230f;{% endif %}">
+            {{ label }}
         </a>
-        <a href="{{ url_for('bitacoras.index', tab='eventos') }}"
-            class="px-5 py-2.5 rounded-t-xl text-sm font-semibold transition-all duration-200
-                   {% if tab == 'eventos' %}text-white{% else %}bg-white text-gray-500 hover:text-gray-700{% endif %}"
-            style="{% if tab == 'eventos' %}background-color: #38230f;{% endif %}">
-            Eventos
-        </a>
-        <a href="{{ url_for('bitacoras.index', tab='sistema') }}"
-            class="px-5 py-2.5 rounded-t-xl text-sm font-semibold transition-all duration-200
-                   {% if tab == 'sistema' %}text-white{% else %}bg-white text-gray-500 hover:text-gray-700{% endif %}"
-            style="{% if tab == 'sistema' %}background-color: #38230f;{% endif %}">
-            Sistema
-        </a>
+        {% endfor %}
     </div>
 
     <div class="bg-white rounded-b-2xl rounded-tr-2xl shadow-md overflow-hidden">
 
+        {# ── Formulario de filtros ── #}
         <form method="GET" action="{{ url_for('bitacoras.index') }}" id="bitacorasFiltrosForm">
             <input type="hidden" name="tab" value="{{ tab }}">
 
             <div class="px-5 py-4 border-b border-gray-100" style="background-color: #f9f5f0;">
                 <div class="flex flex-wrap gap-3 items-end">
 
+                    {# Rango de fechas — siempre visible #}
                     <div class="flex flex-col min-w-[140px]">
                         <label class="text-xs font-semibold text-gray-600 mb-1">Desde</label>
                         <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}"
@@ -59,6 +51,7 @@
                             class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
                     </div>
 
+                    {# ── Filtros: Accesos ── #}
                     {% if tab == 'accesos' %}
                     <div class="flex flex-col min-w-[150px]">
                         <label class="text-xs font-semibold text-gray-600 mb-1">Usuario</label>
@@ -66,7 +59,7 @@
                             placeholder="Buscar usuario..."
                             class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
                     </div>
-                    <div class="flex flex-col min-w-[140px]">
+                    <div class="flex flex-col min-w-[160px]">
                         <label class="text-xs font-semibold text-gray-600 mb-1">Evento</label>
                         <select name="evento"
                             class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
@@ -76,7 +69,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="flex flex-col min-w-[160px]">
+                    <div class="flex flex-col min-w-[200px]">
                         <label class="text-xs font-semibold text-gray-600 mb-1">Resultado</label>
                         <select name="resultado"
                             class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
@@ -88,6 +81,7 @@
                     </div>
                     {% endif %}
 
+                    {# ── Filtros: Eventos ── #}
                     {% if tab == 'eventos' %}
                     <div class="flex flex-col min-w-[150px]">
                         <label class="text-xs font-semibold text-gray-600 mb-1">Usuario</label>
@@ -95,7 +89,7 @@
                             placeholder="Buscar usuario..."
                             class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
                     </div>
-                    <div class="flex flex-col min-w-[130px]">
+                    <div class="flex flex-col min-w-[180px]">
                         <label class="text-xs font-semibold text-gray-600 mb-1">Módulo</label>
                         <select name="modulo"
                             class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
@@ -105,7 +99,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="flex flex-col min-w-[150px]">
+                    <div class="flex flex-col min-w-[190px]">
                         <label class="text-xs font-semibold text-gray-600 mb-1">Acción</label>
                         <select name="accion"
                             class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
@@ -117,6 +111,7 @@
                     </div>
                     {% endif %}
 
+                    {# ── Filtros: Sistema ── #}
                     {% if tab == 'sistema' %}
                     <div class="flex flex-col min-w-[120px]">
                         <label class="text-xs font-semibold text-gray-600 mb-1">Nivel</label>
@@ -128,12 +123,12 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="flex flex-col min-w-[130px]">
+                    <div class="flex flex-col min-w-[180px]">
                         <label class="text-xs font-semibold text-gray-600 mb-1">Módulo</label>
                         <select name="modulo_sis"
                             class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
                             <option value="">Todos</option>
-                            {% for op in modulos_opciones %}
+                            {% for op in modulos_sis_opciones %}
                             <option value="{{ op }}" {% if filtro_modulo_sis == op %}selected{% endif %}>{{ op }}</option>
                             {% endfor %}
                         </select>
@@ -146,6 +141,7 @@
                     </div>
                     {% endif %}
 
+                    {# Botones #}
                     <div class="flex gap-2 items-end">
                         <button type="submit"
                             class="text-white font-semibold px-4 py-1.5 rounded-lg text-xs transition hover:brightness-110"
@@ -158,10 +154,14 @@
                             Limpiar
                         </a>
                     </div>
+
                 </div>
             </div>
         </form>
 
+        {# ══════════════════════════════════════════════════════════
+           Tab: ACCESOS
+        ══════════════════════════════════════════════════════════ #}
         {% if tab == 'accesos' %}
         <div class="overflow-x-auto">
             <table class="w-full text-sm text-left">
@@ -184,8 +184,8 @@
                         <td class="px-4 py-3 font-semibold text-gray-800 text-xs">{{ reg.nombreUsuario }}</td>
                         <td class="px-4 py-3 text-xs">
                             <span class="px-2 py-1 rounded-full text-xs font-semibold
-                                {% if 'LOGIN' in reg.evento and 'BLOQUEADO' not in reg.evento %}bg-blue-100 text-blue-700
-                                {% elif 'LOGOUT' in reg.evento %}bg-gray-100 text-gray-600
+                                {% if reg.evento == 'LOGIN' %}bg-blue-100 text-blue-700
+                                {% elif reg.evento == 'LOGOUT' or reg.evento == 'LOGOUT_INACTIVIDAD' %}bg-gray-100 text-gray-600
                                 {% else %}bg-orange-100 text-orange-700{% endif %}">
                                 {{ reg.evento }}
                             </span>
@@ -215,6 +215,9 @@
         </div>
         {% set pag = accesos_pag %}
 
+        {# ══════════════════════════════════════════════════════════
+           Tab: EVENTOS
+        ══════════════════════════════════════════════════════════ #}
         {% elif tab == 'eventos' %}
         <div class="overflow-x-auto">
             <table class="w-full text-sm text-left">
@@ -236,21 +239,57 @@
                         </td>
                         <td class="px-4 py-3 font-semibold text-gray-800 text-xs">{{ reg.nombreUsuario }}</td>
                         <td class="px-4 py-3 text-xs">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                            {# Color por grupo de módulo #}
+                            {% if reg.modulo in ['Usuarios', 'Roles'] %}
+                                {% set mod_cls = 'bg-indigo-100 text-indigo-700' %}
+                            {% elif reg.modulo in ['Productos', 'Recetas', 'DetalleReceta', 'MiniRecetas'] %}
+                                {% set mod_cls = 'bg-emerald-100 text-emerald-700' %}
+                            {% elif reg.modulo in ['Compras', 'MateriasPrimas', 'UnidadesMedida', 'Proveedores'] %}
+                                {% set mod_cls = 'bg-sky-100 text-sky-700' %}
+                            {% elif reg.modulo in ['OrdenesProduccion', 'Produccion'] %}
+                                {% set mod_cls = 'bg-orange-100 text-orange-700' %}
+                            {% elif reg.modulo in ['Ventas', 'CorteCaja'] %}
+                                {% set mod_cls = 'bg-pink-100 text-pink-700' %}
+                            {% elif reg.modulo == 'Mermas' %}
+                                {% set mod_cls = 'bg-red-100 text-red-700' %}
+                            {% else %}
+                                {% set mod_cls = 'bg-purple-100 text-purple-700' %}
+                            {% endif %}
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold {{ mod_cls }}">
                                 {{ reg.modulo }}
                             </span>
                         </td>
                         <td class="px-4 py-3 text-xs">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold
-                                {% if reg.accion == 'CREAR' %}bg-green-100 text-green-700
-                                {% elif reg.accion == 'EDITAR' %}bg-blue-100 text-blue-700
-                                {% elif reg.accion == 'ACTIVAR' %}bg-teal-100 text-teal-700
-                                {% elif reg.accion == 'DESACTIVAR' %}bg-red-100 text-red-700
-                                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                            {# Color por tipo de acción #}
+                            {% if reg.accion in ['CREAR', 'CREAR_ORDEN_PRODUCCION'] %}
+                                {% set acc_cls = 'bg-green-100 text-green-700' %}
+                            {% elif reg.accion == 'EDITAR' %}
+                                {% set acc_cls = 'bg-blue-100 text-blue-700' %}
+                            {% elif reg.accion in ['ACTIVAR'] %}
+                                {% set acc_cls = 'bg-teal-100 text-teal-700' %}
+                            {% elif reg.accion in ['DESACTIVAR', 'AUTO_DESACTIVAR'] %}
+                                {% set acc_cls = 'bg-red-100 text-red-700' %}
+                            {% elif reg.accion in ['ELIMINAR'] %}
+                                {% set acc_cls = 'bg-rose-100 text-rose-700' %}
+                            {% elif reg.accion in ['COMPLETADO', 'TERMINADA', 'TERMINAR', 'CONFIRMAR'] %}
+                                {% set acc_cls = 'bg-emerald-100 text-emerald-700' %}
+                            {% elif reg.accion in ['CANCELADO', 'CANCELAR', 'CANCELAR_CIERRE_DIA'] %}
+                                {% set acc_cls = 'bg-orange-100 text-orange-700' %}
+                            {% elif reg.accion == 'CORTE' %}
+                                {% set acc_cls = 'bg-violet-100 text-violet-700' %}
+                            {% elif reg.accion == 'CAMBIO_CONTRASENIA' %}
+                                {% set acc_cls = 'bg-yellow-100 text-yellow-700' %}
+                            {% else %}
+                                {% set acc_cls = 'bg-gray-100 text-gray-600' %}
+                            {% endif %}
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold {{ acc_cls }}">
                                 {{ reg.accion }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-gray-600 text-xs font-mono">{{ reg.referencia }}</td>
+                        <td class="px-4 py-3 text-gray-600 text-xs font-mono max-w-[240px] truncate"
+                            title="{{ reg.referencia }}">
+                            {{ reg.referencia }}
+                        </td>
                         <td class="px-4 py-3 text-gray-500 text-xs font-mono">{{ reg.ip }}</td>
                     </tr>
                     {% else %}
@@ -265,6 +304,9 @@
         </div>
         {% set pag = eventos_pag %}
 
+        {# ══════════════════════════════════════════════════════════
+           Tab: SISTEMA
+        ══════════════════════════════════════════════════════════ #}
         {% elif tab == 'sistema' %}
         <div class="overflow-x-auto">
             <table class="w-full text-sm text-left">
@@ -293,7 +335,23 @@
                             </span>
                         </td>
                         <td class="px-4 py-3 text-xs">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                            {# Misma paleta de colores que en Eventos #}
+                            {% if reg.modulo in ['Usuarios', 'Roles'] %}
+                                {% set mod_cls = 'bg-indigo-100 text-indigo-700' %}
+                            {% elif reg.modulo in ['Productos', 'Recetas', 'DetalleReceta', 'MiniRecetas'] %}
+                                {% set mod_cls = 'bg-emerald-100 text-emerald-700' %}
+                            {% elif reg.modulo in ['Compras', 'MateriasPrimas', 'UnidadesMedida', 'Proveedores'] %}
+                                {% set mod_cls = 'bg-sky-100 text-sky-700' %}
+                            {% elif reg.modulo in ['OrdenesProduccion', 'Produccion'] %}
+                                {% set mod_cls = 'bg-orange-100 text-orange-700' %}
+                            {% elif reg.modulo in ['Ventas', 'CorteCaja'] %}
+                                {% set mod_cls = 'bg-pink-100 text-pink-700' %}
+                            {% elif reg.modulo == 'Mermas' %}
+                                {% set mod_cls = 'bg-red-100 text-red-700' %}
+                            {% else %}
+                                {% set mod_cls = 'bg-purple-100 text-purple-700' %}
+                            {% endif %}
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold {{ mod_cls }}">
                                 {{ reg.modulo }}
                             </span>
                         </td>
@@ -317,6 +375,7 @@
         {% set pag = sistema_pag %}
         {% endif %}
 
+        {# ── Paginación ── #}
         {% if pag and pag.pages > 1 %}
         <div class="flex items-center justify-between px-5 py-4 border-t border-gray-100">
             <p class="text-xs text-gray-500">
@@ -372,31 +431,30 @@
         </div>
         {% endif %}
 
-    </div>
-</div>
+    </div>{# /card #}
+</div>{# /container #}
+
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const filtrosForm = document.getElementById('bitacorasFiltrosForm');
-        if (!filtrosForm) return;
+document.addEventListener('DOMContentLoaded', function () {
+    const form   = document.getElementById('bitacorasFiltrosForm');
+    if (!form) return;
 
-        const campos = filtrosForm.querySelectorAll('input[name]:not([type="hidden"]), select[name]');
-        let timer = null;
+    const campos = form.querySelectorAll('input[name]:not([type="hidden"]), select[name]');
+    let timer    = null;
 
-        function enviarFiltros() {
-            filtrosForm.submit();
+    function enviar() { form.submit(); }
+
+    campos.forEach(function (campo) {
+        if (campo.type === 'text' || campo.type === 'date') {
+            campo.addEventListener('input', function () {
+                clearTimeout(timer);
+                timer = setTimeout(enviar, 400);
+            });
+            campo.addEventListener('change', enviar);
+        } else {
+            campo.addEventListener('change', enviar);
         }
-
-        campos.forEach((campo) => {
-            if (campo.type === 'text' || campo.type === 'date') {
-                campo.addEventListener('input', function () {
-                    clearTimeout(timer);
-                    timer = setTimeout(enviarFiltros, 400);
-                });
-                campo.addEventListener('change', enviarFiltros);
-            } else {
-                campo.addEventListener('change', enviarFiltros);
-            }
-        });
     });
+});
 </script>
 {% endblock %}
