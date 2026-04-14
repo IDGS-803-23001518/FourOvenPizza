@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>FourOvenPizza - {% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="{{url_for('static',filename='dist/output.css')}}">
     <style>
@@ -35,7 +36,7 @@
             .menu-text {
                 font-size: 0.9rem;
             }
-            
+
             .submenu-text {
                 font-size: 0.8rem;
             }
@@ -49,35 +50,35 @@
             body:not(.sidebar-closed) main {
                 margin-left: 288px;
             }
-            
+
             body.sidebar-closed main {
                 margin-left: 0;
             }
-            
+
             body:not(.sidebar-closed) .sidebar-toggle-button {
                 margin-left: 288px;
             }
-            
+
             body.sidebar-closed .sidebar-toggle-button {
                 margin-left: 0;
             }
-            
+
             #drawer-navigation {
                 transition: transform 0.3s ease-in-out;
             }
-            
+
             body:not(.sidebar-closed) #drawer-navigation {
                 transform: translateX(0) !important;
             }
-            
+
             body.sidebar-closed #drawer-navigation {
                 transform: translateX(-100%) !important;
             }
-            
+
             [drawer-backdrop] {
                 display: none !important;
             }
-            
+
             main {
                 position: relative;
                 z-index: 1;
@@ -102,11 +103,11 @@
                 padding-left: 0.75rem;
                 padding-right: 0.75rem;
             }
-            
+
             .sidebar-toggle-button {
                 margin-left: 0 !important;
             }
-            
+
             #drawer-navigation.open-mobile {
                 transform: translateX(0) !important;
             }
@@ -120,11 +121,21 @@
             transform: scale(0.98);
         }
 
-        .sidebar-separator {
-            border-top: 1px solid rgba(242, 159, 5, 0.3);
-            margin: 0.75rem 0;
+        /* Separador de sección con etiqueta */
+        .sidebar-section-label {
+            padding: 0.5rem 0.75rem 0.25rem;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: rgba(242, 159, 5, 0.55);
         }
-        
+
+        .sidebar-separator {
+            border-top: 1px solid rgba(242, 159, 5, 0.2);
+            margin: 0.5rem 0.5rem;
+        }
+
         .sidebar-toggle-button {
             transition: margin-left 0.3s ease-in-out;
         }
@@ -137,10 +148,8 @@
     <div class="fixed top-0 left-0 z-30 h-16 flex items-center sidebar-toggle-button">
         <button type="button" id="sidebar-toggle-btn"
             class="inline-flex items-center justify-center p-3 ml-4 text-white bg-[#38230f] rounded-xl hover:bg-[#4a3a2a] focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition-all duration-300 shadow-lg hover:shadow-xl">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16">
-                </path>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
         </button>
     </div>
@@ -149,6 +158,7 @@
         class="fixed top-0 left-0 z-30 w-72 h-full p-4 overflow-y-auto sidebar-gradient border-r border-[#f29f05] shadow-2xl no-scrollbar"
         tabindex="-1" aria-labelledby="drawer-navigation-label">
 
+        <!-- Logo -->
         <div class="border-b border-[#f29f05] pb-3 mb-3 flex items-center justify-between">
             <div class="flex items-center space-x-2">
                 <div class="bg-white p-1.5 rounded-xl shadow-lg">
@@ -162,8 +172,7 @@
             </div>
             <button type="button" id="sidebar-hide-btn"
                 class="text-gray-300 bg-transparent hover:bg-white hover:bg-opacity-10 rounded-lg w-7 h-7 flex items-center justify-center transition-all duration-300">
-                <svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    fill="none" viewBox="0 0 24 24">
+                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M6 18 17.94 6M18 18 6.06 6" />
                 </svg>
@@ -171,10 +180,13 @@
         </div>
 
         <div class="py-1 overflow-y-visible h-[calc(100%-80px)] no-scrollbar">
-            <ul class="space-y-1 font-medium">
+            <ul class="space-y-0.5 font-medium">
+
+                <!-- INICIO -->
                 <li>
-                    <a href="/inicio"
+                    <a href="/dashboard"
                         class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Casa / Dashboard -->
                         <svg class="w-4 h-4 transition duration-75 group-hover:text-[#f29f05]" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -184,11 +196,17 @@
                     </a>
                 </li>
 
+                <!-- ── SECCIÓN: ADMINISTRACIÓN ── -->
+                <div class="sidebar-separator"></div>
+                <div class="sidebar-section-label">Administración</div>
+
+                <!-- Usuarios -->
                 <li>
                     <button type="button"
                         class="flex items-center w-full justify-between px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text"
                         aria-controls="Autentificación/usuarios" data-collapse-toggle="Autentificación/usuarios">
                         <div class="flex items-center">
+                            <!-- Silueta de personas -->
                             <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -212,148 +230,74 @@
                     </ul>
                 </li>
 
+                <!-- Proveedores -->
                 <li>
                     <a href="/proveedores"
-                        class="flex items-center justify-between px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
-                        <div class="flex items-center">
-                            <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
-                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            <span class="flex-1 ms-3">Proveedores</span>
-                        </div>
+                        class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Edificio/empresa -->
+                        <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        <span class="ms-3">Proveedores</span>
                     </a>
                 </li>
 
+                <!-- ── SECCIÓN: INVENTARIO ── -->
+                <div class="sidebar-separator"></div>
+                <div class="sidebar-section-label">Inventario</div>
+
+                <!-- Compras -->
                 <li>
                     <a href="/compras"
-                        class="flex items-center justify-between px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
-                        <div class="flex items-center">
-                            <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
-                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                            </svg>
-                            <span class="flex-1 ms-3">Compras</span>
-                        </div>
-                    </a>
-                </li>
-
-                <li>
-                    <button type="button"
-                        class="flex items-center w-full justify-between px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text"
-                        aria-controls="materias-primas" data-collapse-toggle="materias-primas">
-                        <div class="flex items-center">
-                            <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
-                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                            </svg>
-                            <span class="flex-1 ms-3 text-left">Materias primas</span>
-                        </div>
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <ul id="materias-primas" class="hidden py-1 space-y-0.5 ps-10">
-                        <li>
-                            <a href="#"
-                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#f29f05] hover:bg-opacity-10 submenu-text">Materias
-                                primas</a>
-                        </li>
-                        <li>
-                            <a href="#"
-                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#f29f05] hover:bg-opacity-10 submenu-text">Unidades
-                                de medida</a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li>
-                    <a href="#"
                         class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Carrito de compras -->
                         <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                         </svg>
-                        <span class="ms-3">Productos</span>
+                        <span class="ms-3">Compras</span>
                     </a>
                 </li>
 
+                <!-- Unidades de medida -->
                 <li>
-                    <a href="#"
+                    <a href="/unidades-medida"
                         class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Regla / escala de medición -->
+                        <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M3 12h18M3 18h18" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 3v3M11 3v3M15 3v3M19 3v3" />
+                        </svg>
+                        <span class="ms-3">Unidades de medida</span>
+                    </a>
+                </li>
+
+                <!-- Materias primas -->
+                <li>
+                    <a href="/materiasPrimas"
+                        class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Grano / ingrediente crudo -->
                         <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01" />
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 8c-2 0-4 1-4 4s2 4 4 4 4-1 4-4-2-4-4-4z" />
                         </svg>
-                        <span class="ms-3">Prod. terminados</span>
+                        <span class="ms-3">Materias primas</span>
                     </a>
                 </li>
 
+                <!-- Mermas -->
                 <li>
-                    <button type="button"
-                        class="flex items-center w-full justify-between px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text"
-                        aria-controls="ventas" data-collapse-toggle="ventas">
-                        <div class="flex items-center">
-                            <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
-                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span class="flex-1 ms-3 text-left">Ventas</span>
-                        </div>
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <ul id="ventas" class="hidden py-1 space-y-0.5 ps-10">
-                        <li>
-                            <a href="#"
-                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#f29f05] hover:bg-opacity-10 submenu-text">Registrar</a>
-                        </li>
-                        <li>
-                            <a href="#"
-                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#f29f05] hover:bg-opacity-10 submenu-text">Consultar</a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li>
-                    <button type="button"
-                        class="flex items-center w-full justify-between px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text"
-                        aria-controls="finanzas" data-collapse-toggle="finanzas">
-                        <div class="flex items-center">
-                            <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
-                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                            <span class="flex-1 ms-3 text-left">Finanzas</span>
-                        </div>
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <ul id="finanzas" class="hidden py-1 space-y-0.5 ps-10">
-                        <li>
-                            <a href="#"
-                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#f29f05] hover:bg-opacity-10 submenu-text">Utilidades</a>
-                        </li>
-                        <li>
-                            <a href="#"
-                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#f29f05] hover:bg-opacity-10 submenu-text">Corte
-                                de caja</a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li>
-                    <a href="#"
+                    <a href="/mermas"
                         class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Basura / desperdicio -->
                         <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -363,11 +307,66 @@
                     </a>
                 </li>
 
+                <!-- ── SECCIÓN: PRODUCTOS ── -->
+                <div class="sidebar-separator"></div>
+                <div class="sidebar-section-label">Productos</div>
+
+                <!-- Productos (catálogo) -->
+                <li>
+                    <a href="/productos"
+                        class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Pizza / plato -->
+                        <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="9" stroke-linecap="round" stroke-linejoin="round" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l9 9-9 9-9-9 9-9z" />
+                            <circle cx="12" cy="12" r="2" />
+                        </svg>
+                        <span class="ms-3">Productos</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/mini-recetas"
+                        class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+
+                        <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 3v7a4 4 0 01-4 4v7" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 3v18" />
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M16 3a3 3 0 013 3v3h-6V6a3 3 0 013-3z" />
+                        </svg>
+
+                        <span class="ms-3">Mini Recetas</span>
+                    </a>
+                </li>
+
+                <!-- Productos terminados -->
+                <li>
+                    <a href="/productosTerminados"
+                        class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Caja / producto listo -->
+                        <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                        <span class="ms-3">Prod. terminados</span>
+                    </a>
+                </li>
+
+                <!-- ── SECCIÓN: OPERACIONES ── -->
+                <div class="sidebar-separator"></div>
+                <div class="sidebar-section-label">Operaciones</div>
+
+                <!-- Producción -->
                 <li>
                     <button type="button"
                         class="flex items-center w-full justify-between px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text"
                         aria-controls="produccion" data-collapse-toggle="produccion">
                         <div class="flex items-center">
+                            <!-- Engranaje / proceso -->
                             <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -383,19 +382,89 @@
                     </button>
                     <ul id="produccion" class="hidden py-1 space-y-0.5 ps-10">
                         <li>
-                            <a href="#"
-                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#f29f05] hover:bg-opacity-10 submenu-text">Ordenes</a>
+                            <a href="/produccion"
+                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#f29f05] hover:bg-opacity-10 submenu-text">Gestionar
+                                Órdenes</a>
                         </li>
                         <li>
-                            <a href="#"
-                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#29f05] hover:bg-opacity-10 submenu-text">Activas</a>
+                            <a href="/produccion/cocina"
+                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#f29f05] hover:bg-opacity-10 submenu-text">Órdenes
+                                en Cocina</a>
                         </li>
                     </ul>
                 </li>
 
+                <!-- Ventas -->
+                <li>
+                    <button type="button"
+                        class="flex items-center w-full justify-between px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text"
+                        aria-controls="ventas" data-collapse-toggle="ventas">
+                        <div class="flex items-center">
+                            <!-- Ticket / punto de venta -->
+                            <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
+                            <span class="flex-1 ms-3 text-left">Ventas</span>
+                        </div>
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <ul id="ventas" class="hidden py-1 space-y-0.5 ps-10">
+                        <li>
+                            <a href="/ventas"
+                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#f29f05] hover:bg-opacity-10 submenu-text">Registrar</a>
+                        </li>
+                        <li>
+                            <a href="/ventas/historial"
+                                class="block px-3 py-1.5 text-xs text-gray-300 rounded-lg hover:bg-[#f29f05] hover:bg-opacity-10 submenu-text">Historial</a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- ── SECCIÓN: FINANZAS ── -->
+                <div class="sidebar-separator"></div>
+                <div class="sidebar-section-label">Finanzas</div>
+
+                <!-- Corte de caja -->
+                <li>
+                    <a href="/caja/corte"
+                        class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Cajón de dinero -->
+                        <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span class="ms-3">Corte de caja</span>
+                    </a>
+                </li>
+
+                <!-- Finanzas -->
+                <li>
+                    <a href="/caja/utilidades"
+                        class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Gráfica de barras -->
+                        <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <span class="ms-3">Finanzas</span>
+                    </a>
+                </li>
+
+                <!-- ── SECCIÓN: SISTEMA ── -->
+                <div class="sidebar-separator"></div>
+                <div class="sidebar-section-label">Sistema</div>
+
+                <!-- Bitácoras -->
                 <li>
                     <a href="/bitacoras"
                         class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Escudo / registro de seguridad -->
                         <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -405,25 +474,25 @@
                     </a>
                 </li>
 
-                <div class="sidebar-separator"></div>
-
+                <!-- Cambiar contraseña -->
                 <li>
                     <a href="/cambiar-contraseña"
                         class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-[#f29f05] hover:bg-opacity-20 hover:text-[#f29f05] group menu-item-hover menu-text">
+                        <!-- Candado con llave -->
                         <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-[#f29f05]"
                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M15 7h.01M21 9a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                         <span class="ms-3">Cambiar Contraseña</span>
                     </a>
                 </li>
 
+                <!-- Cerrar sesión -->
                 <li>
                     <a href="{{ url_for('autentificacion.logout') }}"
                         class="flex items-center px-3 py-2 text-sm text-gray-200 rounded-xl hover:bg-red-500 hover:bg-opacity-20 hover:text-red-400 group menu-item-hover menu-text">
+                        <!-- Flecha de salida -->
                         <svg class="shrink-0 w-4 h-4 transition duration-75 group-hover:text-red-400"
                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -432,6 +501,7 @@
                         <span class="ms-3">Cerrar Sesión</span>
                     </a>
                 </li>
+
             </ul>
         </div>
     </div>
@@ -442,108 +512,81 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
-    
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const drawer = document.getElementById('drawer-navigation');
             const toggleBtn = document.getElementById('sidebar-toggle-btn');
             const hideBtn = document.getElementById('sidebar-hide-btn');
-            
+
             let isMobileOpen = false;
-            
+
             function updateDesktopSidebar() {
                 if (window.innerWidth >= 769) {
                     const isClosed = document.body.classList.contains('sidebar-closed');
-                    if (isClosed) {
-                        drawer.style.transform = 'translateX(-100%)';
-                    } else {
-                        drawer.style.transform = 'translateX(0)';
-                    }
+                    drawer.style.transform = isClosed ? 'translateX(-100%)' : 'translateX(0)';
                 }
             }
-            
+
             function openMobileSidebar() {
                 if (window.innerWidth < 769) {
                     drawer.classList.add('open-mobile');
                     isMobileOpen = true;
                 }
             }
-            
+
             function closeMobileSidebar() {
                 if (window.innerWidth < 769) {
                     drawer.classList.remove('open-mobile');
                     isMobileOpen = false;
                 }
             }
-            
-            function toggleMobileSidebar() {
-                if (isMobileOpen) {
-                    closeMobileSidebar();
-                } else {
-                    openMobileSidebar();
-                }
-            }
-            
+
             function openDesktopSidebar() {
                 if (window.innerWidth >= 769) {
                     document.body.classList.remove('sidebar-closed');
                     drawer.style.transform = 'translateX(0)';
                 }
             }
-            
+
             function closeDesktopSidebar() {
                 if (window.innerWidth >= 769) {
                     document.body.classList.add('sidebar-closed');
                     drawer.style.transform = 'translateX(-100%)';
                 }
             }
-            
-            function toggleDesktopSidebar() {
-                const isClosed = document.body.classList.contains('sidebar-closed');
-                if (isClosed) {
-                    openDesktopSidebar();
-                } else {
-                    closeDesktopSidebar();
-                }
-            }
-            
+
             if (toggleBtn) {
-                toggleBtn.addEventListener('click', function(e) {
+                toggleBtn.addEventListener('click', function (e) {
                     e.preventDefault();
                     if (window.innerWidth >= 769) {
-                        toggleDesktopSidebar();
+                        document.body.classList.contains('sidebar-closed')
+                            ? openDesktopSidebar()
+                            : closeDesktopSidebar();
                     } else {
-                        toggleMobileSidebar();
+                        isMobileOpen ? closeMobileSidebar() : openMobileSidebar();
                     }
                 });
             }
-            
+
             if (hideBtn) {
-                hideBtn.addEventListener('click', function(e) {
+                hideBtn.addEventListener('click', function (e) {
                     e.preventDefault();
-                    if (window.innerWidth >= 769) {
-                        closeDesktopSidebar();
-                    } else {
-                        closeMobileSidebar();
-                    }
+                    window.innerWidth >= 769 ? closeDesktopSidebar() : closeMobileSidebar();
                 });
             }
-            
-            document.addEventListener('click', function(e) {
+
+            document.addEventListener('click', function (e) {
                 if (window.innerWidth < 769 && isMobileOpen) {
                     if (!drawer.contains(e.target) && !toggleBtn.contains(e.target)) {
                         closeMobileSidebar();
                     }
                 }
             });
-            
-            window.addEventListener('resize', function() {
-                const isDesktop = window.innerWidth >= 769;
-                
-                if (isDesktop) {
-                    if (isMobileOpen) {
-                        closeMobileSidebar();
-                    }
+
+            window.addEventListener('resize', function () {
+                if (window.innerWidth >= 769) {
+                    if (isMobileOpen) closeMobileSidebar();
                     updateDesktopSidebar();
                 } else {
                     document.body.classList.remove('sidebar-closed');
@@ -551,16 +594,18 @@
                     closeMobileSidebar();
                 }
             });
-            
+
             if (window.innerWidth >= 769) {
                 document.body.classList.remove('sidebar-closed');
                 drawer.style.transform = 'translateX(0)';
-                if (drawer) {
-                    drawer.setAttribute('data-drawer-backdrop', 'false');
-                }
+                drawer.setAttribute('data-drawer-backdrop', 'false');
             } else {
                 closeMobileSidebar();
             }
+        });
+
+        window.addEventListener('beforeunload', function () {
+            navigator.sendBeacon('/autentificacion/logout-beacon');
         });
     </script>
 </body>

@@ -1,0 +1,959 @@
+{% extends layout %} 
+{% block container %}
+
+<!-- jsPDF + AutoTable -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- SheetJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
+  style="border-bottom: 3px solid #f29f05;">
+  <div class="container flex flex-wrap items-center justify-between mx-auto">
+    <div class="flex-1 flex justify-center">
+      <div class="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2 rounded-full">
+        <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Reporte de</span>
+        <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap" style="color:#f29f05;">Utilidades</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container mx-auto px-4 sm:px-6 max-w-7xl">
+
+  <!-- ══════════════ FILTROS Y EXPORTACION ══════════════ -->
+  <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
+    <div class="px-5 py-3 flex items-center justify-between" style="background-color:#38230f;">
+      <h2 class="text-sm font-bold text-white tracking-wide">FILTROS DEL REPORTE</h2>
+      <div class="flex gap-2">
+        <button onclick="exportarPDF()"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition hover:brightness-110 shadow"
+          style="background-color:#c0392b;" title="Descargar reporte en PDF">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          PDF
+        </button>
+        <button onclick="exportarExcel()"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition hover:brightness-110 shadow"
+          style="background-color:#1e7e34;" title="Descargar reporte en Excel">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Excel
+        </button>
+      </div>
+    </div>
+    <div class="p-4">
+      <form method="GET" action="{{ url_for('caja.utilidades') }}" class="flex flex-wrap gap-3 items-end">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">Desde</label>
+          <input type="date" name="fecha_ini" value="{{ filtros.fecha_ini }}"
+            class="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">Hasta</label>
+          <input type="date" name="fecha_fin" value="{{ filtros.fecha_fin }}"
+            class="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
+        </div>
+        <div class="flex gap-2">
+          <button type="submit"
+            class="px-5 py-2 rounded-xl text-white font-bold text-sm transition hover:brightness-110 shadow"
+            style="background-color:#38230f;">
+            Aplicar
+          </button>
+          <a href="{{ url_for('caja.utilidades') }}"
+            class="px-5 py-2 rounded-xl border border-gray-300 text-gray-600 font-semibold text-sm hover:bg-gray-100 transition">
+            Limpiar
+          </a>
+        </div>
+        <p class="text-xs text-gray-400 self-end ml-auto">
+          Periodo: <span class="font-semibold text-gray-600">{{ filtros.fecha_ini }} al {{ filtros.fecha_fin }}</span>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════ KPIs DE UTILIDAD NETA ══════════════ -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center col-span-2 sm:col-span-1 lg:col-span-1">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Ingresos</p>
+      <p class="text-lg font-black" style="color:#38230f;">${{ '%.2f' % (utilidad_neta.total_ingresos or 0) }}</p>
+      <div class="mt-1 h-1 rounded-full" style="background-color:#f29f05;"></div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Costo MP</p>
+      <p class="text-lg font-black text-red-500">${{ '%.2f' % (utilidad_neta.costo_materias_primas or 0) }}</p>
+      <div class="mt-1 h-1 rounded-full bg-red-200"></div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Perd. Mermas</p>
+      <p class="text-lg font-black text-orange-500">${{ '%.2f' % (utilidad_neta.perdida_mermas or 0) }}</p>
+      <div class="mt-1 h-1 rounded-full bg-orange-200"></div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Util. Bruta</p>
+      <p class="text-lg font-black text-blue-600">${{ '%.2f' % (utilidad_neta.utilidad_bruta or 0) }}</p>
+      <p class="text-[10px] font-semibold text-blue-400">{{ '%.1f' % (utilidad_neta.margen_bruto_pct or 0) }}%</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Util. Neta</p>
+      <p class="text-lg font-black {% if (utilidad_neta.utilidad_neta or 0) >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+        ${{ '%.2f' % (utilidad_neta.utilidad_neta or 0) }}
+      </p>
+      <p class="text-[10px] font-semibold {% if (utilidad_neta.margen_neto_pct or 0) >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
+        {{ '%.1f' % (utilidad_neta.margen_neto_pct or 0) }}%
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ GRAFICAS ══════════════ -->
+  <div class="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6 mb-6">
+
+    <!-- Tendencia de ingresos -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+      <div class="px-5 py-3 flex items-center justify-between" style="background-color:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide">TENDENCIA DE INGRESOS</h2>
+        <span class="text-xs text-amber-300 font-semibold">{{ ventas_por_dia | length }} dias</span>
+      </div>
+      <div class="p-5">
+        {% if ventas_por_dia %}
+        <div class="relative h-48">
+          <canvas id="graficaTendencia"></canvas>
+        </div>
+        {% else %}
+        <div class="h-48 flex flex-col items-center justify-center text-gray-400">
+          <p class="text-xs font-semibold">Sin datos en el periodo</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Metodo de pago -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+      <div class="px-5 py-3" style="background-color:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide">METODO DE PAGO</h2>
+      </div>
+      <div class="p-5">
+        {% if metodo_pago %}
+        <div class="relative h-48 flex items-center justify-center">
+          <canvas id="graficaPago" width="160" height="160"></canvas>
+        </div>
+        <div class="mt-3 space-y-2">
+          {% set total_pagos = metodo_pago | sum(attribute='total_ingresos') %}
+          {% for mp in metodo_pago %}
+          <div class="flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full shrink-0"
+                style="background-color: {% if loop.index == 1 %}#f29f05{% elif loop.index == 2 %}#38230f{% else %}#7a6040{% endif %};"></span>
+              <span class="font-semibold text-gray-700">{{ mp.metodoPago }}</span>
+            </div>
+            <div class="text-right">
+              <span class="font-black" style="color:#38230f;">${{ '%.2f' % mp.total_ingresos }}</span>
+              <span class="text-gray-400 ml-1">
+                ({{ '%.0f' % ((mp.total_ingresos / total_pagos * 100) if total_pagos > 0 else 0) }}%)
+              </span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="h-48 flex flex-col items-center justify-center text-gray-400">
+          <p class="text-xs font-semibold">Sin datos en el periodo</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ GRAFICA COSTOS VS INGRESOS (NUEVA) ══════════════ -->
+  {% if ventas_por_dia %}
+  <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
+    <div class="px-5 py-3 flex items-center justify-between" style="background-color:#38230f;">
+      <h2 class="text-sm font-bold text-white tracking-wide">RENTABILIDAD POR PRODUCTO - MARGEN BRUTO</h2>
+      <span class="text-xs text-amber-300 font-semibold">Precio venta vs Costo MP</span>
+    </div>
+    <div class="p-5">
+      <div class="relative h-56">
+        <canvas id="graficaRentabilidad"></canvas>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══════════════ PRODUCTOS MAS Y MENOS VENDIDOS ══════════════ -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+    <!-- Mas vendidos -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+      <div class="px-5 py-3 flex items-center justify-between" style="background-color:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide">MAS VENDIDOS</h2>
+        <span class="text-xs text-amber-300 font-semibold">Top {{ mas_vendidos | length }}</span>
+      </div>
+      <div class="divide-y divide-gray-100">
+        {% if mas_vendidos %}
+          {% set max_unidades = mas_vendidos[0].unidades_vendidas if mas_vendidos else 1 %}
+          {% for p in mas_vendidos[:10] %}
+          <div class="px-5 py-3 hover:bg-amber-50 transition"
+               style="animation: fadeUp .2s ease both; animation-delay: {{ loop.index0 * 0.03 }}s">
+            <div class="flex items-center justify-between gap-3 mb-1.5">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-xs font-black w-5 text-center shrink-0
+                  {% if loop.index == 1 %}text-amber-500
+                  {% elif loop.index == 2 %}text-gray-400
+                  {% elif loop.index == 3 %}text-orange-400
+                  {% else %}text-gray-300{% endif %}">
+                  {{ loop.index }}
+                </span>
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-gray-800 truncate">{{ p.nombre_producto }}</p>
+                  <p class="text-[10px] text-gray-400">{{ p.tamano }}</p>
+                </div>
+              </div>
+              <div class="text-right shrink-0">
+                <p class="text-xs font-black" style="color:#38230f;">{{ p.unidades_vendidas }} uds</p>
+                <p class="text-[10px] text-gray-400">${{ '%.2f' % p.ingresos }}</p>
+              </div>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-1.5">
+              <div class="h-1.5 rounded-full transition-all"
+                style="background-color:#f29f05;
+                       width: {{ ((p.unidades_vendidas / max_unidades) * 100) | int if max_unidades > 0 else 0 }}%;">
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center py-10 text-gray-400 text-xs font-semibold">Sin ventas en el periodo</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Menos vendidos -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+      <div class="px-5 py-3 flex items-center justify-between" style="background-color:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide">MENOS VENDIDOS</h2>
+        <span class="text-xs text-amber-300 font-semibold">Bottom {{ menos_vendidos | length }}</span>
+      </div>
+      <div class="divide-y divide-gray-100">
+        {% if menos_vendidos %}
+          {% set max_u = menos_vendidos | map(attribute='unidades_vendidas') | max %}
+          {% for p in menos_vendidos[:10] %}
+          <div class="px-5 py-3 hover:bg-red-50 transition"
+               style="animation: fadeUp .2s ease both; animation-delay: {{ loop.index0 * 0.03 }}s">
+            <div class="flex items-center justify-between gap-3 mb-1.5">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-xs font-bold w-5 text-center text-red-300 shrink-0">{{ loop.index }}</span>
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-gray-800 truncate">{{ p.nombre_producto }}</p>
+                  <p class="text-[10px] text-gray-400">{{ p.tamano }}</p>
+                </div>
+              </div>
+              <div class="text-right shrink-0">
+                <p class="text-xs font-black text-red-500">{{ p.unidades_vendidas }} uds</p>
+                <p class="text-[10px] text-gray-400">${{ '%.2f' % p.ingresos }}</p>
+              </div>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-1.5">
+              <div class="h-1.5 rounded-full bg-red-300 transition-all"
+                style="width: {{ ((p.unidades_vendidas / max_u) * 100) | int if max_u > 0 else 0 }}%;"></div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center py-10 text-gray-400 text-xs font-semibold">Sin datos en el periodo</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ UTILIDAD POR PRODUCTO ══════════════ -->
+  <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6" id="tabla-utilidad-producto">
+    <div class="px-5 py-3 flex items-center justify-between" style="background-color:#38230f;">
+      <h2 class="text-sm font-bold text-white tracking-wide">UTILIDAD POR PRODUCTO</h2>
+      <p class="text-[10px] text-amber-300">Costo MP = promedio ultimos 30 dias</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs" id="tbl-productos">
+        <thead>
+          <tr class="bg-gray-50 border-b border-gray-100">
+            <th class="px-4 py-3 text-left font-bold text-gray-500 uppercase tracking-wide">Producto</th>
+            <th class="px-4 py-3 text-left font-bold text-gray-500 uppercase tracking-wide">Tamano</th>
+            <th class="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wide">P. Venta</th>
+            <th class="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wide">Costo MP/u</th>
+            <th class="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wide">Vendidos</th>
+            <th class="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wide">Ingresos</th>
+            <th class="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wide">Margen</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% if utilidad_productos %}
+            {% for p in utilidad_productos %}
+            {% set margen_pct = ((p.precio_venta - p.costo_unit_mp) / p.precio_venta * 100) if p.precio_venta > 0 else 0 %}
+            <tr class="hover:bg-amber-50 transition">
+              <td class="px-4 py-3 font-semibold text-gray-800">{{ p.nombre_producto }}</td>
+              <td class="px-4 py-3 text-gray-500">{{ p.tamano }}</td>
+              <td class="px-4 py-3 text-right font-semibold text-gray-700">${{ '%.2f' % p.precio_venta }}</td>
+              <td class="px-4 py-3 text-right text-red-500 font-semibold">${{ '%.2f' % (p.costo_unit_mp or 0) }}</td>
+              <td class="px-4 py-3 text-right font-bold" style="color:#38230f;">{{ p.unidades_vendidas }}</td>
+              <td class="px-4 py-3 text-right font-bold text-gray-700">${{ '%.2f' % (p.ingresos_totales or 0) }}</td>
+              <td class="px-4 py-3 text-right">
+                <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-black
+                  {% if margen_pct >= 50 %}bg-green-100 text-green-700
+                  {% elif margen_pct >= 30 %}bg-amber-100 text-amber-700
+                  {% else %}bg-red-100 text-red-600{% endif %}">
+                  {{ '%.1f' % margen_pct }}%
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-10 text-gray-400 font-semibold">Sin datos en el periodo</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════ RESUMEN DE VENTAS POR DIA ══════════════ -->
+  {% if ventas_por_dia %}
+  <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
+    <div class="px-5 py-3 flex items-center justify-between" style="background-color:#38230f;">
+      <h2 class="text-sm font-bold text-white tracking-wide">DETALLE DE VENTAS POR DIA</h2>
+      <span class="text-xs text-amber-300 font-semibold">{{ ventas_por_dia | length }} dias con ventas</span>
+    </div>
+    <div class="overflow-x-auto max-h-64 overflow-y-auto">
+      <table class="w-full text-xs" id="tbl-ventas-dia">
+        <thead class="sticky top-0 bg-gray-50">
+          <tr class="border-b border-gray-100">
+            <th class="px-4 py-2 text-left font-bold text-gray-500 uppercase">Fecha</th>
+            <th class="px-4 py-2 text-right font-bold text-gray-500 uppercase">Num. Ventas</th>
+            <th class="px-4 py-2 text-right font-bold text-gray-500 uppercase">Unidades</th>
+            <th class="px-4 py-2 text-right font-bold text-gray-500 uppercase">Total Ingresos</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for d in ventas_por_dia %}
+          <tr class="hover:bg-amber-50 transition">
+            <td class="px-4 py-2 font-semibold text-gray-700">{{ d.dia.strftime('%d/%m/%Y') if d.dia else '' }}</td>
+            <td class="px-4 py-2 text-right text-gray-600">{{ d.num_ventas }}</td>
+            <td class="px-4 py-2 text-right text-gray-600">{{ d.unidades }}</td>
+            <td class="px-4 py-2 text-right font-bold" style="color:#38230f;">${{ '%.2f' % d.total_ingresos }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="bg-amber-50 font-bold border-t-2" style="border-color:#f29f05;">
+            <td class="px-4 py-2 text-gray-800">TOTAL</td>
+            <td class="px-4 py-2 text-right" style="color:#38230f;">{{ ventas_por_dia | sum(attribute='num_ventas') }}</td>
+            <td class="px-4 py-2 text-right" style="color:#38230f;">{{ ventas_por_dia | sum(attribute='unidades') }}</td>
+            <td class="px-4 py-2 text-right" style="color:#38230f;">${{ '%.2f' % (ventas_por_dia | sum(attribute='total_ingresos')) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══════════════ COSTOS DE INSUMOS + MERMAS ══════════════ -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+    <!-- Costos de MP -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+      <div class="px-5 py-3 flex items-center justify-between" style="background-color:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide">COSTOS DE INSUMOS</h2>
+        {% if costos_mp %}
+        <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-900 text-amber-300">
+          Total: ${{ '%.2f' % (costos_mp | sum(attribute='costo_total')) }}
+        </span>
+        {% endif %}
+      </div>
+      <div class="overflow-x-auto max-h-80 overflow-y-auto">
+        <table class="w-full text-xs" id="tbl-costos-mp">
+          <thead class="sticky top-0 bg-gray-50">
+            <tr class="border-b border-gray-100">
+              <th class="px-4 py-2 text-left font-bold text-gray-500 uppercase">Insumo</th>
+              <th class="px-4 py-2 text-left font-bold text-gray-500 uppercase">Categoria</th>
+              <th class="px-4 py-2 text-right font-bold text-gray-500 uppercase">Cant. Comprada</th>
+              <th class="px-4 py-2 text-right font-bold text-gray-500 uppercase">$/u promedio</th>
+              <th class="px-4 py-2 text-right font-bold text-gray-500 uppercase">Total</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% if costos_mp %}
+              {% for c in costos_mp %}
+              <tr class="hover:bg-amber-50 transition">
+                <td class="px-4 py-2 font-semibold text-gray-800">{{ c.nombre_mp }}</td>
+                <td class="px-4 py-2 text-gray-500">{{ c.categoria }}</td>
+                <td class="px-4 py-2 text-right text-gray-500">{{ '%.2f' % (c.total_comprado or 0) }}</td>
+                <td class="px-4 py-2 text-right text-gray-600">${{ '%.4f' % (c.costo_promedio_unidad or 0) }}</td>
+                <td class="px-4 py-2 text-right font-bold text-red-500">${{ '%.2f' % (c.costo_total or 0) }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center py-8 text-gray-400">Sin compras en el periodo</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Mermas -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+      <div class="px-5 py-3 flex items-center justify-between" style="background-color:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide">PERDIDAS POR MERMAS</h2>
+        {% set total_mermas_val = mermas_periodo | sum(attribute='valor_perdida') if mermas_periodo else 0 %}
+        <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-red-900 text-red-300">
+          -${{ '%.2f' % total_mermas_val }}
+        </span>
+      </div>
+      <div class="overflow-x-auto max-h-80 overflow-y-auto">
+        <table class="w-full text-xs" id="tbl-mermas">
+          <thead class="sticky top-0 bg-gray-50">
+            <tr class="border-b border-gray-100">
+              <th class="px-4 py-2 text-left font-bold text-gray-500 uppercase">Fecha</th>
+              <th class="px-4 py-2 text-left font-bold text-gray-500 uppercase">Insumo</th>
+              <th class="px-4 py-2 text-right font-bold text-gray-500 uppercase">Cantidad</th>
+              <th class="px-4 py-2 text-right font-bold text-gray-500 uppercase">Perdida</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% if mermas_periodo %}
+              {% for m in mermas_periodo %}
+              <tr class="hover:bg-red-50 transition">
+                <td class="px-4 py-2 text-gray-500 whitespace-nowrap">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}</td>
+                <td class="px-4 py-2 font-semibold text-gray-800">{{ m.materia_prima }}</td>
+                <td class="px-4 py-2 text-right text-gray-500">{{ '%.2f' % m.cantidad_merma }}</td>
+                <td class="px-4 py-2 text-right font-bold text-red-500">${{ '%.2f' % (m.valor_perdida or 0) }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="4" class="text-center py-8 text-gray-400">Sin mermas en el periodo</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ ALERTAS DE STOCK BAJO (NUEVA) ══════════════ -->
+  {% if alertas_stock %}
+  <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6 border-l-4 border-red-500">
+    <div class="px-5 py-3 flex items-center justify-between" style="background-color:#38230f;">
+      <h2 class="text-sm font-bold text-white tracking-wide">ALERTAS DE STOCK BAJO</h2>
+      <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-red-800 text-red-200">
+        {{ alertas_stock | length }} insumo(s)
+      </span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="bg-red-50 border-b border-red-100">
+            <th class="px-4 py-2 text-left font-bold text-red-600 uppercase">Insumo</th>
+            <th class="px-4 py-2 text-left font-bold text-red-600 uppercase">Categoria</th>
+            <th class="px-4 py-2 text-right font-bold text-red-600 uppercase">Stock Actual</th>
+            <th class="px-4 py-2 text-right font-bold text-red-600 uppercase">Stock Minimo</th>
+            <th class="px-4 py-2 text-right font-bold text-red-600 uppercase">Diferencia</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-red-50">
+          {% for a in alertas_stock %}
+          <tr class="hover:bg-red-50 transition">
+            <td class="px-4 py-2 font-semibold text-gray-800">{{ a.nombre }}</td>
+            <td class="px-4 py-2 text-gray-500">{{ a.categoria }}</td>
+            <td class="px-4 py-2 text-right font-bold text-red-600">{{ '%.2f' % a.stock }}</td>
+            <td class="px-4 py-2 text-right text-gray-500">{{ '%.2f' % a.stockMinimo }}</td>
+            <td class="px-4 py-2 text-right font-bold text-red-700">{{ '%.2f' % (a.stock - a.stockMinimo) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ══════════════ SPINNER DE EXPORTACION ══════════════ -->
+<div id="exportSpinner" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+  <div class="bg-white rounded-2xl p-8 flex flex-col items-center gap-4 shadow-2xl">
+    <div class="w-10 h-10 border-4 border-gray-200 rounded-full animate-spin" style="border-top-color:#f29f05;"></div>
+    <p class="text-sm font-bold text-gray-700" id="spinnerMsg">Generando reporte...</p>
+  </div>
+</div>
+
+<style>
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(10px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+</style>
+
+<script>
+/* ════════════ DATOS DESDE JINJA ════════════ */
+const DIAS_LABELS = [{% for d in ventas_por_dia %}"{{ d.dia.strftime('%d/%m') if d.dia else '' }}"{% if not loop.last %},{% endif %}{% endfor %}];
+const DIAS_TOTAL  = [{% for d in ventas_por_dia %}{{ d.total_ingresos | float }}{% if not loop.last %},{% endif %}{% endfor %}];
+const PAGO_LABELS = [{% for mp in metodo_pago %}"{{ mp.metodoPago }}"{% if not loop.last %},{% endif %}{% endfor %}];
+const PAGO_VALUES = [{% for mp in metodo_pago %}{{ mp.total_ingresos | float }}{% if not loop.last %},{% endif %}{% endfor %}];
+const PROD_LABELS = [{% for p in utilidad_productos[:10] %}"{{ p.nombre_producto }} {{ p.tamano }}"{% if not loop.last %},{% endif %}{% endfor %}];
+const PROD_VENTA  = [{% for p in utilidad_productos[:10] %}{{ p.precio_venta | float }}{% if not loop.last %},{% endif %}{% endfor %}];
+const PROD_COSTO  = [{% for p in utilidad_productos[:10] %}{{ (p.costo_unit_mp or 0) | float }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+const FILTRO_INI = "{{ filtros.fecha_ini }}";
+const FILTRO_FIN = "{{ filtros.fecha_fin }}";
+
+/* KPIs para exportacion */
+const KPI_DATA = {
+  total_ingresos:        {{ (utilidad_neta.total_ingresos or 0) | float }},
+  costo_materias_primas: {{ (utilidad_neta.costo_materias_primas or 0) | float }},
+  perdida_mermas:        {{ (utilidad_neta.perdida_mermas or 0) | float }},
+  utilidad_bruta:        {{ (utilidad_neta.utilidad_bruta or 0) | float }},
+  utilidad_neta:         {{ (utilidad_neta.utilidad_neta or 0) | float }},
+  margen_bruto_pct:      {{ (utilidad_neta.margen_bruto_pct or 0) | float }},
+  margen_neto_pct:       {{ (utilidad_neta.margen_neto_pct or 0) | float }},
+};
+
+/* ════════════ GRAFICA TENDENCIA ════════════ */
+if (DIAS_LABELS.length > 0) {
+  const ctxT = document.getElementById('graficaTendencia');
+  if (ctxT) {
+    new Chart(ctxT, {
+      type: 'line',
+      data: {
+        labels: DIAS_LABELS,
+        datasets: [{
+          label: 'Ingresos',
+          data: DIAS_TOTAL,
+          borderColor: '#f29f05',
+          backgroundColor: 'rgba(242,159,5,0.12)',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#38230f',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.4,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' $' + ctx.parsed.y.toFixed(2) } } },
+        scales: {
+          x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#9ca3af' } },
+          y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#9ca3af', callback: v => '$' + v.toFixed(0) } }
+        }
+      }
+    });
+  }
+}
+
+/* ════════════ GRAFICA PAGO ════════════ */
+if (PAGO_LABELS.length > 0) {
+  const ctxP = document.getElementById('graficaPago');
+  if (ctxP) {
+    new Chart(ctxP, {
+      type: 'doughnut',
+      data: {
+        labels: PAGO_LABELS,
+        datasets: [{ data: PAGO_VALUES, backgroundColor: ['#f29f05', '#38230f', '#7a6040'], borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+      },
+      options: {
+        responsive: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' $' + ctx.parsed.toFixed(2) } } },
+        cutout: '68%',
+      }
+    });
+  }
+}
+
+/* ════════════ GRAFICA RENTABILIDAD ════════════ */
+if (PROD_LABELS.length > 0) {
+  const ctxR = document.getElementById('graficaRentabilidad');
+  if (ctxR) {
+    new Chart(ctxR, {
+      type: 'bar',
+      data: {
+        labels: PROD_LABELS,
+        datasets: [
+          { label: 'Precio Venta', data: PROD_VENTA, backgroundColor: 'rgba(56,35,15,0.85)', borderRadius: 4 },
+          { label: 'Costo MP', data: PROD_COSTO, backgroundColor: 'rgba(242,159,5,0.85)', borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'top', labels: { font: { size: 10 }, color: '#6b7280' } },
+          tooltip: { callbacks: { label: ctx => ' $' + ctx.parsed.y.toFixed(2) } }
+        },
+        scales: {
+          x: { ticks: { font: { size: 9 }, color: '#9ca3af', maxRotation: 35 } },
+          y: { ticks: { font: { size: 10 }, color: '#9ca3af', callback: v => '$' + v.toFixed(0) } }
+        }
+      }
+    });
+  }
+}
+
+/* ════════════ HELPERS ════════════ */
+function mostrarSpinner(msg) {
+  document.getElementById('spinnerMsg').textContent = msg || 'Generando reporte...';
+  document.getElementById('exportSpinner').classList.remove('hidden');
+}
+function ocultarSpinner() {
+  document.getElementById('exportSpinner').classList.add('hidden');
+}
+
+function fmtMXN(v) { return '$' + Number(v || 0).toFixed(2); }
+
+/* ════════════ EXPORTAR PDF ════════════ */
+async function exportarPDF() {
+  mostrarSpinner('Generando PDF...');
+  await new Promise(r => setTimeout(r, 50));
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const cafe   = [56, 35, 15];
+    const dorado = [242, 159, 5];
+    const W = doc.internal.pageSize.getWidth();
+    let y = 0;
+
+    /* ENCABEZADO */
+    doc.setFillColor(...cafe);
+    doc.rect(0, 0, W, 22, 'F');
+    doc.setFontSize(16);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FourOvenPizza', 14, 10);
+    doc.setFontSize(9);
+    doc.setTextColor(...dorado);
+    doc.text('Reporte de Utilidades', 14, 16);
+    doc.setTextColor(200, 200, 200);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Periodo: ${FILTRO_INI} al ${FILTRO_FIN}`, W - 14, 10, { align: 'right' });
+    doc.text(`Generado: ${new Date().toLocaleDateString('es-MX')}`, W - 14, 16, { align: 'right' });
+
+    y = 30;
+
+    /* KPIs */
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...cafe);
+    doc.text('RESUMEN EJECUTIVO', 14, y);
+    y += 5;
+
+    const kpis = [
+      ['Total Ingresos', fmtMXN(KPI_DATA.total_ingresos)],
+      ['Costo Materias Primas', fmtMXN(KPI_DATA.costo_materias_primas)],
+      ['Perdida por Mermas', fmtMXN(KPI_DATA.perdida_mermas)],
+      ['Utilidad Bruta', fmtMXN(KPI_DATA.utilidad_bruta) + '  (' + KPI_DATA.margen_bruto_pct.toFixed(1) + '%)'],
+      ['Utilidad Neta', fmtMXN(KPI_DATA.utilidad_neta) + '  (' + KPI_DATA.margen_neto_pct.toFixed(1) + '%)'],
+    ];
+
+    doc.autoTable({
+      startY: y,
+      head: [['Concepto', 'Importe']],
+      body: kpis,
+      theme: 'grid',
+      headStyles: { fillColor: cafe, textColor: [255,255,255], fontStyle: 'bold', fontSize: 8 },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
+      margin: { left: 14, right: 14 },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.row.index === 4) {
+          const color = KPI_DATA.utilidad_neta >= 0 ? [22,163,74] : [220,38,38];
+          data.cell.styles.textColor = color;
+        }
+      }
+    });
+
+    y = doc.lastAutoTable.finalY + 8;
+
+    /* UTILIDAD POR PRODUCTO */
+    const rowsProd = [];
+    document.querySelectorAll('#tbl-productos tbody tr').forEach(tr => {
+      const tds = tr.querySelectorAll('td');
+      if (tds.length >= 7) {
+        rowsProd.push([
+          tds[0].textContent.trim(),
+          tds[1].textContent.trim(),
+          tds[2].textContent.trim(),
+          tds[3].textContent.trim(),
+          tds[4].textContent.trim(),
+          tds[5].textContent.trim(),
+          tds[6].textContent.trim(),
+        ]);
+      }
+    });
+
+    if (rowsProd.length) {
+      if (y > 240) { doc.addPage(); y = 15; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...cafe);
+      doc.text('UTILIDAD POR PRODUCTO', 14, y);
+      y += 4;
+
+      doc.autoTable({
+        startY: y,
+        head: [['Producto', 'Tamano', 'P.Venta', 'Costo MP/u', 'Vendidos', 'Ingresos', 'Margen']],
+        body: rowsProd,
+        theme: 'striped',
+        headStyles: { fillColor: cafe, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: {
+          2: { halign: 'right' }, 3: { halign: 'right' },
+          4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }
+        },
+        margin: { left: 14, right: 14 },
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
+    /* MAS VENDIDOS */
+    const rowsMas = [];
+    document.querySelectorAll('#tbl-productos tbody tr').forEach((_, i) => {});
+    // Usamos los datos de mas_vendidos
+    const masVendidos = [
+      {% for p in mas_vendidos[:10] %}
+      ["{{ loop.index }}", "{{ p.nombre_producto }}", "{{ p.tamano }}", "{{ p.unidades_vendidas }}", "${{ '%.2f' % p.ingresos }}"],
+      {% endfor %}
+    ];
+    const menosVendidos = [
+      {% for p in menos_vendidos[:10] %}
+      ["{{ loop.index }}", "{{ p.nombre_producto }}", "{{ p.tamano }}", "{{ p.unidades_vendidas }}", "${{ '%.2f' % p.ingresos }}"],
+      {% endfor %}
+    ];
+
+    if (masVendidos.length) {
+      if (y > 240) { doc.addPage(); y = 15; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...cafe);
+      doc.text('MAS VENDIDOS', 14, y);
+      y += 4;
+      doc.autoTable({
+        startY: y,
+        head: [['#', 'Producto', 'Tamano', 'Unidades', 'Ingresos']],
+        body: masVendidos,
+        theme: 'striped',
+        headStyles: { fillColor: cafe, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' } },
+        margin: { left: 14, right: 14 },
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
+    /* COSTOS MP */
+    const rowsCostos = [];
+    document.querySelectorAll('#tbl-costos-mp tbody tr').forEach(tr => {
+      const tds = tr.querySelectorAll('td');
+      if (tds.length >= 5) rowsCostos.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
+    });
+
+    if (rowsCostos.length) {
+      if (y > 240) { doc.addPage(); y = 15; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...cafe);
+      doc.text('COSTOS DE INSUMOS', 14, y);
+      y += 4;
+      doc.autoTable({
+        startY: y,
+        head: [['Insumo', 'Categoria', 'Cant. Comprada', '$/u promedio', 'Total']],
+        body: rowsCostos,
+        theme: 'striped',
+        headStyles: { fillColor: cafe, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', textColor: [220,38,38] } },
+        margin: { left: 14, right: 14 },
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
+    /* MERMAS */
+    const rowsMermas = [];
+    document.querySelectorAll('#tbl-mermas tbody tr').forEach(tr => {
+      const tds = tr.querySelectorAll('td');
+      if (tds.length >= 4) rowsMermas.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim()]);
+    });
+
+    if (rowsMermas.length) {
+      if (y > 240) { doc.addPage(); y = 15; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...cafe);
+      doc.text('PERDIDAS POR MERMAS', 14, y);
+      y += 4;
+      doc.autoTable({
+        startY: y,
+        head: [['Fecha', 'Insumo', 'Cantidad', 'Perdida']],
+        body: rowsMermas,
+        theme: 'striped',
+        headStyles: { fillColor: cafe, textColor: [255,255,255], fontStyle: 'bold', fontSize: 7 },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right', textColor: [220,38,38] } },
+        margin: { left: 14, right: 14 },
+      });
+    }
+
+    /* PIE DE PAGINA en todas las paginas */
+    const totalPags = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPags; i++) {
+      doc.setPage(i);
+      doc.setFillColor(...cafe);
+      doc.rect(0, 287, W, 10, 'F');
+      doc.setFontSize(7);
+      doc.setTextColor(200, 200, 200);
+      doc.text('FourOvenPizza - Reporte Confidencial', 14, 293);
+      doc.text(`Pagina ${i} de ${totalPags}`, W - 14, 293, { align: 'right' });
+    }
+
+    doc.save(`FourOvenPizza_Utilidades_${FILTRO_INI}_${FILTRO_FIN}.pdf`);
+  } catch(e) {
+    console.error(e);
+    alert('Error al generar PDF: ' + e.message);
+  } finally {
+    ocultarSpinner();
+  }
+}
+
+/* ════════════ EXPORTAR EXCEL ════════════ */
+function exportarExcel() {
+  mostrarSpinner('Generando Excel...');
+  setTimeout(() => {
+    try {
+      const wb = XLSX.utils.book_new();
+      const estiloHeader = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '38230F' } }, alignment: { horizontal: 'center' } };
+
+      /* ── HOJA 1: Resumen ── */
+      const wsResumenData = [
+        ['FourOvenPizza - Reporte de Utilidades'],
+        [`Periodo: ${FILTRO_INI} al ${FILTRO_FIN}`],
+        [`Generado: ${new Date().toLocaleDateString('es-MX')}`],
+        [],
+        ['RESUMEN EJECUTIVO'],
+        ['Concepto', 'Importe'],
+        ['Total Ingresos',        KPI_DATA.total_ingresos],
+        ['Costo Materias Primas', KPI_DATA.costo_materias_primas],
+        ['Perdida por Mermas',    KPI_DATA.perdida_mermas],
+        ['Utilidad Bruta',        KPI_DATA.utilidad_bruta],
+        ['Margen Bruto %',        KPI_DATA.margen_bruto_pct],
+        ['Utilidad Neta',         KPI_DATA.utilidad_neta],
+        ['Margen Neto %',         KPI_DATA.margen_neto_pct],
+      ];
+      const wsResumen = XLSX.utils.aoa_to_sheet(wsResumenData);
+      wsResumen['!cols'] = [{ wch: 30 }, { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+      /* ── HOJA 2: Utilidad por Producto ── */
+      const rowsProd = [['Producto', 'Tamano', 'Precio Venta', 'Costo MP/u', 'Vendidos', 'Ingresos Totales', 'Margen %']];
+      document.querySelectorAll('#tbl-productos tbody tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length >= 7) {
+          rowsProd.push([
+            tds[0].textContent.trim(),
+            tds[1].textContent.trim(),
+            parseFloat(tds[2].textContent.replace('$','')),
+            parseFloat(tds[3].textContent.replace('$','')),
+            parseInt(tds[4].textContent),
+            parseFloat(tds[5].textContent.replace('$','')),
+            parseFloat(tds[6].textContent.replace('%','')),
+          ]);
+        }
+      });
+      const wsProd = XLSX.utils.aoa_to_sheet(rowsProd);
+      wsProd['!cols'] = [{wch:22},{wch:12},{wch:13},{wch:13},{wch:11},{wch:16},{wch:11}];
+      XLSX.utils.book_append_sheet(wb, wsProd, 'Util. por Producto');
+
+      /* ── HOJA 3: Mas vendidos ── */
+      const rowsMas = [['#', 'Producto', 'Tamano', 'Unidades Vendidas', 'Ingresos', 'Num. Transacciones']];
+      {% for p in mas_vendidos %}
+      rowsMas.push([{{ loop.index }}, "{{ p.nombre_producto }}", "{{ p.tamano }}", {{ p.unidades_vendidas }}, {{ p.ingresos | float }}, {{ p.num_transacciones }}]);
+      {% endfor %}
+      const wsMas = XLSX.utils.aoa_to_sheet(rowsMas);
+      wsMas['!cols'] = [{wch:5},{wch:25},{wch:12},{wch:18},{wch:14},{wch:18}];
+      XLSX.utils.book_append_sheet(wb, wsMas, 'Mas Vendidos');
+
+      /* ── HOJA 4: Menos vendidos ── */
+      const rowsMenos = [['#', 'Producto', 'Tamano', 'Unidades Vendidas', 'Ingresos', 'Num. Transacciones']];
+      {% for p in menos_vendidos %}
+      rowsMenos.push([{{ loop.index }}, "{{ p.nombre_producto }}", "{{ p.tamano }}", {{ p.unidades_vendidas }}, {{ p.ingresos | float }}, {{ p.num_transacciones }}]);
+      {% endfor %}
+      const wsMenos = XLSX.utils.aoa_to_sheet(rowsMenos);
+      wsMenos['!cols'] = [{wch:5},{wch:25},{wch:12},{wch:18},{wch:14},{wch:18}];
+      XLSX.utils.book_append_sheet(wb, wsMenos, 'Menos Vendidos');
+
+      /* ── HOJA 5: Ventas por dia ── */
+      const rowsDias = [['Fecha', 'Num. Ventas', 'Unidades', 'Total Ingresos']];
+      {% for d in ventas_por_dia %}
+      rowsDias.push(["{{ d.dia.strftime('%d/%m/%Y') if d.dia else '' }}", {{ d.num_ventas }}, {{ d.unidades }}, {{ d.total_ingresos | float }}]);
+      {% endfor %}
+      const wsDias = XLSX.utils.aoa_to_sheet(rowsDias);
+      wsDias['!cols'] = [{wch:14},{wch:13},{wch:11},{wch:16}];
+      XLSX.utils.book_append_sheet(wb, wsDias, 'Ventas por Dia');
+
+      /* ── HOJA 6: Metodo de pago ── */
+      const rowsPago = [['Metodo de Pago', 'Num. Ventas', 'Total Ingresos']];
+      {% for mp in metodo_pago %}
+      rowsPago.push(["{{ mp.metodoPago }}", {{ mp.num_ventas }}, {{ mp.total_ingresos | float }}]);
+      {% endfor %}
+      const wsPago = XLSX.utils.aoa_to_sheet(rowsPago);
+      wsPago['!cols'] = [{wch:18},{wch:13},{wch:16}];
+      XLSX.utils.book_append_sheet(wb, wsPago, 'Metodo de Pago');
+
+      /* ── HOJA 7: Costos insumos ── */
+      const rowsCostos = [['Insumo', 'Categoria', 'Cant. Comprada', '$/u Promedio', 'Costo Total', 'Num. Compras']];
+      document.querySelectorAll('#tbl-costos-mp tbody tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length >= 5) {
+          rowsCostos.push([
+            tds[0].textContent.trim(), tds[1].textContent.trim(),
+            parseFloat(tds[2].textContent),
+            parseFloat(tds[3].textContent.replace('$','')),
+            parseFloat(tds[4].textContent.replace('$','')),
+          ]);
+        }
+      });
+      const wsCostos = XLSX.utils.aoa_to_sheet(rowsCostos);
+      wsCostos['!cols'] = [{wch:22},{wch:16},{wch:15},{wch:14},{wch:14},{wch:13}];
+      XLSX.utils.book_append_sheet(wb, wsCostos, 'Costos Insumos');
+
+      /* ── HOJA 8: Mermas ── */
+      const rowsMermas = [['Fecha', 'Insumo', 'Cantidad', 'Valor Perdida']];
+      document.querySelectorAll('#tbl-mermas tbody tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length >= 4) {
+          rowsMermas.push([
+            tds[0].textContent.trim(), tds[1].textContent.trim(),
+            parseFloat(tds[2].textContent),
+            parseFloat(tds[3].textContent.replace('$','')),
+          ]);
+        }
+      });
+      const wsMermas = XLSX.utils.aoa_to_sheet(rowsMermas);
+      wsMermas['!cols'] = [{wch:14},{wch:22},{wch:12},{wch:16}];
+      XLSX.utils.book_append_sheet(wb, wsMermas, 'Mermas');
+
+      XLSX.writeFile(wb, `FourOvenPizza_Utilidades_${FILTRO_INI}_${FILTRO_FIN}.xlsx`);
+    } catch(e) {
+      console.error(e);
+      alert('Error al generar Excel: ' + e.message);
+    } finally {
+      ocultarSpinner();
+    }
+  }, 100);
+}
+</script>
+
+{% endblock %}

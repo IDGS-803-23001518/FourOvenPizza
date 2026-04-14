@@ -1,0 +1,75 @@
+{# Partial: produccion/_detalle_orden.html
+   Renderizado por la ruta /produccion/ver/<id> y mostrado en el modal Ver.
+   No extiende layoutAdmin — es un fragmento HTML puro. #}
+
+{% if detalle %}
+<div class="space-y-3 text-sm">
+
+  <!-- Info general -->
+  <div class="grid grid-cols-2 gap-3 mb-3">
+    <div class="bg-gray-50 rounded-xl p-3">
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Estado</p>
+      {% if orden.estado == 'En proceso' %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700">
+          <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse inline-block"></span>En proceso
+        </span>
+      {% elif orden.estado == 'Terminada' %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-bold text-green-700">
+          <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>Terminada
+        </span>
+      {% else %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-bold text-red-700">
+          <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Cancelada
+        </span>
+      {% endif %}
+    </div>
+    <div class="bg-gray-50 rounded-xl p-3">
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Fecha</p>
+      <p class="text-gray-700 font-semibold text-xs">
+        {{ orden.fecha.strftime('%d/%m/%Y %H:%M') if orden.fecha else '—' }}
+      </p>
+    </div>
+  </div>
+
+  {% if orden.estado == 'En proceso' and segundos <= 60 %}
+  <div class="mb-3 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+    ⏱ Puedes editar esta orden durante los primeros 60 segundos ({{ 60 - segundos }}s restantes).
+  </div>
+  {% endif %}
+
+  <!-- Tabla de productos -->
+  <div class="rounded-xl overflow-hidden border border-gray-100">
+    <table class="w-full text-sm">
+      <thead>
+        <tr style="background-color:#38230f;">
+          <th class="px-4 py-2 text-left text-xs font-bold text-white uppercase">Producto</th>
+          <th class="px-4 py-2 text-left text-xs font-bold text-white uppercase">Tamaño</th>
+          <th class="px-4 py-2 text-center text-xs font-bold text-white uppercase">Cantidad</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in detalle %}
+        <tr class="border-b border-gray-50 hover:bg-amber-50 transition">
+          <td class="px-4 py-3 font-semibold text-gray-800">{{ d.nombre_producto }}</td>
+          <td class="px-4 py-3 text-gray-600">{{ d.tamano }}</td>
+          <td class="px-4 py-3 text-center">
+            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-xs font-black"
+                  style="background-color:#f29f05;">
+              {{ d.cantidad | int }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="text-xs text-gray-400 text-right pt-1">
+    Total: <strong class="text-gray-600">{{ detalle | length }}</strong> tipo(s),
+    <strong class="text-gray-600">{{ detalle | sum(attribute='cantidad') | int }}</strong> unidades
+  </p>
+</div>
+
+{% else %}
+<p class="text-center text-gray-400 text-sm py-6">No hay detalle para esta orden.</p>
+{% endif %}

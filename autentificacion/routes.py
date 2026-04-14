@@ -27,6 +27,20 @@ def login_requerido(f):
     return decorated
 
 
+def get_redirect_by_role():
+    """Determina a qué página redirigir según el rol del usuario"""
+    usuario_rol = session.get('usuario_rol')
+    
+    if usuario_rol == 'Administrador':
+        return url_for('dashboard.index')  # Asumiendo que tu dashboard está aquí
+    elif usuario_rol == 'Ventas':
+        return url_for('inicio')  # O la página principal para ventas
+    elif usuario_rol == 'Cocinero':
+        return url_for('inicio')  # O la página principal para cocinero
+    else:
+        return url_for('inicio')  # Página por defecto
+
+
 def rol_requerido(*roles):
     def decorator(f):
         @wraps(f)
@@ -34,9 +48,11 @@ def rol_requerido(*roles):
             if not session.get('usuario_id'):
                 flash('Debes iniciar sesión.', 'danger')
                 return redirect(url_for('autentificacion.login'))
+            
             if session.get('usuario_rol') not in roles:
                 flash('No tienes permisos para acceder a esta sección.', 'danger')
-                return redirect(url_for('inicio'))
+                return redirect(get_redirect_by_role())
+            
             return f(*args, **kwargs)
         return decorated
     return decorator
@@ -186,9 +202,11 @@ def registrar_acceso(usuario_id, nombre_usuario, evento, resultado):
         )
         db.session.add(entrada)
         db.session.commit()
+        return True
     except Exception as e:
         db.session.rollback()
         print(f"Error registrando acceso en bitácora: {e}")
+        return False
 
 
 def registrar_error(modulo, mensaje, detalles=None):
@@ -270,12 +288,12 @@ def login():
 
             if registro.intentos >= 3:
                 registro.bloqueado_hasta = (
-                    datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
+                    datetime.datetime.utcnow() + datetime.timedelta(minutes=1)
                 )
                 db.session.commit()
                 registrar_acceso(None, nombre_usuario, 'LOGIN', 'BLOQUEADO_POR_INTENTOS')
                 flash('Has superado el límite de intentos. '
-                      'Tu acceso queda bloqueado por 10 minutos.', 'danger')
+                      'Tu acceso queda bloqueado por 1 minuto.', 'danger')
             else:
                 restantes = 3 - registro.intentos
                 db.session.commit()
@@ -288,6 +306,14 @@ def login():
 
 @autentificacion.route("/logout")
 def logout():
+    if session.get('usuario_id'):
+        registrar_acceso(
+            session.get('usuario_id'),
+            session.get('usuario_nombre'),
+            'LOGOUT_MANUAL',
+            'EXITOSO'
+        )
+    
     session.clear()
     flash('Sesión cerrada exitosamente.', 'success')
     return redirect(url_for('autentificacion.login'))
@@ -597,3 +623,16 @@ def cambiar_contrasena():
         db.session.rollback()
         registrar_error('Usuarios', 'Error al cambiar contraseña', str(e))
         return jsonify({'success': False, 'message': f'Error inesperado: {str(e)}'})
+    
+@autentificacion.route("/logout-beacon", methods=['POST'])
+def logout_beacon():
+    # Similar al logout normal pero sin flash messages
+    if session.get('usuario_id'):
+        registrar_acceso(
+            session.get('usuario_id'),
+            session.get('usuario_nombre'),
+            'LOGOUT_CIERRE_NAVEGADOR',
+            'EXITOSO'
+        )
+        session.clear()
+    return '', 204  # Sin contenido

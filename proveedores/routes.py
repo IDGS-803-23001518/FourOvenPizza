@@ -2,6 +2,7 @@ from . import proveedores
 from flask import render_template, request, redirect, url_for, flash, session, jsonify
 from flask_wtf.csrf import generate_csrf, validate_csrf
 from models import Proveedores, db
+from autentificacion.routes import rol_requerido
 from sqlalchemy import text
 import re
 import forms
@@ -68,6 +69,7 @@ def ejecutar_sp_proveedor(accion, idProveedor=None, nombre=None, correo=None,
 # Rutas para proveedores PIPOOOOOL :]
 
 @proveedores.route("/proveedores", methods=['GET'])
+@rol_requerido('Administrador')
 def lista_proveedores():
     if not session.get('usuario_id'):
         flash('Debes iniciar sesión.', 'danger')
@@ -82,6 +84,7 @@ def lista_proveedores():
                          csrf_token=generate_csrf())
 
 @proveedores.route("/registrar-proveedor", methods=['POST'])
+@rol_requerido('Administrador')
 def registrar_proveedor():
     try:
         validate_csrf(request.form.get('csrf_token'))
@@ -126,6 +129,7 @@ def registrar_proveedor():
         return jsonify({'success': False, 'message': f'Error inesperado: {str(e)}'})
 
 @proveedores.route("/editar-proveedor/<int:id>", methods=['POST'])
+@rol_requerido('Administrador')
 def editar_proveedor(id):
     try:
         validate_csrf(request.form.get('csrf_token'))
@@ -179,6 +183,7 @@ def editar_proveedor(id):
         return jsonify({'success': False, 'message': f'Error inesperado: {str(e)}'})
 
 @proveedores.route("/cambiar-estatus-proveedor/<int:id>/<int:estatus>")
+@rol_requerido('Administrador')
 def cambiar_estatus_proveedor(id, estatus):
     if not session.get('usuario_id'):
         flash('Debes iniciar sesión.', 'danger')

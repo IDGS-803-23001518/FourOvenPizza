@@ -16,15 +16,7 @@
     </div>
 </nav>
 
-<div class="container mx-auto px-4 sm:px-6 max-w-7xl">
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}{% for category, message in messages %}
-    <div class="mb-4 p-4 rounded-lg {% if category == 'success' %}bg-green-100 text-green-700{% elif category == 'danger' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
-        {{ message }}
-    </div>
-    {% endfor %}{% endif %}
-    {% endwith %}
+<div class="container mx-auto px-4 sm:px-6 max-w-7xl mb-6">
 
     <!-- Tabs -->
     <div class="flex gap-2 mb-0">
@@ -50,7 +42,7 @@
 
     <div class="bg-white rounded-b-2xl rounded-tr-2xl shadow-md overflow-hidden">
 
-        <form method="GET" action="{{ url_for('bitacoras.index') }}">
+        <form method="GET" action="{{ url_for('bitacoras.index') }}" id="bitacorasFiltrosForm">
             <input type="hidden" name="tab" value="{{ tab }}">
 
             <div class="px-5 py-4 border-b border-gray-100" style="background-color: #f9f5f0;">
@@ -382,4 +374,29 @@
 
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const filtrosForm = document.getElementById('bitacorasFiltrosForm');
+        if (!filtrosForm) return;
+
+        const campos = filtrosForm.querySelectorAll('input[name]:not([type="hidden"]), select[name]');
+        let timer = null;
+
+        function enviarFiltros() {
+            filtrosForm.submit();
+        }
+
+        campos.forEach((campo) => {
+            if (campo.type === 'text' || campo.type === 'date') {
+                campo.addEventListener('input', function () {
+                    clearTimeout(timer);
+                    timer = setTimeout(enviarFiltros, 400);
+                });
+                campo.addEventListener('change', enviarFiltros);
+            } else {
+                campo.addEventListener('change', enviarFiltros);
+            }
+        });
+    });
+</script>
 {% endblock %}

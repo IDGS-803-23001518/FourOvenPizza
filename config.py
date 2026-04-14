@@ -12,6 +12,6 @@ class Config(object):
     MAIL_DEFAULT_SENDER = 'fourovenpizzas@gmail.com'
 
 class DevelopmentConfig(Config):
-    DEBUG = True
-    SQLALCHEMY_DATABASE_URI  = "mysql+pymysql://root:root@127.0.0.1/fourovenpizzadb"
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    DEBUG=True
+    SQLALCHEMY_DATABASE_URI="mysql+pymysql://root:5522@127.0.0.1/fourovenpizzadb"
+    SQLALCHEMY_TRACK_MODIFICATIONS=False

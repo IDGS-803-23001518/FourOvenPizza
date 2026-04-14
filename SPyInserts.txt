@@ -1,5 +1,9 @@
 USE FourOvenPizzaDB;
 
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Autentificación/Login y Roles
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 INSERT INTO roles VALUES (1,'Administrador',1);
 INSERT INTO roles VALUES (2,'Cocinero',1);
 INSERT INTO roles VALUES (3,'Ventas',1);
@@ -62,7 +66,7 @@ BEGIN
 
             INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
             VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Usuarios', 'CREAR',
-                    'usuario', CONCAT('ID:', p_idGenerado, ' | ', p_usuario), NOW(), p_ip);
+                    'usuario', CONCAT('Usuario:', p_usuario), NOW(), p_ip);
             COMMIT;
         END IF;
 
@@ -98,7 +102,7 @@ BEGIN
 
             INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
             VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Usuarios', 'EDITAR',
-                    'usuario', CONCAT('ID:', p_idUsuario, ' | ', p_usuario), NOW(), p_ip);
+                    'usuario', CONCAT('Usuario:', p_usuario), NOW(), p_ip);
             COMMIT;
         END IF;
 
@@ -117,7 +121,7 @@ BEGIN
             INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
             VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Usuarios',
                     IF(p_estatus=1, 'ACTIVAR', 'DESACTIVAR'),
-                    'usuario', CONCAT('ID:', p_idUsuario), NOW(), p_ip);
+                    'usuario', CONCAT('Usuario:', p_usuario), NOW(), p_ip);
             COMMIT;
         END IF;
 
@@ -133,7 +137,7 @@ CALL sp_gestion_usuarios(
     'INSERT', NULL, 1,
     'Administrador Principal',
     'AdminPrincipal',
-    'scrypt:32768:8:1$NrVZXUMYPV2o7SVi$9e0fff504c575e4f2e6364ed4e741bc724b09174a6f7ffd1f2cdf059db3848e6071dfb37eaf80e8f5d4ef491a3fae9b5269856c190c4057e5a6ed35dbb92ba8e', -- fourovenpizzas33
+    'scrypt:32768:8:1$NrVZXUMYPV2o7SVi$9e0fff504c575e4f2e6364ed4e741bc724b09174a6f7ffd1f2cdf059db3848e6071dfb37eaf80e8f5d4ef491a3fae9b5269856c190c4057e5a6ed35dbb92ba8e',
     1, 'admin@fourovenpizza.com',
     '127.0.0.1', NULL,   -- ← p_ip y p_ejecutadoPor
     @p_resultado, @p_idGenerado
@@ -142,7 +146,7 @@ CALL sp_gestion_usuarios(
 CALL sp_gestion_usuarios(
     'INSERT', NULL, 2,
     'Cocinero', 'Cocinero',
-    'scrypt:32768:8:1$NrVZXUMYPV2o7SVi$9e0fff504c575e4f2e6364ed4e741bc724b09174a6f7ffd1f2cdf059db3848e6071dfb37eaf80e8f5d4ef491a3fae9b5269856c190c4057e5a6ed35dbb92ba8e', -- fourovenpizzas33
+    'scrypt:32768:8:1$NrVZXUMYPV2o7SVi$9e0fff504c575e4f2e6364ed4e741bc724b09174a6f7ffd1f2cdf059db3848e6071dfb37eaf80e8f5d4ef491a3fae9b5269856c190c4057e5a6ed35dbb92ba8e',
     1, 'cocinero@fourovenpizza.com',
     '127.0.0.1', NULL,
     @p_resultado, @p_idGenerado
@@ -151,7 +155,7 @@ CALL sp_gestion_usuarios(
 CALL sp_gestion_usuarios(
     'INSERT', NULL, 3,
     'Ventas', 'Ventas',
-    'scrypt:32768:8:1$NrVZXUMYPV2o7SVi$9e0fff504c575e4f2e6364ed4e741bc724b09174a6f7ffd1f2cdf059db3848e6071dfb37eaf80e8f5d4ef491a3fae9b5269856c190c4057e5a6ed35dbb92ba8e', -- fourovenpizzas33
+    'scrypt:32768:8:1$NrVZXUMYPV2o7SVi$9e0fff504c575e4f2e6364ed4e741bc724b09174a6f7ffd1f2cdf059db3848e6071dfb37eaf80e8f5d4ef491a3fae9b5269856c190c4057e5a6ed35dbb92ba8e',
     1, 'ventas@fourovenpizza.com',
     '127.0.0.1', NULL,
     @p_resultado, @p_idGenerado
@@ -187,7 +191,7 @@ BEGIN
         INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
         VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Roles',
                 IF(p_estatus=1, 'ACTIVAR', 'DESACTIVAR'),
-                'rol', CONCAT('ID:', p_idRol, ' | ', v_nombre_rol), NOW(), p_ip);
+                'rol', CONCAT('Rol:', v_nombre_rol), NOW(), p_ip);
 
         SET p_resultado = 'OK';
     END IF;
@@ -213,21 +217,19 @@ BEGIN
 
         INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
         VALUES (p_idUsuario, v_nombre, 'Usuarios', 'CAMBIO_CONTRASENIA',
-                'usuario', CONCAT('ID:', p_idUsuario), NOW(), p_ip);
+                'usuario', CONCAT('Usuario:', v_nombre), NOW(), p_ip);
 
         SET p_resultado = 'OK';
     END IF;
 END$$
 DELIMITER ;
 
--- _______________________________________________
--- SP PROVEEDORES
--- _______________________________________________
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Proveedores
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 DELIMITER $$
-
 DROP PROCEDURE IF EXISTS sp_gestion_proveedores$$
-
 CREATE PROCEDURE sp_gestion_proveedores(
     IN p_accion        VARCHAR(20),
     IN p_idProveedor   INT,
@@ -265,19 +267,15 @@ BEGIN
     END IF;
 
     START TRANSACTION;
-
     IF p_accion = 'INSERT' THEN
-
         IF EXISTS (SELECT 1 FROM proveedores WHERE nombre = p_nombre) THEN
             SET p_resultado = 'ERROR: El nombre del proveedor ya existe';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSEIF EXISTS (SELECT 1 FROM proveedores WHERE correo = p_correo) THEN
             SET p_resultado = 'ERROR: El correo ya está registrado para otro proveedor';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSE
             INSERT INTO proveedores (nombre, correo, telefono, direccion, estatus)
             VALUES (p_nombre, p_correo, p_telefono, p_direccion, p_estatus);
@@ -287,30 +285,25 @@ BEGIN
 
             INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
             VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Proveedores', 'CREAR',
-                    'proveedor', CONCAT('ID:', p_idGenerado, ' | ', p_nombre), NOW(), p_ip);
-
+                    'proveedor', CONCAT('Proveedor:', p_nombre), NOW(), p_ip);
             COMMIT;
         END IF;
 
     ELSEIF p_accion = 'UPDATE' THEN
-
         IF NOT EXISTS (SELECT 1 FROM proveedores WHERE idProveedor = p_idProveedor) THEN
             SET p_resultado = 'ERROR: El proveedor no existe';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSEIF EXISTS (SELECT 1 FROM proveedores 
                        WHERE nombre = p_nombre AND idProveedor != p_idProveedor) THEN
             SET p_resultado = 'ERROR: El nombre del proveedor ya está en uso';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSEIF EXISTS (SELECT 1 FROM proveedores 
                        WHERE correo = p_correo AND idProveedor != p_idProveedor) THEN
             SET p_resultado = 'ERROR: El correo ya está en uso por otro proveedor';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSE
             UPDATE proveedores
             SET nombre = p_nombre,
@@ -319,39 +312,31 @@ BEGIN
                 direccion = p_direccion,
                 estatus = p_estatus
             WHERE idProveedor = p_idProveedor;
-
             SET p_idGenerado = p_idProveedor;
             SET p_resultado = 'SUCCESS: Proveedor actualizado correctamente';
-
             INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
             VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Proveedores', 'EDITAR',
-                    'proveedor', CONCAT('ID:', p_idProveedor, ' | ', p_nombre), NOW(), p_ip);
-
+                    'proveedor', CONCAT('Proveedor:', p_nombre), NOW(), p_ip);
             COMMIT;
         END IF;
 
     ELSEIF p_accion = 'CHANGE_STATUS' THEN
-
         IF NOT EXISTS (SELECT 1 FROM proveedores WHERE idProveedor = p_idProveedor) THEN
             SET p_resultado = 'ERROR: El proveedor no existe';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSE
             UPDATE proveedores 
             SET estatus = p_estatus 
             WHERE idProveedor = p_idProveedor;
-
             SET p_idGenerado = p_idProveedor;
             SET p_resultado = IF(p_estatus=1,
                 'SUCCESS: Proveedor activado correctamente',
                 'SUCCESS: Proveedor desactivado correctamente');
-
             INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
             VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Proveedores',
                     IF(p_estatus=1, 'ACTIVAR', 'DESACTIVAR'),
-                    'proveedor', CONCAT('ID:', p_idProveedor), NOW(), p_ip);
-
+                    'proveedor', CONCAT('Proveedor:', p_nombre), NOW(), p_ip);
             COMMIT;
         END IF;
 
@@ -360,43 +345,924 @@ BEGIN
         SET p_idGenerado = 0;
         ROLLBACK;
     END IF;
-
 END$$
-
 DELIMITER ;
 
--- _______________________________________________
--- INSERT DE PROVEEDORES
--- _______________________________________________
-
 INSERT INTO proveedores (nombre, correo, telefono, direccion, estatus) VALUES
-
 -- HARINA
 ('Molino Harinero La Esperanza', 'ventas@molinolaesperanza.com', '2201-1234', 'Calle a Tonacatepeque #45, San Salvador', 1),
 ('Harinas Selectas S.A.', 'pedidos@harinasselectas.com', '2202-2345', 'Colonia Santa Cecilia, Pasaje #3, San Salvador', 1),
-
 -- LEVADURA
 ('Levaduras y Mejorantes La Espiga', 'ventas@laespiga.com', '2234-5678', 'Km 12 Carretera a Santa Tecla, San Salvador', 1),
-
 -- LÁCTEOS 
 ('Lácteos La Vaquita', 'pedidos@lavaquita.com', '2256-7890', 'Colonia San Benito, Calle Principal #123, San Salvador', 1),
 ('Productos Lácteos La Granja', 'ventas@lagranja.com', '2203-3456', 'Carretera a Lourdes Km 12, Colón', 1),
-
 -- QUESO MONARCA
 ('Quesos Monarca Centroamérica', 'ventas@monarca.com.sv', '2250-1111', 'Boulevard Los Próceres #500, San Salvador', 1),
-
 -- QUESO ASADERO
 ('Quesería La Campiña', 'info@lacampina.com', '2312-3456', 'Carretera a Sonsonate Km 25, Colón', 1),
-
 -- QUESO MOZZARELLA
 ('Quesería La Mozzarella', 'ventas@lamozzarella.com', '2270-1234', 'Colonia San Benito, Av. La Paz #234, San Salvador', 1),
 ('Quesos Italianos La Bella Italia', 'pedidos@labellaitalia.com', '2270-5678', 'Santa Elena, Calle El Espino #89, Antiguo Cuscatlán', 1),
-
 -- VEGETALES 
 ('Verduras y Frutas La Cosecha', 'pedidos@lacosecha.com', '2290-1234', 'Mercado Central, Local #78, San Salvador', 1),
-
 -- PEPPERONI
 ('Carnes Mark S.A. de C.V.', 'ventas@carnesmark.com', '2278-9012', 'Boulevard Los Próceres #456, San Salvador', 1);
+
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Materias primas
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_materiasprimas$$
+CREATE PROCEDURE sp_gestion_materiasprimas(
+    IN p_accion         VARCHAR(20),
+    IN p_idMateriaP     INT,
+    IN p_nombre         VARCHAR(100),
+    IN p_tipo           VARCHAR(50),
+    IN p_idCategoria    INT,
+    IN p_stock          DECIMAL(10,2),
+    IN p_stockMinimo    DECIMAL(10,2),
+    IN p_estatus        TINYINT,
+    IN p_ip             VARCHAR(45),
+    IN p_ejecutadoPor   INT,
+    OUT p_resultado     VARCHAR(255),
+    OUT p_idGenerado    INT
+)
+BEGIN
+    DECLARE v_nombre_ejecutor VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_nombre_mp VARCHAR(100) DEFAULT '';
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado = 'ERROR: Ocurrió un error en la operación';
+        SET p_idGenerado = 0;
+
+        INSERT INTO bitacora_sistema 
+        (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES (
+            'ERROR',
+            'MateriasPrimas',
+            CONCAT('Error en sp_gestion_materiasprimas acción: ', p_accion),
+            CONCAT('Materia: ', IFNULL(p_nombre,'')),
+            NOW(),
+            p_ip,
+            p_ejecutadoPor
+        );
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor 
+        FROM usuarios 
+        WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+    START TRANSACTION;
+
+    IF p_accion = 'INSERT' THEN
+        IF EXISTS (SELECT 1 FROM materiasprimas WHERE nombre = p_nombre) THEN
+            SET p_resultado = 'ERROR: Ya existe una materia prima con ese nombre';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF NOT EXISTS (SELECT 1 FROM categorias 
+                           WHERE idCategoria = p_idCategoria 
+                           AND estatus = 1) THEN
+            SET p_resultado = 'ERROR: Categoría inválida';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF p_stock < 0 THEN
+            SET p_resultado = 'ERROR: Stock negativo no permitido';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            INSERT INTO materiasprimas
+            (nombre, tipo, idCategoria, stock, stockMinimo, estatus)
+            VALUES
+            (p_nombre, p_tipo, p_idCategoria, p_stock, p_stockMinimo, 1);
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado = 'SUCCESS: Materia prima registrada correctamente';
+            INSERT INTO bitacora_eventos
+            (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES(
+                p_ejecutadoPor,
+                v_nombre_ejecutor,
+                'MateriasPrimas',
+                'CREAR',
+                'materiaprima',
+                CONCAT('Materia prima: ',p_nombre),
+                NOW(),
+                p_ip);
+            COMMIT;
+        END IF;
+
+    ELSEIF p_accion = 'UPDATE' THEN
+        IF NOT EXISTS (SELECT 1 FROM materiasprimas WHERE idMateriaP = p_idMateriaP) THEN
+            SET p_resultado = 'ERROR: Materia prima no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF EXISTS (
+            SELECT 1 
+            FROM materiasprimas 
+            WHERE nombre = p_nombre 
+            AND idMateriaP != p_idMateriaP
+        ) THEN
+            SET p_resultado = 'ERROR: Ya existe otra materia prima con ese nombre';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            UPDATE materiasprimas
+            SET
+                nombre = p_nombre,
+                tipo = p_tipo,
+                idCategoria = p_idCategoria,
+                stock = p_stock,
+                stockMinimo = p_stockMinimo,
+                estatus = IFNULL(p_estatus, estatus)
+            WHERE idMateriaP = p_idMateriaP;
+            SET p_idGenerado = p_idMateriaP;
+            SET p_resultado = 'SUCCESS: Materia prima actualizada correctamente';
+
+            INSERT INTO bitacora_eventos
+            (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES(
+                p_ejecutadoPor,
+                v_nombre_ejecutor,
+                'MateriasPrimas',
+                'EDITAR',
+                'materiaprima',
+                CONCAT('Materia prima: ',p_nombre),
+                NOW(),
+                p_ip);
+            COMMIT;
+        END IF;
+
+    ELSEIF p_accion = 'CHANGE_STATUS' THEN
+        IF NOT EXISTS (SELECT 1 FROM materiasprimas WHERE idMateriaP = p_idMateriaP) THEN
+            SET p_resultado = 'ERROR: Materia prima no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            UPDATE materiasprimas
+            SET estatus = p_estatus
+            WHERE idMateriaP = p_idMateriaP;
+            SET p_idGenerado = p_idMateriaP;
+            SET p_resultado = IF(
+                p_estatus = 1,
+                'SUCCESS: Materia prima activada',
+                'SUCCESS: Materia prima desactivada');
+
+            INSERT INTO bitacora_eventos
+            (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES(
+                p_ejecutadoPor,
+                v_nombre_ejecutor,
+                'MateriasPrimas',
+                IF(p_estatus=1,'ACTIVAR','DESACTIVAR'),
+                'materiaprima',
+                CONCAT('Materia prima: ',p_nombre),
+                NOW(),
+                p_ip);
+            COMMIT;
+        END IF;
+
+    ELSEIF p_accion = 'DELETE' THEN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM materiasprimas 
+        WHERE idMateriaP = p_idMateriaP
+    ) THEN
+        SET p_resultado = 'ERROR: Materia prima no existe';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    ELSE
+        SELECT nombre 
+        INTO v_nombre_mp 
+        FROM materiasprimas 
+        WHERE idMateriaP = p_idMateriaP;
+        UPDATE materiasprimas 
+        SET estatus = 0
+        WHERE idMateriaP = p_idMateriaP;
+        SET p_idGenerado = p_idMateriaP;
+        SET p_resultado = 'SUCCESS: Materia prima desactivada correctamente';
+
+        INSERT INTO bitacora_eventos(
+            usuarioId,
+            nombreUsuario,
+            modulo,
+            accion,
+            referencial,
+            referencia,
+            fecha,
+            ip)
+        VALUES(
+            p_ejecutadoPor,
+            v_nombre_ejecutor,
+            'MateriasPrimas',
+            'ELIMINAR',
+            'materiaprima',
+            CONCAT('Materia prima: ',v_nombre_mp),
+            NOW(),
+            p_ip);
+        COMMIT;
+    END IF;
+    ELSE
+        SET p_resultado = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    END IF;
+END$$
+DELIMITER ;
+
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Unidades de medida
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+-- Unidades de medida
+DELIMITER $$
+CREATE PROCEDURE sp_gestion_unidadesmedida(
+    IN p_accion VARCHAR(20),
+    IN p_idUnidad INT,
+    IN p_nombre VARCHAR(50),
+    IN p_tipo VARCHAR(50),
+    IN p_equivalente DECIMAL(10,2),
+    IN p_estatus TINYINT,
+    IN p_ip VARCHAR(50),
+    IN p_usuario INT,
+    OUT p_resultado VARCHAR(255),
+    OUT p_idGenerado INT
+)
+BEGIN
+DECLARE v_nombre VARCHAR(50);
+DECLARE v_nombre_usuario VARCHAR(100) DEFAULT 'Sistema';
+
+IF p_usuario IS NOT NULL THEN
+    SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_usuario;
+END IF;
+
+START TRANSACTION;
+
+IF p_accion = 'INSERT' THEN
+    IF EXISTS (SELECT 1 FROM unidadesmedida WHERE nombre = p_nombre) THEN
+
+        SET p_resultado = 'ERROR: La unidad ya existe';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    ELSE
+        INSERT INTO unidadesmedida
+        (nombre, tipo, equivalente, estatus)
+        VALUES
+        (p_nombre, p_tipo, p_equivalente, 1);
+        SET p_idGenerado = LAST_INSERT_ID();
+        SET p_resultado = 'SUCCESS: Unidad registrada correctamente';
+        INSERT INTO bitacora_eventos
+        (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+        VALUES
+        (p_usuario, v_nombre_usuario, 'UnidadesMedida', 'CREAR', p_nombre, NOW(), p_ip);
+        COMMIT;
+    END IF;
+
+
+ELSEIF p_accion = 'UPDATE' THEN
+    IF NOT EXISTS (SELECT 1 FROM unidadesmedida WHERE idUnidadM = p_idUnidad) THEN
+        SET p_resultado = 'ERROR: Unidad no existe';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    ELSE
+        UPDATE unidadesmedida
+        SET
+        nombre = p_nombre,
+        tipo = p_tipo,
+        equivalente = p_equivalente,
+        estatus = IFNULL(p_estatus, estatus)
+        WHERE idUnidadM = p_idUnidad;
+        SET p_resultado = 'SUCCESS: Unidad actualizada';
+        SET p_idGenerado = p_idUnidad;
+
+        INSERT INTO bitacora_eventos
+        (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+        VALUES
+        (p_usuario, v_nombre_usuario, 'UnidadesMedida', 'EDITAR', p_nombre, NOW(), p_ip);
+        COMMIT;
+    END IF;
+
+ELSEIF p_accion = 'DELETE' THEN
+    IF NOT EXISTS (SELECT 1 FROM unidadesmedida WHERE idUnidadM = p_idUnidad) THEN
+        SET p_resultado = 'ERROR: Unidad no existe';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    ELSE
+        UPDATE unidadesmedida
+        SET estatus = 0
+        WHERE idUnidadM = p_idUnidad;
+        SET p_resultado = 'SUCCESS: Unidad desactivada';
+        SET p_idGenerado = p_idUnidad;
+        INSERT INTO bitacora_eventos
+        (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+        VALUES
+        (p_usuario, v_nombre_usuario, 'UnidadesMedida', 'Eliminar', p_idUnidad, NOW(), p_ip);
+        COMMIT;
+
+    END IF;
+ELSEIF p_accion = 'CHANGE_STATUS' THEN
+    IF NOT EXISTS (SELECT 1 FROM unidadesmedida WHERE idUnidadM = p_idUnidad) THEN
+        SET p_resultado = 'ERROR: Unidad no existe';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    ELSE
+        UPDATE unidadesmedida
+        SET estatus = p_estatus
+        WHERE idUnidadM = p_idUnidad;
+        SET p_resultado = 'SUCCESS: Estatus actualizado correctamente';
+        SET p_idGenerado = p_idUnidad;
+        INSERT INTO bitacora_eventos
+        (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+        VALUES
+        (p_usuario, v_nombre_usuario, 'UnidadesMedida', 
+         IF(p_estatus = 1, 'ACTIVAR', 'DESACTIVAR'), p_idUnidad, NOW(), p_ip);
+        COMMIT;
+    END IF;
+END IF;
+END$$
+DELIMITER ;
+
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Productos y recetas
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ALTER TABLE productos
+ADD UNIQUE KEY uk_nombre_tamano (nombre, `tamaño`);
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_productos$$
+CREATE PROCEDURE sp_gestion_productos(
+    IN  p_accion     VARCHAR(10),
+    IN  p_idProducto INT,
+    IN  p_nombre     VARCHAR(100),
+    IN  p_precio     DECIMAL(10,2),
+    IN  p_tamano     VARCHAR(50),
+    IN  p_stock      DECIMAL(10,2),
+    IN  p_estatus    TINYINT,
+    IN  p_ip         VARCHAR(50),
+    IN  p_usuario    INT,
+    OUT p_resultado  VARCHAR(255),
+    OUT p_idGenerado INT
+)
+BEGIN
+    DECLARE v_nombre_producto VARCHAR(100) DEFAULT '';
+    DECLARE v_nombre_usuario  VARCHAR(100) DEFAULT 'Sistema';
+
+    DECLARE v_nombre VARCHAR(100);
+    DECLARE v_tamano VARCHAR(50);
+ 
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado = 'ERROR: Ocurrió un error en la operación';
+        SET p_idGenerado = 0;
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES ('ERROR', 'Productos',
+                CONCAT('Error en sp_gestion_productos acción: ', p_accion),
+                CONCAT('Producto: ', IFNULL(p_nombre,''), ' | ID: ', IFNULL(p_idProducto,0)),
+                NOW(), p_ip, p_usuario);
+    END;
+ 
+    IF p_usuario IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_usuario;
+    END IF;
+
+    SET v_nombre = LOWER(TRIM(p_nombre));
+    SET v_tamano = LOWER(TRIM(p_tamano));
+ 
+    START TRANSACTION;
+
+    IF p_accion = 'INSERT' THEN
+        IF v_nombre = '' THEN
+            SET p_resultado = 'ERROR: El nombre del producto no puede estar vacío';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF v_tamano = '' THEN
+            SET p_resultado = 'ERROR: El tamaño del producto no puede estar vacío';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF p_precio < 0 THEN
+            SET p_resultado = 'ERROR: El precio no puede ser negativo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF p_stock < 0 THEN
+            SET p_resultado = 'ERROR: El stock no puede ser negativo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF EXISTS (
+            SELECT 1 FROM productos
+            WHERE LOWER(TRIM(nombre))   = v_nombre
+              AND LOWER(TRIM(`tamaño`)) = v_tamano
+        ) THEN
+            SET p_resultado = 'ERROR: Ya existe un producto con ese nombre y tamaño';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            INSERT INTO productos (nombre, precio, `tamaño`, stock, estatus)
+            VALUES (TRIM(p_nombre), p_precio, TRIM(p_tamano), p_stock, 1);
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado  = 'SUCCESS: Producto registrado correctamente';
+            INSERT INTO bitacora_eventos
+                (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+            VALUES
+                (p_usuario, v_nombre_usuario, 'Productos', 'CREAR',
+                 CONCAT('Producto: ', TRIM(p_nombre), ' | ', TRIM(p_tamano)),
+                 NOW(), p_ip);
+            COMMIT;
+        END IF;
+ 
+    ELSEIF p_accion = 'UPDATE' THEN
+        IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = p_idProducto) THEN
+            SET p_resultado = 'ERROR: El producto no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF v_nombre = '' THEN
+            SET p_resultado = 'ERROR: El nombre del producto no puede estar vacío';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF v_tamano = '' THEN
+            SET p_resultado = 'ERROR: El tamaño del producto no puede estar vacío';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF p_precio < 0 THEN
+            SET p_resultado = 'ERROR: El precio no puede ser negativo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF p_stock < 0 THEN
+            SET p_resultado = 'ERROR: El stock no puede ser negativo';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF EXISTS (
+            SELECT 1 FROM productos
+            WHERE LOWER(TRIM(nombre))   = v_nombre
+              AND LOWER(TRIM(`tamaño`)) = v_tamano
+              AND idProducto           <> p_idProducto
+        ) THEN
+            SET p_resultado = 'ERROR: Ya existe otro producto con ese nombre y tamaño';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            UPDATE productos
+            SET nombre   = TRIM(p_nombre),
+                precio   = p_precio,
+                `tamaño` = TRIM(p_tamano),
+                stock    = p_stock,
+                estatus  = IFNULL(p_estatus, estatus)
+            WHERE idProducto = p_idProducto;
+            SET p_resultado  = 'SUCCESS: Producto actualizado correctamente';
+            SET p_idGenerado = p_idProducto;
+            INSERT INTO bitacora_eventos
+                (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+            VALUES
+                (p_usuario, v_nombre_usuario, 'Productos', 'EDITAR',
+                 CONCAT('Producto: ', TRIM(p_nombre), ' | ', TRIM(p_tamano)),
+                 NOW(), p_ip);
+            COMMIT;
+        END IF;
+ 
+    ELSEIF p_accion = 'DELETE' THEN
+        IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = p_idProducto) THEN
+            SET p_resultado = 'ERROR: El producto no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            SELECT nombre INTO v_nombre_producto
+            FROM productos WHERE idProducto = p_idProducto;
+            UPDATE productos
+            SET estatus = 0
+            WHERE idProducto = p_idProducto;
+            SET p_resultado  = 'SUCCESS: Producto desactivado correctamente';
+            SET p_idGenerado = p_idProducto;
+            INSERT INTO bitacora_eventos
+                (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+            VALUES
+                (p_usuario, v_nombre_usuario, 'Productos', 'Eliminar',
+                 CONCAT('ID:', p_idProducto, ' | ', v_nombre_producto),
+                 NOW(), p_ip);
+            COMMIT;
+        END IF;
+    ELSE
+        SET p_resultado = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    END IF;
+END$$
+DELIMITER ;
+
+-- Insert de categorias
+INSERT INTO categorias (nombre, descripcion, estatus) VALUES
+('Harinas y masas',    'Ingredientes base para la elaboración de masas y rebozados',         1),
+('Carnes y embutidos', 'Proteínas cárnicas como pepperoni, jamón, tocino y carnes frescas',  1),
+('Lácteos',            'Quesos, cremas y derivados lácteos para pizzas y salsas',             1),
+('Salsas y bases',     'Salsas de tomate, pesto, crema blanca y otras bases para pizza',     1),
+('Frutas y Verduras',           'Vegetales frescos y procesados usados como ingredientes o toppings', 1),
+('Aceites y grasas',   'Aceites de oliva, vegetal y mantequillas para cocción y acabados',   1),
+('Especias y hierbas', 'Condimentos secos como orégano, albahaca, ajo en polvo y pimienta',  1),
+('Bebidas',            'Refrescos, aguas y bebidas para la venta al cliente',                1);
+
+--  Recetas
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_recetas $$
+CREATE PROCEDURE sp_gestion_recetas(
+    IN p_accion VARCHAR(10),
+    IN p_idReceta INT,
+    IN p_idProducto INT,
+    IN p_descripcion VARCHAR(200),
+    IN p_ip VARCHAR(50),
+    IN p_usuario INT,
+    OUT p_resultado VARCHAR(255),
+    OUT p_idGenerado INT
+)
+BEGIN
+    DECLARE v_nombre_usuario VARCHAR(100) DEFAULT 'Sistema';
+    IF p_usuario IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_usuario;
+    END IF;
+
+    START TRANSACTION;
+
+    IF p_accion = 'INSERT' THEN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM productos
+            WHERE idProducto = p_idProducto
+        ) THEN
+            SET p_resultado = 'ERROR: El producto no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF EXISTS (
+            SELECT 1
+            FROM recetas
+            WHERE idProducto = p_idProducto
+        ) THEN
+            SET p_resultado = 'ERROR: El producto ya tiene una receta registrada';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            INSERT INTO recetas (idProducto, descripcion)
+            VALUES (p_idProducto, p_descripcion);
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado = 'SUCCESS: Receta registrada correctamente';
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                v_nombre_usuario,
+                'Recetas',
+                'CREAR',
+                CONCAT('Receta ID:', p_idGenerado, ' | Producto ID:', p_idProducto),
+                NOW(),
+                p_ip
+            );
+            COMMIT;
+        END IF;
+
+    ELSEIF p_accion = 'UPDATE' THEN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM recetas
+            WHERE idReceta = p_idReceta
+        ) THEN
+            SET p_resultado = 'ERROR: La receta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            UPDATE recetas
+            SET descripcion = p_descripcion
+            WHERE idReceta = p_idReceta;
+            SET p_resultado = 'SUCCESS: Receta actualizada correctamente';
+            SET p_idGenerado = p_idReceta;
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                v_nombre_usuario,
+                'Recetas',
+                'EDITAR',
+                CONCAT('Receta ID:', p_idReceta),
+                NOW(),
+                p_ip
+            );
+            COMMIT;
+        END IF;
+
+    ELSEIF p_accion = 'DELETE' THEN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM recetas
+            WHERE idReceta = p_idReceta
+        ) THEN
+            SET p_resultado = 'ERROR: La receta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            DELETE FROM detalleReceta
+            WHERE idReceta = p_idReceta;
+            DELETE FROM recetas
+            WHERE idReceta = p_idReceta;
+            SET p_resultado = 'SUCCESS: Receta eliminada correctamente';
+            SET p_idGenerado = p_idReceta;
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                v_nombre_usuario,
+                'Recetas',
+                'ELIMINAR',
+                CONCAT('Receta ID:', p_idReceta),
+                NOW(),
+                p_ip
+            );
+            COMMIT;
+        END IF;
+    ELSE
+        SET p_resultado = 'ERROR: Accion no valida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    END IF;
+END $$
+DELIMITER ;
+
+-- Detalle Receta
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_detalle_receta $$
+CREATE PROCEDURE sp_gestion_detalle_receta(
+    IN p_accion VARCHAR(10),
+    IN p_idDetalleR INT,
+    IN p_idReceta INT,
+    IN p_idMateriaP INT,
+    IN p_cantidad DECIMAL(10,2),
+    IN p_ip VARCHAR(50),
+    IN p_usuario INT,
+    OUT p_resultado VARCHAR(255),
+    OUT p_idGenerado INT
+)
+BEGIN
+    DECLARE v_nombre_usuario VARCHAR(100) DEFAULT 'Sistema';
+
+    IF p_usuario IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_usuario;
+    END IF;
+
+    START TRANSACTION;
+    IF p_accion = 'INSERT' THEN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM recetas
+            WHERE idReceta = p_idReceta
+        ) THEN
+            SET p_resultado = 'ERROR: La receta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF NOT EXISTS (
+            SELECT 1
+            FROM materiasPrimas
+            WHERE idMateriaP = p_idMateriaP
+        ) THEN
+            SET p_resultado = 'ERROR: La materia prima no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF p_cantidad <= 0 THEN
+            SET p_resultado = 'ERROR: La cantidad debe ser mayor a 0';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF EXISTS (
+            SELECT 1
+            FROM detalleReceta
+            WHERE idReceta = p_idReceta
+              AND idMateriaP = p_idMateriaP
+        ) THEN
+            SET p_resultado = 'ERROR: La materia prima ya esta registrada en la receta';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            INSERT INTO detalleReceta (idReceta, idMateriaP, cantidad)
+            VALUES (p_idReceta, p_idMateriaP, p_cantidad);
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado = 'SUCCESS: Detalle de receta registrado correctamente';
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                v_nombre_usuario,
+                'DetalleReceta',
+                'CREAR',
+                CONCAT('Detalle ID:', p_idGenerado, ' | Receta ID:', p_idReceta, ' | MateriaPrima ID:', p_idMateriaP),
+                NOW(),
+                p_ip
+            );
+            COMMIT;
+        END IF;
+
+    ELSEIF p_accion = 'UPDATE' THEN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM detalleReceta
+            WHERE idDetalleR = p_idDetalleR
+        ) THEN
+            SET p_resultado = 'ERROR: El detalle de receta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSEIF p_cantidad <= 0 THEN
+            SET p_resultado = 'ERROR: La cantidad debe ser mayor a 0';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            UPDATE detalleReceta
+            SET cantidad = p_cantidad
+            WHERE idDetalleR = p_idDetalleR;
+            SET p_resultado = 'SUCCESS: Detalle de receta actualizado correctamente';
+            SET p_idGenerado = p_idDetalleR;
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                v_nombre_usuario,
+                'DetalleReceta',
+                'EDITAR',
+                CONCAT('Detalle ID:', p_idDetalleR),
+                NOW(),
+                p_ip
+            );
+            COMMIT;
+        END IF;
+        
+    ELSEIF p_accion = 'DELETE' THEN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM detalleReceta
+            WHERE idDetalleR = p_idDetalleR
+        ) THEN
+            SET p_resultado = 'ERROR: El detalle de receta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+        ELSE
+            DELETE FROM detalleReceta
+            WHERE idDetalleR = p_idDetalleR;
+            SET p_resultado = 'SUCCESS: Detalle de receta eliminado correctamente';
+            SET p_idGenerado = p_idDetalleR;
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+            VALUES (
+                p_usuario,
+                v_nombre_usuario,
+                'DetalleReceta',
+                'ELIMINAR',
+                CONCAT('Detalle ID:', p_idDetalleR),
+                NOW(),
+                p_ip
+            );
+            COMMIT;
+        END IF;
+    ELSE
+
+        SET p_resultado = 'ERROR: Accion no valida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    END IF;
+END $$
+DELIMITER ;
+
+-- SP para cambiar estatus de productos (lee estatus actual internamente)
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_cambiar_estatus_producto$$
+CREATE PROCEDURE sp_cambiar_estatus_producto(
+    IN  p_idProducto   INT,
+    IN  p_ip           VARCHAR(50),
+    IN  p_usuario      INT,
+    OUT p_resultado    VARCHAR(255),
+    OUT p_nuevoEstatus TINYINT
+)
+BEGIN
+    DECLARE v_estatus_actual  TINYINT       DEFAULT NULL;
+    DECLARE v_nombre_producto VARCHAR(100)  DEFAULT '';
+    DECLARE v_nombre_usuario  VARCHAR(100)  DEFAULT 'Sistema';
+
+    IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = p_idProducto) THEN
+        SET p_resultado = 'ERROR: Producto no encontrado';
+        SET p_nuevoEstatus = 0;
+    ELSE
+        SELECT estatus, nombre INTO v_estatus_actual, v_nombre_producto
+        FROM productos WHERE idProducto = p_idProducto;
+
+        SET p_nuevoEstatus = IF(v_estatus_actual = 1, 0, 1);
+
+        UPDATE productos SET estatus = p_nuevoEstatus WHERE idProducto = p_idProducto;
+
+        IF p_usuario IS NOT NULL THEN
+            SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_usuario;
+        END IF;
+
+        INSERT INTO bitacora_eventos
+            (usuarioId, nombreUsuario, modulo, accion, referencia, fecha, ip)
+        VALUES
+            (p_usuario, v_nombre_usuario, 'Productos',
+             IF(p_nuevoEstatus = 1, 'ACTIVAR', 'DESACTIVAR'),
+             CONCAT('Producto: ', v_nombre_producto),
+             NOW(), p_ip);
+
+        SET p_resultado = IF(p_nuevoEstatus = 1,
+            'SUCCESS: Producto activado correctamente',
+            'SUCCESS: Producto desactivado correctamente');
+    END IF;
+END$$
+DELIMITER ;
+
+
+-- SP para obtener alertas de stock de materias primas activas
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_obtener_alertas_stock_mp$$
+CREATE PROCEDURE sp_obtener_alertas_stock_mp()
+BEGIN
+    SELECT
+        idMateriaP,
+        nombre,
+        stock,
+        stockMinimo,
+        tipo
+    FROM materiasprimas
+    WHERE estatus = 1
+      AND stockMinimo > 0
+      AND stock <= stockMinimo
+    ORDER BY nombre ASC;
+END$$
+DELIMITER ;
+
+
+-- SP para obtener alertas de stock de una receta especifica
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_obtener_alertas_stock_receta$$
+CREATE PROCEDURE sp_obtener_alertas_stock_receta(
+    IN p_idReceta INT
+)
+BEGIN
+    SELECT
+        mp.nombre    AS materia_prima,
+        mp.stock     AS stock,
+        mp.stockMinimo AS stock_minimo,
+        dr.cantidad  AS requerido,
+        CASE
+            WHEN mp.stock < dr.cantidad THEN 'insuficiente'
+            WHEN mp.stockMinimo > 0 AND mp.stock <= mp.stockMinimo THEN 'bajo'
+            ELSE 'ok'
+        END AS tipo_alerta
+    FROM detalleReceta dr
+    INNER JOIN materiasPrimas mp ON mp.idMateriaP = dr.idMateriaP
+    WHERE dr.idReceta = p_idReceta
+    ORDER BY mp.nombre ASC;
+END$$
+DELIMITER ;
+
+
+-- SP para listar productos con filtros
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_listar_productos$$
+CREATE PROCEDURE sp_listar_productos(
+    IN p_nombre         VARCHAR(100),
+    IN p_precio_inicio  DECIMAL(10,2),
+    IN p_precio_fin     DECIMAL(10,2),
+    IN p_estatus        VARCHAR(10),
+    IN p_tamano         VARCHAR(50),
+    IN p_estatus_receta VARCHAR(10)
+)
+BEGIN
+    SELECT
+        p.idProducto,
+        p.nombre,
+        p.precio,
+        p.`tamaño` AS tamano,
+        p.stock,
+        p.estatus,
+        CASE WHEN EXISTS (SELECT 1 FROM recetas r WHERE r.idProducto = p.idProducto)
+             THEN 1 ELSE 0 END AS receta_activa
+    FROM productos p
+    WHERE (p_nombre IS NULL OR p.nombre LIKE CONCAT('%', p_nombre, '%'))
+      AND (p_precio_inicio IS NULL OR p.precio >= p_precio_inicio)
+      AND (p_precio_fin IS NULL OR p.precio <= p_precio_fin)
+      AND (p_tamano IS NULL OR p.`tamaño` = p_tamano)
+      AND (
+            p_estatus IS NULL
+            OR p_estatus = 'todos'
+            OR p.estatus = CAST(p_estatus AS UNSIGNED)
+          )
+      AND (
+            p_estatus_receta IS NULL
+            OR p_estatus_receta = 'todos'
+            -- MODIFICACIÓN: Verifica que tenga al menos 4 ingredientes
+            OR (p_estatus_receta = '1' AND EXISTS (
+                SELECT 1 FROM recetas r2 
+                JOIN detalleReceta dr ON dr.idReceta = r2.idReceta
+                WHERE r2.idProducto = p.idProducto
+                HAVING COUNT(dr.idDetalleR) >= 4
+            ))
+            OR (p_estatus_receta = '0' AND NOT EXISTS (
+                SELECT 1 FROM recetas r3 
+                JOIN detalleReceta dr ON dr.idReceta = r3.idReceta
+                WHERE r3.idProducto = p.idProducto
+                HAVING COUNT(dr.idDetalleR) >= 4
+            ))
+          )
+    ORDER BY p.nombre ASC;
+END$$
+DELIMITER ;
+
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Compras
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 DELIMITER $$
 DROP PROCEDURE IF EXISTS sp_gestion_compras$$
@@ -414,8 +1280,6 @@ CREATE PROCEDURE sp_gestion_compras(
     OUT p_idGenerado    INT
 )
 sp_gestion_compras:BEGIN
-
-    -- Declaración de variables
     DECLARE v_nombre_ejecutor   VARCHAR(100) DEFAULT 'Sistema';
     DECLARE v_idx               INT DEFAULT 0;
     DECLARE v_total_items       INT DEFAULT 0;
@@ -425,8 +1289,8 @@ sp_gestion_compras:BEGIN
     DECLARE v_precio            DECIMAL(10,2);
     DECLARE v_estatus_actual    VARCHAR(30);
     DECLARE v_raw_unidad        TEXT;
+    DECLARE v_total_compra      DECIMAL(10,2);  -- <-- DECLARADO AQUÍ AL INICIO
 
-    -- Manejador de excepciones
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -441,7 +1305,6 @@ sp_gestion_compras:BEGIN
                 NOW(), p_ip, p_ejecutadoPor);
     END;
 
-    -- Nombre del ejecutor
     IF p_ejecutadoPor IS NOT NULL THEN
         SELECT nombre INTO v_nombre_ejecutor
         FROM usuarios
@@ -449,129 +1312,96 @@ sp_gestion_compras:BEGIN
     END IF;
 
     START TRANSACTION;
-
-    -- ════════════════════════════════════════════════════════════════════════
-    --  INSERT  –  Registrar una compra con su detalle
-    -- ════════════════════════════════════════════════════════════════════════
     IF p_accion = 'INSERT' THEN
 
         IF NOT EXISTS (SELECT 1 FROM proveedores WHERE idProveedor = p_idProveedor AND estatus = 1) THEN
             SET p_resultado  = 'ERROR: El proveedor no existe o está inactivo';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSEIF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
             SET p_resultado  = 'ERROR: Debe incluir al menos un producto en el detalle';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSE
             INSERT INTO compras (idProveedor, idUsuario, fecha, estatus)
             VALUES (p_idProveedor, p_ejecutadoPor, p_fecha, 'Pendiente');
-
             SET p_idGenerado  = LAST_INSERT_ID();
             SET v_total_items = JSON_LENGTH(p_detalles);
             SET v_idx         = 0;
-
             loop_insert: WHILE v_idx < v_total_items DO
-
                 SET v_idMateriaP = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idMateriaP'))) AS UNSIGNED);
                 SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
                 SET v_precio     = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].precio')))     AS DECIMAL(10,2));
-
-                -- idUnidadM es OPCIONAL: puede ser null en el JSON
                 SET v_raw_unidad = JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idUnidadM')));
                 IF v_raw_unidad IS NULL OR v_raw_unidad = 'null' OR v_raw_unidad = '' THEN
                     SET v_idUnidadM = NULL;
                 ELSE
                     SET v_idUnidadM = CAST(v_raw_unidad AS UNSIGNED);
                 END IF;
-
-                -- Validar materia prima
                 IF NOT EXISTS (SELECT 1 FROM materiasPrimas WHERE idMateriaP = v_idMateriaP AND estatus = 1) THEN
                     SET p_resultado  = CONCAT('ERROR: La materia prima ID ', v_idMateriaP, ' no existe o está inactiva');
                     SET p_idGenerado = 0;
                     ROLLBACK;
                     LEAVE sp_gestion_compras;
-
-                -- Validar unidad de medida SOLO si se proporcionó
                 ELSEIF v_idUnidadM IS NOT NULL AND NOT EXISTS (SELECT 1 FROM unidadesMedida WHERE idUnidadM = v_idUnidadM AND estatus = 1) THEN
                     SET p_resultado  = CONCAT('ERROR: La unidad de medida ID ', v_idUnidadM, ' no existe o está inactiva');
                     SET p_idGenerado = 0;
                     ROLLBACK;
                     LEAVE sp_gestion_compras;
-
                 ELSEIF v_cantidad <= 0 OR v_precio <= 0 THEN
                     SET p_resultado  = 'ERROR: La cantidad y el precio deben ser mayores a cero';
                     SET p_idGenerado = 0;
                     ROLLBACK;
                     LEAVE sp_gestion_compras;
-
                 ELSE
                     INSERT INTO detalleCompra (idCompra, idMateriaP, idUnidadM, cantidad, precio)
                     VALUES (p_idGenerado, v_idMateriaP, v_idUnidadM, v_cantidad, v_precio);
                 END IF;
-
                 SET v_idx = v_idx + 1;
             END WHILE loop_insert;
-
             SET p_resultado = 'SUCCESS: Compra registrada correctamente';
 
             INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
             VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Compras', 'CREAR',
-                    'compra', CONCAT('ID:', p_idGenerado, ' | Proveedor ID:', p_idProveedor), NOW(), p_ip);
-
+                    'compra', CONCAT('Numero de compra:', p_idGenerado), NOW(), p_ip);
             COMMIT;
         END IF;
 
-    -- ════════════════════════════════════════════════════════════════════════
-    --  UPDATE  –  Editar cabecera y reemplazar detalle completo
-    -- ════════════════════════════════════════════════════════════════════════
-    ELSEIF p_accion = 'UPDATE' THEN
 
+    ELSEIF p_accion = 'UPDATE' THEN
         SELECT estatus INTO v_estatus_actual
         FROM compras
         WHERE idCompra = p_idCompra;
-
         IF v_estatus_actual IS NULL THEN
             SET p_resultado  = 'ERROR: La compra no existe';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSEIF v_estatus_actual != 'Pendiente' THEN
             SET p_resultado  = 'ERROR: Solo se pueden editar compras en estado Pendiente';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSEIF NOT EXISTS (SELECT 1 FROM proveedores WHERE idProveedor = p_idProveedor AND estatus = 1) THEN
             SET p_resultado  = 'ERROR: El proveedor no existe o está inactivo';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSEIF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
             SET p_resultado  = 'ERROR: Debe incluir al menos un producto en el detalle';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSE
             UPDATE compras
             SET idProveedor = p_idProveedor,
                 idUsuario   = p_ejecutadoPor,
                 fecha       = p_fecha
             WHERE idCompra  = p_idCompra;
-
             DELETE FROM detalleCompra WHERE idCompra = p_idCompra;
-
             SET v_total_items = JSON_LENGTH(p_detalles);
             SET v_idx         = 0;
-
             loop_update: WHILE v_idx < v_total_items DO
-
                 SET v_idMateriaP = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idMateriaP'))) AS UNSIGNED);
                 SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
                 SET v_precio     = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].precio')))     AS DECIMAL(10,2));
 
-                -- idUnidadM es OPCIONAL: puede ser null en el JSON
                 SET v_raw_unidad = JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idUnidadM')));
                 IF v_raw_unidad IS NULL OR v_raw_unidad = 'null' OR v_raw_unidad = '' THEN
                     SET v_idUnidadM = NULL;
@@ -579,26 +1409,21 @@ sp_gestion_compras:BEGIN
                     SET v_idUnidadM = CAST(v_raw_unidad AS UNSIGNED);
                 END IF;
 
-                -- Validar materia prima
                 IF NOT EXISTS (SELECT 1 FROM materiasPrimas WHERE idMateriaP = v_idMateriaP AND estatus = 1) THEN
                     SET p_resultado  = CONCAT('ERROR: La materia prima ID ', v_idMateriaP, ' no existe o está inactiva');
                     SET p_idGenerado = 0;
                     ROLLBACK;
                     LEAVE sp_gestion_compras;
-
-                -- Validar unidad de medida SOLO si se proporcionó
                 ELSEIF v_idUnidadM IS NOT NULL AND NOT EXISTS (SELECT 1 FROM unidadesMedida WHERE idUnidadM = v_idUnidadM AND estatus = 1) THEN
                     SET p_resultado  = CONCAT('ERROR: La unidad de medida ID ', v_idUnidadM, ' no existe o está inactiva');
                     SET p_idGenerado = 0;
                     ROLLBACK;
                     LEAVE sp_gestion_compras;
-
                 ELSEIF v_cantidad <= 0 OR v_precio <= 0 THEN
                     SET p_resultado  = 'ERROR: La cantidad y el precio deben ser mayores a cero';
                     SET p_idGenerado = 0;
                     ROLLBACK;
                     LEAVE sp_gestion_compras;
-
                 ELSE
                     INSERT INTO detalleCompra (idCompra, idMateriaP, idUnidadM, cantidad, precio)
                     VALUES (p_idCompra, v_idMateriaP, v_idUnidadM, v_cantidad, v_precio);
@@ -612,52 +1437,52 @@ sp_gestion_compras:BEGIN
 
             INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
             VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Compras', 'EDITAR',
-                    'compra', CONCAT('ID:', p_idCompra, ' | Proveedor ID:', p_idProveedor), NOW(), p_ip);
-
+                    'compra', CONCAT('Numero de compra:', p_idCompra), NOW(), p_ip);
             COMMIT;
         END IF;
 
-    -- ════════════════════════════════════════════════════════════════════════
-    --  CHANGE_STATUS  –  Actualiza el estado de la compra
-    --  Al Completar: incrementa el stock de cada materia prima
-    -- ════════════════════════════════════════════════════════════════════════
     ELSEIF p_accion = 'CHANGE_STATUS' THEN
-
         SELECT estatus INTO v_estatus_actual
         FROM compras
         WHERE idCompra = p_idCompra;
-
+        
         IF v_estatus_actual IS NULL THEN
             SET p_resultado  = 'ERROR: La compra no existe';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSEIF p_estatus NOT IN ('Pendiente', 'Completado', 'Cancelado') THEN
             SET p_resultado  = 'ERROR: Estado no válido. Use Pendiente, Completado o Cancelado';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSEIF v_estatus_actual = p_estatus THEN
             SET p_resultado  = CONCAT('ERROR: La compra ya se encuentra en estado ', p_estatus);
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSEIF v_estatus_actual IN ('Completado', 'Cancelado') THEN
             SET p_resultado  = 'ERROR: No se puede cambiar el estado de una compra ya finalizada';
             SET p_idGenerado = 0;
             ROLLBACK;
-
         ELSE
+            -- Calcular el total de la compra (usando v_total_compra ya declarada)
+            SELECT COALESCE(SUM(precio), 0) INTO v_total_compra
+            FROM detalleCompra
+            WHERE idCompra = p_idCompra;
+            
             UPDATE compras
             SET estatus = p_estatus
             WHERE idCompra = p_idCompra;
 
-            -- Al completar: sumar la cantidad comprada al stock de cada materia prima
             IF p_estatus = 'Completado' THEN
+                -- Actualizar stock
                 UPDATE materiasPrimas mp
                 JOIN detalleCompra dc ON dc.idMateriaP = mp.idMateriaP
                 SET mp.stock = mp.stock + dc.cantidad
                 WHERE dc.idCompra = p_idCompra;
+                
+                -- Registrar movimiento de caja (EGRESO por compra)
+                INSERT INTO cajaMovimientos (idUsuario, tipo, monto, descripcion, fecha)
+                VALUES (p_ejecutadoPor, 'EGRESO', v_total_compra, 
+                        CONCAT('Compra #', p_idCompra, ' - Compra de insumos'), NOW());
             END IF;
 
             SET p_idGenerado = p_idCompra;
@@ -666,14 +1491,387 @@ sp_gestion_compras:BEGIN
             INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
             VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Compras',
                     UPPER(p_estatus),
-                    'compra', CONCAT('ID:', p_idCompra), NOW(), p_ip);
-
+                    'compra', CONCAT('Numero de compra:', p_idCompra), NOW(), p_ip);
             COMMIT;
         END IF;
 
-    -- ════════════════════════════════════════════════════════════════════════
-    --  Acción no reconocida
-    -- ════════════════════════════════════════════════════════════════════════
+    ELSE
+        SET p_resultado  = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    END IF;
+END$$
+DELIMITER ;
+
+INSERT INTO unidadesMedida (nombre, tipo, equivalente, estatus) VALUES
+('Gramo', 'Solido', 1.00, 1),
+('Kilogramo', 'Solido', 1000.00, 1),
+('Mililitro', 'Liquido', 1.00, 1),
+('Litro', 'Liquido', 1000.00, 1),
+('Cucharada', 'Solido', 15.00, 1),
+('Taza', 'Solido', 240.00, 1);
+
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- ÓRDENES DE PRODUCCIÓN
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_ordenes_produccion$$
+CREATE PROCEDURE sp_gestion_ordenes_produccion(
+    IN  p_accion        VARCHAR(20),
+    IN  p_idOrden       INT,
+    IN  p_idUsuario     INT,
+    IN  p_estado        VARCHAR(50),
+    IN  p_detalles      JSON,
+    IN  p_ip            VARCHAR(45),
+    IN  p_ejecutadoPor  INT,
+    OUT p_resultado     VARCHAR(255),
+    OUT p_idGenerado    INT
+)
+sp_main: BEGIN
+    DECLARE v_nombre_ejecutor   VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_idx               INT          DEFAULT 0;
+    DECLARE v_total_items       INT          DEFAULT 0;
+    DECLARE v_idProducto        INT;
+    DECLARE v_cantidad          DECIMAL(10,2);
+    DECLARE v_estado_actual     VARCHAR(50);
+
+    DECLARE v_idReceta          INT;
+    DECLARE v_idMateriaP        INT;
+    DECLARE v_cantidad_receta   DECIMAL(10,2);
+    DECLARE v_stock_mp          DECIMAL(10,2);
+    DECLARE v_nombre_mp         VARCHAR(100);
+    DECLARE v_nombre_producto   VARCHAR(100);
+    DECLARE v_tiene_receta      INT DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado  = 'ERROR: Ocurrió un error inesperado en la operación';
+        SET p_idGenerado = 0;
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES ('ERROR', 'OrdenesProduccion',
+                CONCAT('Error en sp_gestion_ordenes_produccion acción: ', p_accion),
+                CONCAT('Orden ID: ', IFNULL(p_idOrden, 0),
+                       ' | Ejecutado por: ', IFNULL(p_ejecutadoPor, 0)),
+                NOW(), p_ip, p_ejecutadoPor);
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    START TRANSACTION;
+    IF p_accion = 'INSERT' THEN
+
+        IF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+            SET p_resultado  = 'ERROR: Debe incluir al menos un producto en la orden';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        SET v_total_items = JSON_LENGTH(p_detalles);
+        SET v_idx = 0;
+
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+
+            IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = v_idProducto AND estatus = 1) THEN
+                SET p_resultado  = CONCAT('ERROR: Producto ID ', v_idProducto, ' no existe o está inactivo');
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            SELECT COUNT(*) INTO v_tiene_receta FROM recetas WHERE idProducto = v_idProducto;
+            IF v_tiene_receta = 0 THEN
+                SELECT nombre INTO v_nombre_producto FROM productos WHERE idProducto = v_idProducto;
+                SET p_resultado  = CONCAT('ERROR: El producto "', v_nombre_producto, '" no tiene receta registrada');
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            IF v_cantidad <= 0 THEN
+                SET p_resultado  = 'ERROR: La cantidad de cada producto debe ser mayor a 0';
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- Verificar stock de materias primas
+        CREATE TEMPORARY TABLE IF NOT EXISTS tmp_consumo_mp (
+            idMateriaP INT,
+            total_requerido DECIMAL(10,2)
+        );
+        DELETE FROM tmp_consumo_mp;
+
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+            SELECT idReceta INTO v_idReceta FROM recetas WHERE idProducto = v_idProducto LIMIT 1;
+            INSERT INTO tmp_consumo_mp (idMateriaP, total_requerido)
+            SELECT dr.idMateriaP, dr.cantidad * v_cantidad
+            FROM detalleReceta dr
+            WHERE dr.idReceta = v_idReceta
+            ON DUPLICATE KEY UPDATE total_requerido = total_requerido + (dr.cantidad * v_cantidad);
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        SELECT t.idMateriaP, t.total_requerido, mp.stock, mp.nombre
+        INTO v_idMateriaP, v_cantidad_receta, v_stock_mp, v_nombre_mp
+        FROM tmp_consumo_mp t
+        JOIN materiasPrimas mp ON mp.idMateriaP = t.idMateriaP
+        WHERE mp.stock < t.total_requerido
+        LIMIT 1;
+
+        IF v_stock_mp IS NOT NULL AND v_stock_mp < v_cantidad_receta THEN
+            DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp;
+            SET p_resultado  = CONCAT('ERROR: Stock insuficiente de "', v_nombre_mp,
+                                      '". Disponible: ', v_stock_mp, ', requerido: ', v_cantidad_receta);
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp;
+
+        -- Insertar la orden
+        INSERT INTO ordenesProduccion (idUsuario, estado, fecha)
+        VALUES (p_ejecutadoPor, 'En proceso', NOW());
+        SET p_idGenerado = LAST_INSERT_ID();
+
+        -- Insertar el detalle
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+            INSERT INTO detalleProduccion (idProducto, idOrden, cantidad)
+            VALUES (v_idProducto, p_idGenerado, v_cantidad);
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        SET p_resultado = 'SUCCESS: Orden de producción registrada correctamente';
+
+        -- NUEVO: Descontar materias primas al crear la orden
+        CREATE TEMPORARY TABLE IF NOT EXISTS tmp_consumo_insert (
+            idMateriaP INT,
+            total_requerido DECIMAL(10,2)
+        );
+        DELETE FROM tmp_consumo_insert;
+
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+            SELECT idReceta INTO v_idReceta FROM recetas WHERE idProducto = v_idProducto LIMIT 1;
+            INSERT INTO tmp_consumo_insert (idMateriaP, total_requerido)
+            SELECT dr.idMateriaP, dr.cantidad * v_cantidad
+            FROM detalleReceta dr
+            WHERE dr.idReceta = v_idReceta
+            ON DUPLICATE KEY UPDATE total_requerido = total_requerido + (dr.cantidad * v_cantidad);
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        UPDATE materiasPrimas mp
+        JOIN tmp_consumo_insert t ON t.idMateriaP = mp.idMateriaP
+        SET mp.stock = mp.stock - t.total_requerido;
+
+        DROP TEMPORARY TABLE IF EXISTS tmp_consumo_insert;
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'OrdenesProduccion', 'CREAR',
+                'orden', CONCAT('ID:', p_idGenerado), NOW(), p_ip);
+
+        COMMIT;
+
+    ELSEIF p_accion = 'CHANGE_STATUS' THEN
+
+        SELECT estado INTO v_estado_actual FROM ordenesProduccion WHERE idOrden = p_idOrden;
+
+        IF v_estado_actual IS NULL THEN
+            SET p_resultado  = 'ERROR: La orden no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF v_estado_actual != 'En proceso' THEN
+            SET p_resultado  = 'ERROR: Solo se pueden cambiar órdenes en estado "En proceso"';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF p_estado NOT IN ('Cancelada', 'Terminada') THEN
+            SET p_resultado  = 'ERROR: Estado no válido. Use Cancelada o Terminada';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        UPDATE ordenesProduccion SET estado = p_estado WHERE idOrden = p_idOrden;
+
+        -- MODIFICADO: Cambió la lógica de descuentos
+        -- Al cancelar: restablecer materias primas (ya fueron descontadas al crear)
+        -- Al terminar: solo sumar stock a productos terminados (materias ya descontadas al crear)
+        IF p_estado = 'Cancelada' THEN
+            UPDATE materiasPrimas mp
+            JOIN (
+                SELECT dr.idMateriaP, SUM(dr.cantidad * dp.cantidad) AS total_consumido
+                FROM detalleProduccion dp
+                JOIN recetas r ON r.idProducto = dp.idProducto
+                JOIN detalleReceta dr ON dr.idReceta = r.idReceta
+                WHERE dp.idOrden = p_idOrden
+                GROUP BY dr.idMateriaP
+            ) consumo ON consumo.idMateriaP = mp.idMateriaP
+            SET mp.stock = mp.stock + consumo.total_consumido;
+
+        ELSEIF p_estado = 'Terminada' THEN
+            UPDATE productos p
+            JOIN detalleProduccion dp ON dp.idProducto = p.idProducto
+            SET p.stock = p.stock + dp.cantidad
+            WHERE dp.idOrden = p_idOrden;
+        END IF;
+
+        SET p_idGenerado = p_idOrden;
+        SET p_resultado  = CONCAT('SUCCESS: Orden marcada como "', p_estado, '" correctamente');
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'OrdenesProduccion',
+                UPPER(p_estado), 'orden', CONCAT('ID:', p_idOrden), NOW(), p_ip);
+
+        COMMIT;
+
+    ELSEIF p_accion = 'UPDATE' THEN
+
+        SELECT estado INTO v_estado_actual FROM ordenesProduccion WHERE idOrden = p_idOrden;
+
+        IF v_estado_actual IS NULL THEN
+            SET p_resultado  = 'ERROR: La orden no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF v_estado_actual != 'En proceso' THEN
+            SET p_resultado  = 'ERROR: Solo se pueden editar órdenes en estado "En proceso"';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF TIMESTAMPDIFF(SECOND, (SELECT fecha FROM ordenesProduccion WHERE idOrden = p_idOrden), NOW()) > 60 THEN
+            SET p_resultado  = 'ERROR: El tiempo de edición ha expirado (máximo 1 minuto)';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+            SET p_resultado  = 'ERROR: Debe incluir al menos un producto en la orden';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        SET v_total_items = JSON_LENGTH(p_detalles);
+        SET v_idx = 0;
+
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+
+            IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = v_idProducto AND estatus = 1) THEN
+                SET p_resultado  = CONCAT('ERROR: Producto ID ', v_idProducto, ' no existe o está inactivo');
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            SELECT COUNT(*) INTO v_tiene_receta FROM recetas WHERE idProducto = v_idProducto;
+            IF v_tiene_receta = 0 THEN
+                SELECT nombre INTO v_nombre_producto FROM productos WHERE idProducto = v_idProducto;
+                SET p_resultado  = CONCAT('ERROR: El producto "', v_nombre_producto, '" no tiene receta');
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            IF v_cantidad <= 0 THEN
+                SET p_resultado  = 'ERROR: La cantidad debe ser mayor a 0';
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- Verificar stock
+        CREATE TEMPORARY TABLE IF NOT EXISTS tmp_consumo_mp2 (
+            idMateriaP INT,
+            total_requerido DECIMAL(10,2)
+        );
+        DELETE FROM tmp_consumo_mp2;
+
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+            SELECT idReceta INTO v_idReceta FROM recetas WHERE idProducto = v_idProducto LIMIT 1;
+            INSERT INTO tmp_consumo_mp2 (idMateriaP, total_requerido)
+            SELECT dr.idMateriaP, dr.cantidad * v_cantidad
+            FROM detalleReceta dr WHERE dr.idReceta = v_idReceta
+            ON DUPLICATE KEY UPDATE total_requerido = total_requerido + (dr.cantidad * v_cantidad);
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        SET v_stock_mp = NULL;
+        SELECT t.idMateriaP, t.total_requerido, mp.stock, mp.nombre
+        INTO v_idMateriaP, v_cantidad_receta, v_stock_mp, v_nombre_mp
+        FROM tmp_consumo_mp2 t
+        JOIN materiasPrimas mp ON mp.idMateriaP = t.idMateriaP
+        WHERE mp.stock < t.total_requerido
+        LIMIT 1;
+
+        IF v_stock_mp IS NOT NULL AND v_stock_mp < v_cantidad_receta THEN
+            DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp2;
+            SET p_resultado  = CONCAT('ERROR: Stock insuficiente de "', v_nombre_mp,
+                                      '". Disponible: ', v_stock_mp, ', requerido: ', v_cantidad_receta);
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        DROP TEMPORARY TABLE IF EXISTS tmp_consumo_mp2;
+
+        DELETE FROM detalleProduccion WHERE idOrden = p_idOrden;
+
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+            INSERT INTO detalleProduccion (idProducto, idOrden, cantidad)
+            VALUES (v_idProducto, p_idOrden, v_cantidad);
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        SET p_idGenerado = p_idOrden;
+        SET p_resultado  = 'SUCCESS: Orden actualizada correctamente';
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'OrdenesProduccion', 'EDITAR',
+                'orden', CONCAT('ID:', p_idOrden), NOW(), p_ip);
+
+        COMMIT;
+
     ELSE
         SET p_resultado  = 'ERROR: Acción no válida';
         SET p_idGenerado = 0;
@@ -684,10 +1882,2002 @@ END$$
 DELIMITER ;
 
 
-INSERT INTO unidadesMedida (nombre, tipo, equivalente, estatus) VALUES
-('Gramo', 'Masa', 1.00, 1),
-('Kilogramo', 'Masa', 1000.00, 1),
-('Mililitro', 'Volumen', 1.00, 1),
-('Litro', 'Volumen', 1000.00, 1),
-('Cucharada', 'Volumen', 15.00, 1),
-('Taza', 'Volumen', 240.00, 1);
+--  SP: sp_listar_ordenes_produccion
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_listar_ordenes_produccion$$
+CREATE PROCEDURE sp_listar_ordenes_produccion(
+    IN p_estado     VARCHAR(50),   -- NULL = todos
+    IN p_fecha_ini  DATE,          -- NULL = sin límite
+    IN p_fecha_fin  DATE           -- NULL = sin límite
+)
+BEGIN
+    SELECT
+        o.idOrden,
+        o.estado,
+        o.fecha,
+        u.nombre  AS nombre_usuario,
+        COUNT(dp.idDetalleP)                            AS total_productos,
+        SUM(dp.cantidad)                                AS total_unidades,
+        TIMESTAMPDIFF(SECOND, o.fecha, NOW())           AS segundos_desde_creacion
+    FROM ordenesProduccion o
+    JOIN usuarios u  ON u.idUsuario  = o.idUsuario
+    JOIN detalleProduccion dp ON dp.idOrden = o.idOrden
+    WHERE (p_estado    IS NULL OR o.estado  = p_estado)
+      AND (p_fecha_ini IS NULL OR DATE(o.fecha) >= p_fecha_ini)
+      AND (p_fecha_fin IS NULL OR DATE(o.fecha) <= p_fecha_fin)
+    GROUP BY o.idOrden, o.estado, o.fecha, u.nombre
+    ORDER BY o.fecha DESC;
+END$$
+DELIMITER ;
+
+
+--  SP: sp_detalle_orden_produccion  (detalle completo de una orden)
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_detalle_orden_produccion$$
+CREATE PROCEDURE sp_detalle_orden_produccion(IN p_idOrden INT)
+BEGIN
+    SELECT
+        dp.idDetalleP,
+        dp.cantidad,
+        p.idProducto,
+        p.nombre    AS nombre_producto,
+        p.`tamaño`  AS tamano,
+        p.precio,
+        r.idReceta
+    FROM detalleProduccion dp
+    JOIN productos p ON p.idProducto = dp.idProducto
+    LEFT JOIN recetas r ON r.idProducto = p.idProducto
+    WHERE dp.idOrden = p_idOrden
+    ORDER BY p.nombre ASC;
+END$$
+DELIMITER ;
+
+
+--  SP: sp_ordenes_cocina 
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_ordenes_cocina$$
+CREATE PROCEDURE sp_ordenes_cocina()
+BEGIN
+    SELECT
+        o.idOrden,
+        o.estado,
+        o.fecha,
+        u.nombre AS nombre_usuario,
+        TIMESTAMPDIFF(MINUTE, o.fecha, NOW()) AS minutos_espera
+    FROM ordenesProduccion o
+    JOIN usuarios u ON u.idUsuario = o.idUsuario
+    WHERE o.estado = 'En proceso'
+    ORDER BY o.fecha ASC;
+END$$
+DELIMITER ;
+
+-- =====================================================================
+-- MÓDULO DE VENTAS — Stored Procedures
+-- FourOvenPizzaDB
+-- =====================================================================
+
+USE FourOvenPizzaDB;
+
+-- ─────────────────────────────────────────────────────────────────────
+-- SP: Gestión principal de ventas (INSERT, CONFIRM, CANCEL)
+-- ─────────────────────────────────────────────────────────────────────
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_ventas$$
+CREATE PROCEDURE sp_gestion_ventas(
+    IN  p_accion          VARCHAR(20),   -- INSERT | CONFIRM | CANCEL
+    IN  p_idVenta         INT,           -- NULL en INSERT
+    IN  p_idUsuario       INT,
+    IN  p_nombreCliente   VARCHAR(100),
+    IN  p_metodoPago      VARCHAR(50),   -- 'Efectivo' | 'Tarjeta'
+    IN  p_detalles        JSON,          -- [{idProducto, cantidad, precio}]
+    IN  p_ip              VARCHAR(45),
+    IN  p_ejecutadoPor    INT,
+    OUT p_resultado       VARCHAR(255),
+    OUT p_idGenerado      INT
+)
+sp_main: BEGIN
+
+    DECLARE v_nombre_ejecutor  VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_idx              INT          DEFAULT 0;
+    DECLARE v_total_items      INT          DEFAULT 0;
+    DECLARE v_idProducto       INT;
+    DECLARE v_cantidad         INT;
+    DECLARE v_precio           DECIMAL(10,2);
+    DECLARE v_stock_actual     DECIMAL(10,2);
+    DECLARE v_stock_disponible DECIMAL(10,2);
+    DECLARE v_nombre_producto  VARCHAR(100);
+    DECLARE v_estado_actual    VARCHAR(50);
+
+    -- Variables para la orden de producción automática
+    DECLARE v_tiene_receta     INT DEFAULT 0;
+    DECLARE v_faltante         INT DEFAULT 0;
+    DECLARE v_idOrdenGenerada  INT DEFAULT 0;
+    DECLARE v_detalles_op      JSON;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado  = 'ERROR: Ocurrió un error inesperado en la operación';
+        SET p_idGenerado = 0;
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES ('ERROR', 'Ventas',
+                CONCAT('Error en sp_gestion_ventas acción: ', p_accion),
+                CONCAT('Venta ID: ', IFNULL(p_idVenta, 0),
+                       ' | Ejecutado por: ', IFNULL(p_ejecutadoPor, 0)),
+                NOW(), p_ip, p_ejecutadoPor);
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    START TRANSACTION;
+
+    -- ═══════════════════════════════════════════════════
+    -- INSERT: Registrar nueva venta
+    -- ═══════════════════════════════════════════════════
+    IF p_accion = 'INSERT' THEN
+
+        IF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+            SET p_resultado  = 'ERROR: Debe incluir al menos un producto en la venta';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF p_metodoPago NOT IN ('Efectivo', 'Tarjeta') THEN
+            SET p_resultado  = 'ERROR: Método de pago no válido. Use Efectivo o Tarjeta';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        -- Validar que todos los productos existan y tengan receta
+        SET v_total_items = JSON_LENGTH(p_detalles);
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS UNSIGNED);
+
+            IF NOT EXISTS (SELECT 1 FROM productos WHERE idProducto = v_idProducto AND estatus = 1) THEN
+                SET p_resultado  = CONCAT('ERROR: Producto ID ', v_idProducto, ' no existe o está inactivo');
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            IF v_cantidad <= 0 THEN
+                SET p_resultado  = 'ERROR: La cantidad de cada producto debe ser mayor a 0';
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- ── Determinar estado inicial de la venta ──
+        -- Si todos los productos tienen stock suficiente → 'Lista para entregar'
+        -- Si alguno necesita producción → 'En proceso'
+        -- Usamos tabla temporal para acumular faltantes
+        CREATE TEMPORARY TABLE IF NOT EXISTS tmp_venta_faltantes (
+            idProducto   INT,
+            faltante     INT,
+            precio       DECIMAL(10,2),
+            nombre       VARCHAR(100)
+        );
+        DELETE FROM tmp_venta_faltantes;
+
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS UNSIGNED);
+            SET v_precio     = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].precio')))     AS DECIMAL(10,2));
+
+            SELECT stock, nombre INTO v_stock_actual, v_nombre_producto
+            FROM productos WHERE idProducto = v_idProducto;
+
+            -- Calcular cuánto falta producir
+            SET v_faltante = GREATEST(0, v_cantidad - FLOOR(v_stock_actual));
+
+            -- Descontar del stock lo que hay disponible
+            SET v_stock_disponible = LEAST(v_stock_actual, v_cantidad);
+            IF v_stock_disponible > 0 THEN
+                UPDATE productos SET stock = stock - v_stock_disponible WHERE idProducto = v_idProducto;
+            END IF;
+
+            -- Registrar faltante si aplica
+            IF v_faltante > 0 THEN
+                SELECT COUNT(*) INTO v_tiene_receta FROM recetas WHERE idProducto = v_idProducto;
+                IF v_tiene_receta = 0 THEN
+                    DROP TEMPORARY TABLE IF EXISTS tmp_venta_faltantes;
+                    SET p_resultado  = CONCAT('ERROR: El producto "', v_nombre_producto, '" no tiene stock ni receta para producir');
+                    SET p_idGenerado = 0;
+                    ROLLBACK;
+                    LEAVE sp_main;
+                END IF;
+
+                INSERT INTO tmp_venta_faltantes (idProducto, faltante, precio, nombre)
+                VALUES (v_idProducto, v_faltante, v_precio, v_nombre_producto)
+                ON DUPLICATE KEY UPDATE faltante = faltante + v_faltante;
+            END IF;
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- ── Insertar la venta ──
+        SET @v_estado_venta = IF((SELECT COUNT(*) FROM tmp_venta_faltantes) > 0, 'En proceso', 'Lista para entregar');
+
+        INSERT INTO ventas (idUsuario, nombreCliente, fecha, tipo, metodoPago, estado)
+        VALUES (p_ejecutadoPor, p_nombreCliente, NOW(), 'Punto venta', p_metodoPago, @v_estado_venta);
+
+        SET p_idGenerado = LAST_INSERT_ID();
+
+        -- ── Insertar detalle de venta ──
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS UNSIGNED);
+            SET v_precio     = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].precio')))     AS DECIMAL(10,2));
+
+            INSERT INTO detalleVenta (idVenta, idProducto, cantidad, precio)
+            VALUES (p_idGenerado, v_idProducto, v_cantidad, v_precio);
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- ── Guardar en tabla temporal de stock reservado ──
+        SET v_idx = 0;
+        WHILE v_idx < v_total_items DO
+            SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS UNSIGNED);
+
+            -- Cuánto se tomó del stock (lo que no es faltante)
+            SET v_faltante = IFNULL((SELECT faltante FROM tmp_venta_faltantes WHERE idProducto = v_idProducto), 0);
+
+            INSERT INTO ventaStockReservado (idVenta, idProducto, cantidadReservada, cantidadFaltante)
+            VALUES (p_idGenerado, v_idProducto, v_cantidad - v_faltante, v_faltante)
+            ON DUPLICATE KEY UPDATE
+                cantidadReservada = cantidadReservada + (v_cantidad - v_faltante),
+                cantidadFaltante  = cantidadFaltante  + v_faltante;
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- ── Crear orden de producción para los faltantes ──
+        IF (SELECT COUNT(*) FROM tmp_venta_faltantes WHERE faltante > 0) > 0 THEN
+
+            -- Construir JSON para la orden de producción
+            SET v_detalles_op = (
+                SELECT JSON_ARRAYAGG(JSON_OBJECT('idProducto', idProducto, 'cantidad', faltante))
+                FROM tmp_venta_faltantes WHERE faltante > 0
+            );
+
+            -- Llamar al SP de producción
+            CALL sp_gestion_ordenes_produccion(
+                'INSERT_VENTA',   -- acción especial para ventas
+                NULL,
+                p_ejecutadoPor,
+                NULL,
+                v_detalles_op,
+                p_ip,
+                p_ejecutadoPor,
+                @res_op,
+                @id_op
+            );
+
+            IF @res_op NOT LIKE 'SUCCESS%' THEN
+                DROP TEMPORARY TABLE IF EXISTS tmp_venta_faltantes;
+                SET p_resultado  = CONCAT('ERROR al crear orden de producción: ', @res_op);
+                SET p_idGenerado = 0;
+                ROLLBACK;
+                LEAVE sp_main;
+            END IF;
+
+            -- Vincular la orden de producción con la venta
+            UPDATE ventaStockReservado SET idOrdenProduccion = @id_op WHERE idVenta = p_idGenerado;
+        END IF;
+
+        DROP TEMPORARY TABLE IF EXISTS tmp_venta_faltantes;
+
+        SET p_resultado = CONCAT('SUCCESS: Venta registrada correctamente. Estado: ', @v_estado_venta);
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Ventas', 'CREAR',
+                'venta', CONCAT('ID:', p_idGenerado, ' | Cliente: ', IFNULL(p_nombreCliente, 'Consumidor final')),
+                NOW(), p_ip);
+
+        COMMIT;
+
+    -- ═══════════════════════════════════════════════════
+    -- CONFIRM: Confirmar venta (solo desde 'Lista para entregar')
+    -- ═══════════════════════════════════════════════════
+    ELSEIF p_accion = 'CONFIRM' THEN
+
+        SELECT estado INTO v_estado_actual FROM ventas WHERE idVenta = p_idVenta;
+
+        IF v_estado_actual IS NULL THEN
+            SET p_resultado  = 'ERROR: La venta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF v_estado_actual != 'Lista para entregar' THEN
+            SET p_resultado  = 'ERROR: Solo se pueden confirmar ventas en estado "Lista para entregar"';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        -- Actualizar estado de la venta
+        UPDATE ventas SET estado = 'Confirmada' WHERE idVenta = p_idVenta;
+
+        -- Eliminar reserva temporal (ya no es necesaria)
+        DELETE FROM ventaStockReservado WHERE idVenta = p_idVenta;
+
+        -- Registrar movimiento en caja
+        INSERT INTO cajaMovimientos (idUsuario, tipo, monto, descripcion, fecha)
+        SELECT p_ejecutadoPor, 'INGRESO',
+               SUM(dv.cantidad * dv.precio),
+               CONCAT('Venta #', p_idVenta, ' - ', v.nombreCliente, ' (', v.metodoPago, ')'),
+               NOW()
+        FROM detalleVenta dv
+        JOIN ventas v ON v.idVenta = dv.idVenta
+        WHERE dv.idVenta = p_idVenta;
+
+        SET p_idGenerado = p_idVenta;
+        SET p_resultado  = 'SUCCESS: Venta confirmada correctamente';
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Ventas', 'CONFIRMAR',
+                'venta', CONCAT('ID:', p_idVenta), NOW(), p_ip);
+
+        COMMIT;
+
+    -- ═══════════════════════════════════════════════════
+    -- CANCEL: Cancelar venta (En proceso o Lista para entregar)
+    -- ═══════════════════════════════════════════════════
+    ELSEIF p_accion = 'CANCEL' THEN
+
+        SELECT estado INTO v_estado_actual FROM ventas WHERE idVenta = p_idVenta;
+
+        IF v_estado_actual IS NULL THEN
+            SET p_resultado  = 'ERROR: La venta no existe';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF v_estado_actual NOT IN ('En proceso', 'Lista para entregar') THEN
+            SET p_resultado  = 'ERROR: Solo se pueden cancelar ventas en estado "En proceso" o "Lista para entregar"';
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_main;
+        END IF;
+
+        IF v_estado_actual = 'En proceso' THEN
+            -- Cancelar la orden de producción vinculada si aún está en proceso
+            UPDATE ordenesProduccion op
+            JOIN ventaStockReservado vsr ON vsr.idOrdenProduccion = op.idOrden
+            SET op.estado = 'Cancelada'
+            WHERE vsr.idVenta = p_idVenta
+              AND op.estado = 'En proceso';
+
+            -- Devolver el stock reservado al inventario
+            UPDATE productos p
+            JOIN ventaStockReservado vsr ON vsr.idProducto = p.idProducto
+            SET p.stock = p.stock + vsr.cantidadReservada
+            WHERE vsr.idVenta = p_idVenta;
+
+        ELSEIF v_estado_actual = 'Lista para entregar' THEN
+            -- Devolver stock reservado
+            UPDATE productos p
+            JOIN ventaStockReservado vsr ON vsr.idProducto = p.idProducto
+            SET p.stock = p.stock + vsr.cantidadReservada + vsr.cantidadFaltante
+            WHERE vsr.idVenta = p_idVenta;
+        END IF;
+
+        -- Limpiar reserva temporal
+        DELETE FROM ventaStockReservado WHERE idVenta = p_idVenta;
+
+        -- Actualizar estado de la venta
+        UPDATE ventas SET estado = 'Cancelada' WHERE idVenta = p_idVenta;
+
+        SET p_idGenerado = p_idVenta;
+        SET p_resultado  = 'SUCCESS: Venta cancelada correctamente';
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Ventas', 'CANCELAR',
+                'venta', CONCAT('ID:', p_idVenta), NOW(), p_ip);
+
+        COMMIT;
+
+    ELSE
+        SET p_resultado  = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+    END IF;
+
+END$$
+DELIMITER ;
+
+
+-- ─────────────────────────────────────────────────────────────────────
+-- SP: Listar ventas del día (para la vista de punto de venta)
+-- ─────────────────────────────────────────────────────────────────────
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_listar_ventas_hoy$$
+CREATE PROCEDURE sp_listar_ventas_hoy(
+    IN p_idUsuario INT    -- NULL = todas las de hoy
+)
+BEGIN
+    SELECT
+        v.idVenta,
+        v.nombreCliente,
+        v.fecha,
+        v.tipo,
+        v.metodoPago,
+        v.estado,
+        u.nombre         AS nombre_usuario,
+        SUM(dv.cantidad * dv.precio) AS total
+    FROM ventas v
+    JOIN usuarios u     ON u.idUsuario = v.idUsuario
+    JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+    WHERE DATE(v.fecha) = CURDATE()
+      AND v.tipo = 'Punto venta'
+      AND (p_idUsuario IS NULL OR v.idUsuario = p_idUsuario)
+    GROUP BY v.idVenta, v.nombreCliente, v.fecha, v.tipo, v.metodoPago, v.estado, u.nombre
+    ORDER BY v.fecha DESC
+    LIMIT 20;
+END$$
+DELIMITER ;
+
+
+-- ─────────────────────────────────────────────────────────────────────
+-- SP: Listar ventas con filtros (para la vista de historial)
+-- ─────────────────────────────────────────────────────────────────────
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_listar_ventas_historial$$
+CREATE PROCEDURE sp_listar_ventas_historial(
+    IN p_estado      VARCHAR(50),
+    IN p_fecha_ini   DATE,
+    IN p_fecha_fin   DATE,
+    IN p_cliente     VARCHAR(100),
+    IN p_metodo_pago VARCHAR(50)
+)
+BEGIN
+    SELECT
+        v.idVenta,
+        v.nombreCliente,
+        v.fecha,
+        v.tipo,
+        v.metodoPago,
+        v.estado,
+        u.nombre         AS nombre_usuario,
+        SUM(dv.cantidad * dv.precio) AS total
+    FROM ventas v
+    JOIN usuarios u      ON u.idUsuario = v.idUsuario
+    JOIN detalleVenta dv ON dv.idVenta  = v.idVenta
+    WHERE v.tipo = 'Punto venta'
+      AND (p_estado      IS NULL OR v.estado      = p_estado)
+      AND (p_fecha_ini   IS NULL OR DATE(v.fecha) >= p_fecha_ini)
+      AND (p_fecha_fin   IS NULL OR DATE(v.fecha) <= p_fecha_fin)
+      AND (p_cliente     IS NULL OR v.nombreCliente LIKE CONCAT('%', p_cliente, '%'))
+      AND (p_metodo_pago IS NULL OR v.metodoPago   = p_metodo_pago)
+    GROUP BY v.idVenta, v.nombreCliente, v.fecha, v.tipo, v.metodoPago, v.estado, u.nombre
+    ORDER BY v.fecha DESC;
+END$$
+DELIMITER ;
+
+
+-- ─────────────────────────────────────────────────────────────────────
+-- SP: Detalle de una venta (fragmento HTML via Flask)
+-- ─────────────────────────────────────────────────────────────────────
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_detalle_venta$$
+CREATE PROCEDURE sp_detalle_venta(IN p_idVenta INT)
+BEGIN
+    SELECT
+        dv.idDetalleV,
+        dv.cantidad,
+        dv.precio,
+        (dv.cantidad * dv.precio) AS subtotal,
+        p.idProducto,
+        p.nombre  AS nombre_producto,
+        p.`tamaño` AS tamano
+    FROM detalleVenta dv
+    JOIN productos p ON p.idProducto = dv.idProducto
+    WHERE dv.idVenta = p_idVenta
+    ORDER BY p.nombre ASC;
+END$$
+DELIMITER ;
+
+
+-- ─────────────────────────────────────────────────────────────────────
+-- SP: Cancelar ventas pendientes al cierre del día (cron/job)
+-- ─────────────────────────────────────────────────────────────────────
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_cancelar_ventas_cierre_dia$$
+CREATE PROCEDURE sp_cancelar_ventas_cierre_dia()
+BEGIN
+    DECLARE v_idVenta INT;
+    DECLARE v_estado  VARCHAR(50);
+    DECLARE done INT DEFAULT FALSE;
+
+    DECLARE cur CURSOR FOR
+        SELECT idVenta, estado FROM ventas
+        WHERE DATE(fecha) = CURDATE()
+          AND estado IN ('En proceso', 'Lista para entregar');
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    OPEN cur;
+    cierre_loop: LOOP
+        FETCH cur INTO v_idVenta, v_estado;
+        IF done THEN LEAVE cierre_loop; END IF;
+
+        -- Cancelar orden de producción vinculada si aplica
+        IF v_estado = 'En proceso' THEN
+            UPDATE ordenesProduccion op
+            JOIN ventaStockReservado vsr ON vsr.idOrdenProduccion = op.idOrden
+            SET op.estado = 'Cancelada'
+            WHERE vsr.idVenta = v_idVenta AND op.estado = 'En proceso';
+
+            UPDATE productos p
+            JOIN ventaStockReservado vsr ON vsr.idProducto = p.idProducto
+            SET p.stock = p.stock + vsr.cantidadReservada
+            WHERE vsr.idVenta = v_idVenta;
+
+        ELSEIF v_estado = 'Lista para entregar' THEN
+            UPDATE productos p
+            JOIN ventaStockReservado vsr ON vsr.idProducto = p.idProducto
+            SET p.stock = p.stock + vsr.cantidadReservada + vsr.cantidadFaltante
+            WHERE vsr.idVenta = v_idVenta;
+        END IF;
+
+        DELETE FROM ventaStockReservado WHERE idVenta = v_idVenta;
+        UPDATE ventas SET estado = 'Cancelada' WHERE idVenta = v_idVenta;
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (NULL, 'Sistema', 'Ventas', 'CANCELAR_CIERRE_DIA',
+                'venta', CONCAT('ID:', v_idVenta), NOW(), '127.0.0.1');
+
+    END LOOP;
+    CLOSE cur;
+END$$
+DELIMITER ;
+
+
+-- ─────────────────────────────────────────────────────────────────────
+-- Tabla de stock reservado temporalmente por ventas activas
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS ventaStockReservado (
+    idReserva         INT AUTO_INCREMENT PRIMARY KEY,
+    idVenta           INT          NOT NULL,
+    idProducto        INT          NOT NULL,
+    cantidadReservada INT          NOT NULL DEFAULT 0,  -- tomado del stock actual
+    cantidadFaltante  INT          NOT NULL DEFAULT 0,  -- enviado a producción
+    idOrdenProduccion INT          NULL,                -- orden creada si hay faltante
+    FOREIGN KEY (idVenta)    REFERENCES ventas(idVenta),
+    FOREIGN KEY (idProducto) REFERENCES productos(idProducto),
+    UNIQUE KEY uk_venta_producto (idVenta, idProducto)
+) ENGINE=InnoDB;
+
+-- ─────────────────────────────────────────────────────────────────────
+-- SP ajustado: sp_registrar_orden_venta
+-- Crea una orden de producción vinculada a una venta.
+-- Al terminar → actualiza venta a 'Lista para entregar' y suma stock
+--               de los productos SOLO al stock de ventaStockReservado
+--               (no al inventario general, van al cliente).
+-- ─────────────────────────────────────────────────────────────────────
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_registrar_orden_venta$$
+CREATE PROCEDURE sp_registrar_orden_venta(
+    IN  p_idVenta       INT,
+    IN  p_detalles      JSON,   -- [{idProducto, cantidad}]
+    IN  p_ip            VARCHAR(45),
+    IN  p_ejecutadoPor  INT,
+    OUT p_resultado     VARCHAR(255),
+    OUT p_idGenerado    INT
+)
+sp_rov: BEGIN
+
+    DECLARE v_nombre_ejecutor VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_idx             INT DEFAULT 0;
+    DECLARE v_total_items     INT DEFAULT 0;
+    DECLARE v_idProducto      INT;
+    DECLARE v_cantidad        INT;
+    DECLARE v_tiene_receta    INT DEFAULT 0;
+    DECLARE v_nombre_producto VARCHAR(100);
+    DECLARE v_idMateriaP      INT;
+    DECLARE v_stock_mp        DECIMAL(10,2);
+    DECLARE v_requerido       DECIMAL(10,2);
+    DECLARE v_nombre_mp       VARCHAR(100);
+    DECLARE v_idReceta        INT;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado  = 'ERROR: Ocurrió un error al crear la orden de producción para la venta';
+        SET p_idGenerado = 0;
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    START TRANSACTION;
+
+    IF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+        SET p_resultado  = 'ERROR: Sin productos para producir';
+        SET p_idGenerado = 0;
+        ROLLBACK;
+        LEAVE sp_rov;
+    END IF;
+
+    SET v_total_items = JSON_LENGTH(p_detalles);
+
+    -- Validar recetas y stock de materias primas
+    CREATE TEMPORARY TABLE IF NOT EXISTS tmp_consumo_venta (
+        idMateriaP      INT,
+        total_requerido DECIMAL(10,2)
+    );
+    DELETE FROM tmp_consumo_venta;
+
+    SET v_idx = 0;
+    WHILE v_idx < v_total_items DO
+        SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+        SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS UNSIGNED);
+
+        SELECT COUNT(*) INTO v_tiene_receta FROM recetas WHERE idProducto = v_idProducto;
+        IF v_tiene_receta = 0 THEN
+            SELECT nombre INTO v_nombre_producto FROM productos WHERE idProducto = v_idProducto;
+            DROP TEMPORARY TABLE IF EXISTS tmp_consumo_venta;
+            SET p_resultado  = CONCAT('ERROR: "', v_nombre_producto, '" no tiene receta registrada');
+            SET p_idGenerado = 0;
+            ROLLBACK;
+            LEAVE sp_rov;
+        END IF;
+
+        SELECT idReceta INTO v_idReceta FROM recetas WHERE idProducto = v_idProducto LIMIT 1;
+
+        INSERT INTO tmp_consumo_venta (idMateriaP, total_requerido)
+        SELECT dr.idMateriaP, dr.cantidad * v_cantidad
+        FROM detalleReceta dr WHERE dr.idReceta = v_idReceta
+        ON DUPLICATE KEY UPDATE total_requerido = total_requerido + (dr.cantidad * v_cantidad);
+
+        SET v_idx = v_idx + 1;
+    END WHILE;
+
+    -- Verificar stock de materias primas
+    SET v_stock_mp = NULL;
+    SELECT t.idMateriaP, t.total_requerido, mp.stock, mp.nombre
+    INTO v_idMateriaP, v_requerido, v_stock_mp, v_nombre_mp
+    FROM tmp_consumo_venta t
+    JOIN materiasPrimas mp ON mp.idMateriaP = t.idMateriaP
+    WHERE mp.stock < t.total_requerido
+    LIMIT 1;
+
+    IF v_stock_mp IS NOT NULL AND v_stock_mp < v_requerido THEN
+        DROP TEMPORARY TABLE IF EXISTS tmp_consumo_venta;
+        SET p_resultado  = CONCAT('ERROR: Stock insuficiente de "', v_nombre_mp,
+                                  '". Disponible: ', v_stock_mp, ', requerido: ', v_requerido);
+        SET p_idGenerado = 0;
+        ROLLBACK;
+        LEAVE sp_rov;
+    END IF;
+
+    DROP TEMPORARY TABLE IF EXISTS tmp_consumo_venta;
+
+    -- Crear la orden de producción vinculada a la venta
+    INSERT INTO ordenesProduccion (idUsuario, estado, fecha, origen, idVentaOrigen)
+    VALUES (p_ejecutadoPor, 'En proceso', NOW(), 'Venta', p_idVenta);
+
+    SET p_idGenerado = LAST_INSERT_ID();
+
+    -- Insertar detalle de producción
+    SET v_idx = 0;
+    WHILE v_idx < v_total_items DO
+        SET v_idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idProducto'))) AS UNSIGNED);
+        SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS UNSIGNED);
+
+        INSERT INTO detalleProduccion (idProducto, idOrden, cantidad)
+        VALUES (v_idProducto, p_idGenerado, v_cantidad);
+
+        SET v_idx = v_idx + 1;
+    END WHILE;
+
+    SET p_resultado = CONCAT('SUCCESS: Orden de producción #', p_idGenerado, ' creada para la venta');
+
+    INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+    VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Ventas', 'CREAR_ORDEN_PRODUCCION',
+            'orden_venta', CONCAT('OrdenID:', p_idGenerado, ' | VentaID:', p_idVenta),
+            NOW(), p_ip);
+
+    COMMIT;
+END$$
+DELIMITER ;
+
+
+-- ─────────────────────────────────────────────────────────────────────
+-- SP: Cuando cocina termina una orden vinculada a venta
+--     → cambia venta a 'Lista para entregar'
+--     → actualiza cantidadFaltante en ventaStockReservado a 0
+--       (los productos "ya están listos" para el cliente)
+--     → descuenta materias primas
+-- ─────────────────────────────────────────────────────────────────────
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_terminar_orden_venta$$
+CREATE PROCEDURE sp_terminar_orden_venta(
+    IN  p_idOrden      INT,
+    IN  p_ip           VARCHAR(45),
+    IN  p_ejecutadoPor INT,
+    OUT p_resultado    VARCHAR(255)
+)
+BEGIN
+    DECLARE v_idVenta        INT DEFAULT NULL;
+    DECLARE v_nombre_ejecutor VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_pendientes     INT DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado = 'ERROR: Ocurrió un error al terminar la orden vinculada a venta';
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    START TRANSACTION;
+
+    -- Obtener idVenta vinculada
+    SELECT idVentaOrigen INTO v_idVenta FROM ordenesProduccion WHERE idOrden = p_idOrden;
+
+    -- Marcar la orden como Terminada
+    UPDATE ordenesProduccion SET estado = 'Terminada' WHERE idOrden = p_idOrden;
+
+    -- Descontar materias primas
+    UPDATE materiasPrimas mp
+    JOIN (
+        SELECT dr.idMateriaP, SUM(dr.cantidad * dp.cantidad) AS total_consumido
+        FROM detalleProduccion dp
+        JOIN recetas r  ON r.idProducto  = dp.idProducto
+        JOIN detalleReceta dr ON dr.idReceta = r.idReceta
+        WHERE dp.idOrden = p_idOrden
+        GROUP BY dr.idMateriaP
+    ) consumo ON consumo.idMateriaP = mp.idMateriaP
+    SET mp.stock = mp.stock - consumo.total_consumido;
+
+    -- Si era una orden de venta: actualizar reservas y estado de venta
+    IF v_idVenta IS NOT NULL THEN
+        -- Pasar la cantidad faltante a reservada (ya está producida)
+        UPDATE ventaStockReservado
+        SET cantidadReservada = cantidadReservada + cantidadFaltante,
+            cantidadFaltante  = 0
+        WHERE idVenta = v_idVenta AND idOrdenProduccion = p_idOrden;
+
+        -- Verificar si quedan otras órdenes en proceso para esta venta
+        SELECT COUNT(*) INTO v_pendientes
+        FROM ventaStockReservado vsr
+        JOIN ordenesProduccion op ON op.idOrden = vsr.idOrdenProduccion
+        WHERE vsr.idVenta = v_idVenta
+          AND op.estado = 'En proceso'
+          AND vsr.cantidadFaltante > 0;
+
+        -- Si no quedan órdenes pendientes → venta Lista para entregar
+        IF v_pendientes = 0 THEN
+            UPDATE ventas SET estado = 'Lista para entregar' WHERE idVenta = v_idVenta;
+        END IF;
+    ELSE
+        -- Orden manual: sumar al stock de productos terminados
+        UPDATE productos p
+        JOIN detalleProduccion dp ON dp.idProducto = p.idProducto
+        SET p.stock = p.stock + dp.cantidad
+        WHERE dp.idOrden = p_idOrden;
+    END IF;
+
+    SET p_resultado = 'SUCCESS: Orden terminada correctamente';
+
+    INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+    VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'Produccion', 'TERMINAR',
+            'orden', CONCAT('ID:', p_idOrden), NOW(), p_ip);
+
+    COMMIT;
+END$$
+DELIMITER ;
+
+
+-- ─────────────────────────────────────────────────────────────────────
+-- Evento automático: cancelar ventas activas al cierre del día
+-- ─────────────────────────────────────────────────────────────────────
+SET GLOBAL event_scheduler = ON;
+
+DROP EVENT IF EXISTS evt_cancelar_ventas_fin_dia;
+CREATE EVENT evt_cancelar_ventas_fin_dia
+    ON SCHEDULE EVERY 1 DAY
+    STARTS (CURDATE() + INTERVAL 1 DAY + INTERVAL 23 HOUR + INTERVAL 59 MINUTE)
+    DO CALL sp_cancelar_ventas_cierre_dia();
+    
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Mermas
+-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_mermas$$
+CREATE PROCEDURE sp_gestion_mermas(
+    IN  p_accion        VARCHAR(20),
+    IN  p_idMerma       INT,
+    IN  p_descripcion   VARCHAR(200),
+    IN  p_estatus       TINYINT,
+    IN  p_materias      TEXT,
+    IN  p_ip            VARCHAR(45),
+    IN  p_ejecutadoPor  INT,
+    OUT p_resultado     VARCHAR(255),
+    OUT p_idGenerado    INT
+)
+BEGIN
+    DECLARE v_nombre_ejecutor   VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_idMateriaP        INT;
+    DECLARE v_cantidad          DECIMAL(10,2);
+    DECLARE v_idx               INT DEFAULT 0;
+    DECLARE v_total_items       INT DEFAULT 0;
+    DECLARE v_item              JSON;
+    DECLARE v_descripcion_merma VARCHAR(200);
+    DECLARE v_error             VARCHAR(255) DEFAULT '';  -- ← control de errores del WHILE
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado = 'ERROR: Ocurrió un error inesperado en la operación';
+        SET p_idGenerado = 0;
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES (
+            'ERROR', 'Mermas',
+            CONCAT('Error en sp_gestion_mermas acción: ', p_accion),
+            CONCAT('Merma ID: ', IFNULL(p_idMerma, 'N/A'),
+                   ' | Ejecutado por ID: ', IFNULL(p_ejecutadoPor, 0)),
+            NOW(), p_ip, p_ejecutadoPor
+        );
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor
+        FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    -- ════════════════════════════════════════════════════════
+    -- ACCIÓN: INSERT
+    -- ════════════════════════════════════════════════════════
+    IF p_accion = 'INSERT' THEN
+
+        IF p_descripcion IS NULL OR TRIM(p_descripcion) = '' THEN
+            SET p_resultado = 'ERROR: La descripción es obligatoria';
+            SET p_idGenerado = 0;
+
+        ELSEIF p_materias IS NULL OR JSON_LENGTH(p_materias) = 0 THEN
+            SET p_resultado = 'ERROR: Debe registrar al menos una materia prima';
+            SET p_idGenerado = 0;
+
+        ELSEIF p_ejecutadoPor IS NOT NULL
+               AND NOT EXISTS (SELECT 1 FROM usuarios WHERE idUsuario = p_ejecutadoPor AND estatus = 1) THEN
+            SET p_resultado = 'ERROR: El usuario ejecutor no existe o está inactivo';
+            SET p_idGenerado = 0;
+
+        ELSE
+            START TRANSACTION;
+
+            INSERT INTO mermas (descripcion, fecha, estatus)
+            VALUES (TRIM(p_descripcion), NOW(), 1);
+
+            SET p_idGenerado   = LAST_INSERT_ID();
+            SET v_total_items  = JSON_LENGTH(p_materias);
+            SET v_idx          = 0;
+            SET v_error        = '';
+
+            -- Recorrer el JSON validando cada item antes de insertar
+            WHILE v_idx < v_total_items AND v_error = '' DO
+
+                SET v_item       = JSON_EXTRACT(p_materias, CONCAT('$[', v_idx, ']'));
+                SET v_idMateriaP = CAST(JSON_UNQUOTE(JSON_EXTRACT(v_item, '$.idMateriaP')) AS UNSIGNED);
+                SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(v_item, '$.cantidad'))   AS DECIMAL(10,2));
+
+                -- Validar materia prima activa
+                IF NOT EXISTS (
+                    SELECT 1 FROM materiasPrimas
+                    WHERE idMateriaP = v_idMateriaP AND estatus = 1
+                ) THEN
+                    SET v_error = CONCAT('ERROR: La materia prima ID ', v_idMateriaP, ' no existe o está inactiva');
+
+                -- Validar cantidad positiva
+                ELSEIF v_cantidad <= 0 THEN
+                    SET v_error = CONCAT('ERROR: La cantidad para materia prima ID ', v_idMateriaP, ' debe ser mayor a cero');
+
+                ELSE
+                    -- Insertar detalle
+                    INSERT INTO detalleMerma (idMerma, idMateriaP, cantidad)
+                    VALUES (p_idGenerado, v_idMateriaP, v_cantidad);
+
+                    -- Descontar stock
+                    UPDATE materiasPrimas
+                    SET stock = stock - v_cantidad
+                    WHERE idMateriaP = v_idMateriaP;
+
+                END IF;
+
+                SET v_idx = v_idx + 1;
+            END WHILE;
+
+            -- Si hubo error en el WHILE → ROLLBACK
+            IF v_error != '' THEN
+                ROLLBACK;
+                SET p_resultado = v_error;
+                SET p_idGenerado = 0;
+            ELSE
+                INSERT INTO bitacora_eventos
+                    (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+                VALUES (
+                    p_ejecutadoPor, v_nombre_ejecutor,
+                    'Mermas', 'CREAR', 'merma',
+                    CONCAT('ID:', p_idGenerado, ' | ', TRIM(p_descripcion)),
+                    NOW(), p_ip
+                );
+                COMMIT;
+                SET p_resultado = 'SUCCESS: Merma registrada correctamente';
+            END IF;
+
+        END IF;
+
+    -- ════════════════════════════════════════════════════════
+    -- ACCIÓN: CHANGE_STATUS
+    -- ════════════════════════════════════════════════════════
+ELSEIF p_accion = 'CHANGE_STATUS' THEN
+
+    IF NOT EXISTS (SELECT 1 FROM mermas WHERE idMerma = p_idMerma) THEN
+        SET p_resultado = 'ERROR: La merma no existe';
+        SET p_idGenerado = 0;
+
+    ELSEIF p_estatus NOT IN (0, 1) THEN
+        SET p_resultado = 'ERROR: Estatus no válido (use 0 o 1)';
+        SET p_idGenerado = 0;
+
+    ELSEIF EXISTS (SELECT 1 FROM mermas WHERE idMerma = p_idMerma AND estatus = p_estatus) THEN
+        SET p_resultado = IF(p_estatus = 1,
+            'ERROR: La merma ya se encuentra activa',
+            'ERROR: La merma ya se encuentra inactiva');
+        SET p_idGenerado = 0;
+
+    ELSE
+        START TRANSACTION;
+
+        SELECT descripcion INTO v_descripcion_merma
+        FROM mermas WHERE idMerma = p_idMerma;
+
+        UPDATE mermas SET estatus = p_estatus WHERE idMerma = p_idMerma;
+        SET p_idGenerado = p_idMerma;
+
+IF p_estatus = 0 THEN
+    -- Desactivar: devolver el stock (anular la merma)
+    UPDATE materiasPrimas mp
+    INNER JOIN detalleMerma dm ON dm.idMateriaP = mp.idMateriaP
+    SET mp.stock = mp.stock + dm.cantidad
+    WHERE dm.idMerma = p_idMerma;
+
+ELSE
+    -- Reactivar: volver a descontar el stock
+    UPDATE materiasPrimas mp
+    INNER JOIN detalleMerma dm ON dm.idMateriaP = mp.idMateriaP
+    SET mp.stock = mp.stock - dm.cantidad
+    WHERE dm.idMerma = p_idMerma;
+END IF;
+
+        INSERT INTO bitacora_eventos
+            (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (
+            p_ejecutadoPor, v_nombre_ejecutor,
+            'Mermas',
+            IF(p_estatus = 1, 'ACTIVAR', 'DESACTIVAR'),
+            'merma',
+            CONCAT('ID:', p_idMerma, ' | ', v_descripcion_merma),
+            NOW(), p_ip
+        );
+
+        COMMIT;
+        SET p_resultado = IF(p_estatus = 1,
+            'SUCCESS: Merma activada y stock restaurado correctamente',
+            'SUCCESS: Merma desactivada y stock ajustado correctamente');
+    END IF;
+
+    ELSE
+        SET p_resultado = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+    END IF;
+
+END$$
+DELIMITER ;
+
+-- Agrergar materias primas
+LOCK TABLES `materiasprimas` WRITE;
+/*!40000 ALTER TABLE `materiasprimas` DISABLE KEYS */;
+INSERT INTO `materiasprimas` VALUES (1,'Cebolla','Solido',5,5000.00,1000.00,1),(2,'Harina','Solido',1,24450.00,5000.00,1),(3,'Aceite','Liquido',6,4960.00,1000.00,1),(4,'Levadura seca','Solido',1,996.00,200.00,1),(5,'Azúcar','Solido',7,1996.00,500.00,1),(6,'Sal','Solido',7,2996.00,500.00,1),(7,'Pepperoni','Solido',2,8000.00,1500.00,1),(8,'Jamón','Solido',2,5910.00,1000.00,1),(9,'Piña','Solido',5,0.00,800.00,1),(10,'Tocino','Solido',2,4000.00,800.00,1),(11,'Salami','Solido',2,4000.00,800.00,1),(12,'Chorizo','Solido',2,8500.00,1000.00,1),(13,'Jalapeño','Solido',5,2000.00,500.00,1),(14,'Morrón','Solido',5,3000.00,600.00,1),(15,'Asadero','Solido',3,10000.00,2000.00,1),(16,'Monarca','Solido',3,8000.00,1500.00,1),(17,'Gouda','Solido',3,6000.00,1000.00,1),(18,'Mozzarella','Solido',3,15000.00,3000.00,1),(19,'Champiñones','Solido',5,4000.00,800.00,1),(20,'Aceitunas','Solido',5,300.00,600.00,1);
+/*!40000 ALTER TABLE `materiasprimas` ENABLE KEYS */;
+UNLOCK TABLES;
+
+-- ============================================================
+-- MÓDULO: CORTE DE CAJA Y UTILIDADES
+-- FourOvenPizzaDB
+-- ============================================================
+
+USE FourOvenPizzaDB;
+
+-- ------------------------------------------------------------
+-- TABLA: corteCaja (registro de cortes diarios)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS corteCaja (
+    idCorte         INT AUTO_INCREMENT PRIMARY KEY,
+    idUsuario       INT          NOT NULL,
+    fecha           DATE         NOT NULL,
+    turno           VARCHAR(20)  NOT NULL DEFAULT 'General',  -- 'Mañana' | 'Tarde' | 'General'
+    efectivoInicial DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    totalVentas     DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    totalEfectivo   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    totalTarjeta    DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    totalEgresos    DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    saldoFinal      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    diferencia      DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- saldoContado - saldoEsperado
+    saldoContado    DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- lo que el cajero cuenta físicamente
+    observaciones   TEXT         NULL,
+    estado          VARCHAR(20)  NOT NULL DEFAULT 'Abierto', -- 'Abierto' | 'Cerrado'
+    fechaCreacion   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fechaCierre     DATETIME     NULL,
+
+    FOREIGN KEY (idUsuario) REFERENCES usuarios(idUsuario),
+    UNIQUE KEY uk_corte_fecha_turno (fecha, turno)
+) ENGINE=InnoDB;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_corte_caja_resumen
+-- Calcula el resumen del día (ventas, egresos, saldo esperado)
+-- para pre-rellenar el formulario de corte.
+-- ------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_corte_caja_resumen;
+DELIMITER $$
+CREATE PROCEDURE sp_corte_caja_resumen(IN p_fecha DATE)
+BEGIN
+    DECLARE v_fecha DATE;
+    SET v_fecha = IFNULL(p_fecha, CURDATE());
+
+    -- RS1: Ventas confirmadas del día (sin cambios)
+    SELECT
+        COALESCE(SUM(CASE WHEN v.metodoPago = 'Efectivo' THEN dv_total.total ELSE 0 END), 0) AS total_efectivo,
+        COALESCE(SUM(CASE WHEN v.metodoPago = 'Tarjeta'  THEN dv_total.total ELSE 0 END), 0) AS total_tarjeta,
+        COALESCE(SUM(dv_total.total), 0)                                                       AS total_ventas,
+        COUNT(v.idVenta)                                                                       AS num_ventas
+    FROM ventas v
+    JOIN (
+        SELECT idVenta, SUM(cantidad * precio) AS total
+        FROM detalleVenta GROUP BY idVenta
+    ) dv_total ON dv_total.idVenta = v.idVenta
+    WHERE DATE(v.fecha) = v_fecha
+      AND v.estado = 'Confirmada'
+      AND v.tipo = 'Punto venta';
+
+    -- RS2: Movimientos informativos del día
+    -- Solo INGRESO y CORTE anteriores; excluye EGRESO (compras) porque no afectan esta caja
+    SELECT
+        cm.idMovimiento,
+        cm.tipo,
+        cm.monto,
+        cm.descripcion,
+        cm.fecha,
+        u.nombre AS nombre_usuario
+    FROM cajaMovimientos cm
+    JOIN usuarios u ON u.idUsuario = cm.idUsuario
+    WHERE DATE(cm.fecha) = v_fecha
+      AND cm.tipo NOT IN ('EGRESO')   -- las compras no son de esta caja
+    ORDER BY cm.fecha DESC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_gestion_corte_caja
+-- INSERT: registrar un nuevo corte
+-- GET_HISTORIAL: listar cortes con filtros
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_corte_caja$$
+CREATE PROCEDURE sp_gestion_corte_caja(
+    IN  p_accion          VARCHAR(20),
+    IN  p_idCorte         INT,
+    IN  p_idUsuario       INT,
+    IN  p_fecha           DATE,
+    IN  p_turno           VARCHAR(20),
+    IN  p_efectivoInicial DECIMAL(10,2),
+    IN  p_saldoContado    DECIMAL(10,2),
+    IN  p_observaciones   TEXT,
+    IN  p_ip              VARCHAR(45),
+    OUT p_resultado       VARCHAR(255),
+    OUT p_idGenerado      INT
+)
+BEGIN
+    DECLARE v_nombre_usuario  VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_total_ventas    DECIMAL(10,2) DEFAULT 0;
+    DECLARE v_total_efectivo  DECIMAL(10,2) DEFAULT 0;
+    DECLARE v_total_tarjeta   DECIMAL(10,2) DEFAULT 0;
+    DECLARE v_total_egresos   DECIMAL(10,2) DEFAULT 0;
+    DECLARE v_saldo_esperado  DECIMAL(10,2) DEFAULT 0;
+    DECLARE v_diferencia      DECIMAL(10,2) DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado  = 'ERROR: Ocurrió un error al registrar el corte de caja';
+        SET p_idGenerado = 0;
+    END;
+
+    IF p_idUsuario IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_usuario FROM usuarios WHERE idUsuario = p_idUsuario;
+    END IF;
+
+    -- ── INSERT: nuevo corte ──────────────────────────────────
+    IF p_accion = 'INSERT' THEN
+
+        IF EXISTS (SELECT 1 FROM corteCaja WHERE fecha = p_fecha AND turno = p_turno) THEN
+            SET p_resultado  = CONCAT('ERROR: Ya existe un corte de caja para el turno "', p_turno, '" del día ', p_fecha);
+            SET p_idGenerado = 0;
+        ELSE
+            START TRANSACTION;
+
+            -- Calcular totales de ventas del día
+            SELECT
+                COALESCE(SUM(CASE WHEN v.metodoPago = 'Efectivo' THEN dv_t.total ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN v.metodoPago = 'Tarjeta'  THEN dv_t.total ELSE 0 END), 0),
+                COALESCE(SUM(dv_t.total), 0)
+            INTO v_total_efectivo, v_total_tarjeta, v_total_ventas
+            FROM ventas v
+            JOIN (
+                SELECT idVenta, SUM(cantidad * precio) AS total
+                FROM detalleVenta GROUP BY idVenta
+            ) dv_t ON dv_t.idVenta = v.idVenta
+            WHERE DATE(v.fecha) = p_fecha
+              AND v.estado = 'Confirmada'
+              AND v.tipo = 'Punto venta';
+
+            -- Calcular egresos del día
+            SELECT COALESCE(SUM(monto), 0) INTO v_total_egresos
+            FROM cajaMovimientos
+            WHERE DATE(fecha) = p_fecha AND tipo = 'EGRESO';
+
+            -- Saldo esperado en caja: efectivo inicial + efectivo de ventas - egresos
+            SET v_saldo_esperado = p_efectivoInicial + v_total_efectivo - v_total_egresos;
+            SET v_diferencia     = p_saldoContado - v_saldo_esperado;
+
+            INSERT INTO corteCaja (
+                idUsuario, fecha, turno,
+                efectivoInicial, totalVentas, totalEfectivo, totalTarjeta,
+                totalEgresos, saldoFinal, saldoContado, diferencia,
+                observaciones, estado, fechaCreacion, fechaCierre
+            ) VALUES (
+                p_idUsuario, p_fecha, p_turno,
+                p_efectivoInicial, v_total_ventas, v_total_efectivo, v_total_tarjeta,
+                v_total_egresos, v_saldo_esperado, p_saldoContado, v_diferencia,
+                p_observaciones, 'Cerrado', NOW(), NOW()
+            );
+
+            SET p_idGenerado = LAST_INSERT_ID();
+            SET p_resultado  = 'SUCCESS: Corte de caja registrado correctamente';
+
+            -- Registrar en movimientos de caja
+            INSERT INTO cajaMovimientos (idUsuario, tipo, monto, descripcion, fecha)
+            VALUES (p_idUsuario, 'CORTE',
+                    v_total_ventas,
+                    CONCAT('Corte de caja #', p_idGenerado, ' | Turno: ', p_turno,
+                           ' | Diferencia: ', v_diferencia),
+                    NOW());
+
+            INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+            VALUES (p_idUsuario, v_nombre_usuario, 'CorteCaja', 'CREAR',
+                    'corte', CONCAT('ID:', p_idGenerado, ' | Fecha:', p_fecha), NOW(), p_ip);
+
+            COMMIT;
+        END IF;
+
+    -- ── GET_HISTORIAL: listar cortes ─────────────────────────
+    ELSEIF p_accion = 'GET_HISTORIAL' THEN
+        SET p_resultado  = 'OK';
+        SET p_idGenerado = 0;
+
+        SELECT
+            cc.idCorte,
+            cc.fecha,
+            cc.turno,
+            cc.efectivoInicial,
+            cc.totalVentas,
+            cc.totalEfectivo,
+            cc.totalTarjeta,
+            cc.totalEgresos,
+            cc.saldoFinal,
+            cc.saldoContado,
+            cc.diferencia,
+            cc.observaciones,
+            cc.estado,
+            cc.fechaCreacion,
+            u.nombre AS nombre_usuario
+        FROM corteCaja cc
+        JOIN usuarios u ON u.idUsuario = cc.idUsuario
+        WHERE (p_fecha IS NULL OR cc.fecha = p_fecha)
+        ORDER BY cc.fecha DESC, cc.fechaCreacion DESC;
+
+    ELSE
+        SET p_resultado  = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+    END IF;
+END$$
+DELIMITER ;
+
+
+-- ============================================================
+-- SPs DE UTILIDADES / REPORTES
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- SP: sp_utilidades_resumen
+-- KPIs generales: ingresos, costos, utilidad bruta
+-- p_fecha_ini / p_fecha_fin: rango de fechas (NULL = último mes)
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_utilidades_resumen$$
+CREATE PROCEDURE sp_utilidades_resumen(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    -- ── 1) KPIs generales ───────────────────────────────────
+    SELECT
+        COALESCE(SUM(dv.cantidad * dv.precio), 0)                    AS total_ingresos,
+        COUNT(DISTINCT v.idVenta)                                     AS total_ventas,
+        COALESCE(SUM(dv.cantidad), 0)                                 AS total_unidades,
+        COALESCE(AVG(sub_total.total_venta), 0)                      AS ticket_promedio
+    FROM ventas v
+    JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+    JOIN (
+        SELECT idVenta, SUM(cantidad * precio) AS total_venta
+        FROM detalleVenta GROUP BY idVenta
+    ) sub_total ON sub_total.idVenta = v.idVenta
+    WHERE v.estado = 'Confirmada'
+      AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin;
+
+    -- ── 2) Costo promedio por gramo (últimos 30 días) ────────
+    -- Costo unitario de cada materia prima basado en compras completadas
+    SELECT
+        mp.idMateriaP,
+        mp.nombre AS nombre_mp,
+        COALESCE(
+            (
+                SELECT SUM(dc2.precio) / NULLIF(SUM(dc2.cantidad), 0)
+                FROM detalleCompra dc2
+                JOIN compras c2 ON c2.idCompra = dc2.idCompra
+                WHERE dc2.idMateriaP = mp.idMateriaP
+                  AND c2.estatus = 'Completado'
+                  AND DATE(c2.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            ), 0
+        ) AS costo_por_unidad_promedio
+    FROM materiasPrimas mp
+    WHERE mp.estatus = 1
+    ORDER BY mp.nombre;
+
+    -- ── 3) Utilidad por producto ─────────────────────────────
+    SELECT
+        p.idProducto,
+        p.nombre                                                       AS nombre_producto,
+        p.`tamaño`                                                     AS tamano,
+        p.precio                                                       AS precio_venta,
+        COALESCE(SUM(dv.cantidad), 0)                                  AS unidades_vendidas,
+        COALESCE(SUM(dv.cantidad * dv.precio), 0)                      AS ingresos_totales,
+        -- Costo de materia prima por unidad producida (promedio últimos 30d)
+        COALESCE((
+            SELECT SUM(dr.cantidad * costo_mp.costo_unit)
+            FROM recetas r
+            JOIN detalleReceta dr ON dr.idReceta = r.idReceta
+            JOIN (
+                SELECT dc3.idMateriaP,
+                       SUM(dc3.precio) / NULLIF(SUM(dc3.cantidad), 0) AS costo_unit
+                FROM detalleCompra dc3
+                JOIN compras c3 ON c3.idCompra = dc3.idCompra
+                WHERE c3.estatus = 'Completado'
+                  AND DATE(c3.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                GROUP BY dc3.idMateriaP
+            ) costo_mp ON costo_mp.idMateriaP = dr.idMateriaP
+            WHERE r.idProducto = p.idProducto
+        ), 0)                                                          AS costo_unit_mp,
+        -- Utilidad bruta total
+        COALESCE(SUM(dv.cantidad * dv.precio), 0) - COALESCE(
+            (
+                SELECT SUM(dr.cantidad * costo_mp2.costo_unit) * COALESCE(SUM(dv.cantidad), 0)
+                FROM recetas r2
+                JOIN detalleReceta dr ON dr.idReceta = r2.idReceta
+                JOIN (
+                    SELECT dc4.idMateriaP,
+                           SUM(dc4.precio) / NULLIF(SUM(dc4.cantidad), 0) AS costo_unit
+                    FROM detalleCompra dc4
+                    JOIN compras c4 ON c4.idCompra = dc4.idCompra
+                    WHERE c4.estatus = 'Completado'
+                      AND DATE(c4.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                    GROUP BY dc4.idMateriaP
+                ) costo_mp2 ON costo_mp2.idMateriaP = dr.idMateriaP
+                WHERE r2.idProducto = p.idProducto
+            ), 0
+        )                                                              AS utilidad_bruta
+    FROM productos p
+    LEFT JOIN detalleVenta dv ON dv.idProducto = p.idProducto
+    LEFT JOIN ventas v        ON v.idVenta = dv.idVenta
+        AND v.estado = 'Confirmada'
+        AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    WHERE p.estatus = 1
+    GROUP BY p.idProducto, p.nombre, p.`tamaño`, p.precio
+    ORDER BY unidades_vendidas DESC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_productos_vendidos
+-- Ranking de productos: más y menos vendidos
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_productos_vendidos$$
+CREATE PROCEDURE sp_reporte_productos_vendidos(
+    IN p_fecha_ini  DATE,
+    IN p_fecha_fin  DATE,
+    IN p_limite     INT,      -- top N productos (NULL = todos)
+    IN p_orden      VARCHAR(5) -- 'DESC' = más vendidos | 'ASC' = menos vendidos
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+    DECLARE v_limite INT;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+	SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+	SET v_limite   = IFNULL(p_limite, 999999);
+
+    -- Más / menos vendidos por unidades
+    SELECT
+        p.idProducto,
+        p.nombre                              AS nombre_producto,
+        p.`tamaño`                            AS tamano,
+        p.precio                              AS precio_venta,
+        COALESCE(SUM(dv.cantidad), 0)         AS unidades_vendidas,
+        COALESCE(SUM(dv.cantidad * dv.precio), 0) AS ingresos,
+        COUNT(DISTINCT v.idVenta)             AS num_transacciones
+    FROM productos p
+    LEFT JOIN detalleVenta dv ON dv.idProducto = p.idProducto
+    LEFT JOIN ventas v        ON v.idVenta = dv.idVenta
+        AND v.estado = 'Confirmada'
+        AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    WHERE p.estatus = 1
+    GROUP BY p.idProducto, p.nombre, p.`tamaño`, p.precio
+    ORDER BY
+        CASE WHEN p_orden = 'ASC'  THEN unidades_vendidas END ASC,
+        CASE WHEN p_orden = 'DESC' THEN unidades_vendidas END DESC
+    LIMIT v_limite;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_ventas_por_dia
+-- Ventas agrupadas por día (para gráfica de tendencia)
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_ventas_por_dia$$
+CREATE PROCEDURE sp_reporte_ventas_por_dia(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    SELECT
+        DATE(v.fecha)                          AS dia,
+        COUNT(DISTINCT v.idVenta)              AS num_ventas,
+        COALESCE(SUM(dv.cantidad * dv.precio), 0) AS total_ingresos,
+        COALESCE(SUM(dv.cantidad), 0)          AS unidades
+    FROM ventas v
+    JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+    WHERE v.estado = 'Confirmada'
+      AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    GROUP BY DATE(v.fecha)
+    ORDER BY dia ASC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_metodo_pago
+-- Distribución por método de pago
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_metodo_pago$$
+CREATE PROCEDURE sp_reporte_metodo_pago(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    SELECT
+        v.metodoPago,
+        COUNT(DISTINCT v.idVenta)                 AS num_ventas,
+        COALESCE(SUM(dv.cantidad * dv.precio), 0) AS total_ingresos
+    FROM ventas v
+    JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+    WHERE v.estado = 'Confirmada'
+      AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    GROUP BY v.metodoPago
+    ORDER BY total_ingresos DESC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_costos_materias_primas
+-- Costo total de insumos comprados en el período
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_costos_materias_primas$$
+CREATE PROCEDURE sp_reporte_costos_materias_primas(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    SELECT
+        mp.idMateriaP,
+        mp.nombre                                          AS nombre_mp,
+        cat.nombre                                         AS categoria,
+        SUM(dc.cantidad)                                   AS total_comprado,
+        SUM(dc.precio)                                     AS costo_total,
+        SUM(dc.precio) / NULLIF(SUM(dc.cantidad), 0)       AS costo_promedio_unidad,
+        COUNT(DISTINCT c.idCompra)                         AS num_compras
+    FROM detalleCompra dc
+    JOIN compras c        ON c.idCompra  = dc.idCompra
+    JOIN materiasPrimas mp ON mp.idMateriaP = dc.idMateriaP
+    JOIN categorias cat   ON cat.idCategoria = mp.idCategoria
+    WHERE c.estatus = 'Completado'
+      AND DATE(c.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    GROUP BY mp.idMateriaP, mp.nombre, cat.nombre
+    ORDER BY costo_total DESC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_mermas_periodo
+-- Mermas del período y su impacto económico
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_mermas_periodo$$
+CREATE PROCEDURE sp_reporte_mermas_periodo(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    SELECT
+        m.idMerma,
+        m.descripcion,
+        DATE(m.fecha)                                      AS fecha,
+        mp.nombre                                          AS materia_prima,
+        dm.cantidad                                        AS cantidad_merma,
+        -- Valorizar la merma al costo promedio del último mes
+        COALESCE((
+            SELECT SUM(dc2.precio) / NULLIF(SUM(dc2.cantidad), 0)
+            FROM detalleCompra dc2
+            JOIN compras c2 ON c2.idCompra = dc2.idCompra
+            WHERE dc2.idMateriaP = mp.idMateriaP
+              AND c2.estatus = 'Completado'
+              AND DATE(c2.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ), 0) * dm.cantidad                                AS valor_perdida
+    FROM mermas m
+    JOIN detalleMerma dm ON dm.idMerma = m.idMerma
+    JOIN materiasPrimas mp ON mp.idMateriaP = dm.idMateriaP
+    WHERE m.estatus = 1
+      AND DATE(m.fecha) BETWEEN v_fecha_ini AND v_fecha_fin
+    ORDER BY m.fecha DESC;
+END$$
+DELIMITER ;
+
+
+-- ------------------------------------------------------------
+-- SP: sp_reporte_utilidad_neta
+-- Resultado final: ingresos - costos MP consumidos - mermas
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_reporte_utilidad_neta$$
+CREATE PROCEDURE sp_reporte_utilidad_neta(
+    IN p_fecha_ini DATE,
+    IN p_fecha_fin DATE
+)
+BEGIN
+    DECLARE v_fecha_ini DATE;
+    DECLARE v_fecha_fin DATE;
+    DECLARE v_total_ingresos    DECIMAL(12,2) DEFAULT 0;
+    DECLARE v_total_costo_mp    DECIMAL(12,2) DEFAULT 0;
+    DECLARE v_total_mermas      DECIMAL(12,2) DEFAULT 0;
+    DECLARE v_utilidad_bruta    DECIMAL(12,2) DEFAULT 0;
+    DECLARE v_utilidad_neta     DECIMAL(12,2) DEFAULT 0;
+    DECLARE v_margen_bruto      DECIMAL(8,4)  DEFAULT 0;
+    DECLARE v_margen_neto       DECIMAL(8,4)  DEFAULT 0;
+
+    SET v_fecha_ini = IFNULL(p_fecha_ini, DATE_SUB(CURDATE(), INTERVAL 30 DAY));
+    SET v_fecha_fin = IFNULL(p_fecha_fin, CURDATE());
+
+    -- Total ingresos (ventas confirmadas)
+    SELECT COALESCE(SUM(dv.cantidad * dv.precio), 0)
+    INTO v_total_ingresos
+    FROM ventas v
+    JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+    WHERE v.estado = 'Confirmada'
+      AND DATE(v.fecha) BETWEEN v_fecha_ini AND v_fecha_fin;
+
+    -- Costo MP consumido (órdenes de producción terminadas × costo promedio)
+    SELECT COALESCE(SUM(dr.cantidad * dp.cantidad * costo_mp.costo_unit), 0)
+    INTO v_total_costo_mp
+    FROM detalleProduccion dp
+    JOIN ordenesProduccion op ON op.idOrden = dp.idOrden
+    JOIN recetas r  ON r.idProducto = dp.idProducto
+    JOIN detalleReceta dr ON dr.idReceta = r.idReceta
+    JOIN (
+        SELECT dc.idMateriaP,
+               SUM(dc.precio) / NULLIF(SUM(dc.cantidad), 0) AS costo_unit
+        FROM detalleCompra dc
+        JOIN compras c ON c.idCompra = dc.idCompra
+        WHERE c.estatus = 'Completado'
+          AND DATE(c.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        GROUP BY dc.idMateriaP
+    ) costo_mp ON costo_mp.idMateriaP = dr.idMateriaP
+    WHERE op.estado = 'Terminada'
+      AND DATE(op.fecha) BETWEEN v_fecha_ini AND v_fecha_fin;
+
+    -- Pérdida por mermas
+    SELECT COALESCE(SUM(
+        dm.cantidad * COALESCE((
+            SELECT SUM(dc2.precio) / NULLIF(SUM(dc2.cantidad), 0)
+            FROM detalleCompra dc2
+            JOIN compras c2 ON c2.idCompra = dc2.idCompra
+            WHERE dc2.idMateriaP = dm.idMateriaP
+              AND c2.estatus = 'Completado'
+              AND DATE(c2.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ), 0)
+    ), 0)
+    INTO v_total_mermas
+    FROM mermas m
+    JOIN detalleMerma dm ON dm.idMerma = m.idMerma
+    WHERE m.estatus = 1
+      AND DATE(m.fecha) BETWEEN v_fecha_ini AND v_fecha_fin;
+
+    SET v_utilidad_bruta = v_total_ingresos - v_total_costo_mp;
+    SET v_utilidad_neta  = v_utilidad_bruta - v_total_mermas;
+    SET v_margen_bruto   = IF(v_total_ingresos > 0, (v_utilidad_bruta / v_total_ingresos) * 100, 0);
+    SET v_margen_neto    = IF(v_total_ingresos > 0, (v_utilidad_neta  / v_total_ingresos) * 100, 0);
+
+    SELECT
+        v_fecha_ini          AS fecha_ini,
+        v_fecha_fin          AS fecha_fin,
+        v_total_ingresos     AS total_ingresos,
+        v_total_costo_mp     AS costo_materias_primas,
+        v_total_mermas       AS perdida_mermas,
+        v_utilidad_bruta     AS utilidad_bruta,
+        v_utilidad_neta      AS utilidad_neta,
+        ROUND(v_margen_bruto, 2) AS margen_bruto_pct,
+        ROUND(v_margen_neto,  2) AS margen_neto_pct;
+END$$
+DELIMITER ;
+
+-- ============================================================
+-- ADICION AL MODULO CAJA/UTILIDADES
+-- SP adicional: sp_alertas_stock_bajo
+-- FourOvenPizzaDB
+-- ============================================================
+
+USE FourOvenPizzaDB;
+
+-- ------------------------------------------------------------
+-- SP: sp_alertas_stock_bajo
+-- Insumos con stock actual <= stock minimo configurado.
+-- Se puede llamar desde Python en lugar de la consulta directa
+-- si se prefiere centralizar la logica en la BD.
+-- ------------------------------------------------------------
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_alertas_stock_bajo$$
+CREATE PROCEDURE sp_alertas_stock_bajo()
+BEGIN
+    SELECT
+        mp.idMateriaP,
+        mp.nombre,
+        mp.stock,
+        mp.stockMinimo,
+        mp.stock - mp.stockMinimo          AS diferencia,
+        cat.nombre                         AS categoria,
+        -- Costo estimado para reponer al nivel minimo (basado en compras recientes)
+        COALESCE((
+            SELECT SUM(dc.precio) / NULLIF(SUM(dc.cantidad), 0)
+            FROM detalleCompra dc
+            JOIN compras c ON c.idCompra = dc.idCompra
+            WHERE dc.idMateriaP = mp.idMateriaP
+              AND c.estatus = 'Completado'
+              AND DATE(c.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ), 0) * ABS(mp.stock - mp.stockMinimo) AS costo_reposicion_estimado
+    FROM materiasPrimas mp
+    JOIN categorias cat ON cat.idCategoria = mp.idCategoria
+    WHERE mp.estatus = 1
+      AND mp.stock <= mp.stockMinimo
+    ORDER BY (mp.stock - mp.stockMinimo) ASC;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_alertas_stock_bajo$$
+CREATE PROCEDURE sp_alertas_stock_bajo()
+BEGIN
+    SELECT
+        mp.idMateriaP,
+        mp.nombre,
+        mp.stock,
+        mp.stockMinimo,
+        mp.stock - mp.stockMinimo          AS diferencia,
+        cat.nombre                         AS categoria,
+        -- Costo estimado para reponer al nivel minimo (basado en compras recientes)
+        COALESCE((
+            SELECT SUM(dc.precio) / NULLIF(SUM(dc.cantidad), 0)
+            FROM detalleCompra dc
+            JOIN compras c ON c.idCompra = dc.idCompra
+            WHERE dc.idMateriaP = mp.idMateriaP
+              AND c.estatus = 'Completado'
+              AND DATE(c.fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ), 0) * ABS(mp.stock - mp.stockMinimo) AS costo_reposicion_estimado
+    FROM materiasPrimas mp
+    JOIN categorias cat ON cat.idCategoria = mp.idCategoria
+    WHERE mp.estatus = 1
+      AND mp.stock <= mp.stockMinimo
+    ORDER BY (mp.stock - mp.stockMinimo) ASC;
+END$$
+DELIMITER ;
+
+-- ============================================================
+-- SP: sp_gestion_mini_recetas
+-- Acciones: INSERT, UPDATE, CHANGE_STATUS, DELETE
+-- ============================================================
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_mini_recetas$$
+CREATE PROCEDURE sp_gestion_mini_recetas(
+    IN  p_accion        VARCHAR(20),
+    IN  p_idMiniReceta  INT,
+    IN  p_nombre        VARCHAR(100),
+    IN  p_descripcion   VARCHAR(200),
+    IN  p_estatus       TINYINT,
+    IN  p_ip            VARCHAR(45),
+    IN  p_ejecutadoPor  INT,
+    IN  p_detalles      JSON,   -- [{idMateriaP, cantidad}]  solo en INSERT/UPDATE
+    OUT p_resultado     VARCHAR(255),
+    OUT p_idGenerado    INT
+)
+sp_main: BEGIN
+    DECLARE v_nombre_ejecutor VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_idx             INT          DEFAULT 0;
+    DECLARE v_total_items     INT          DEFAULT 0;
+    DECLARE v_idMateriaP      INT;
+    DECLARE v_cantidad        DECIMAL(10,2);
+    DECLARE v_nombre_mr       VARCHAR(100) DEFAULT '';
+    DECLARE v_hay_inactivas   INT          DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado  = 'ERROR: Ocurrió un error inesperado en la operación';
+        SET p_idGenerado = 0;
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES ('ERROR', 'MiniRecetas',
+                CONCAT('Error en sp_gestion_mini_recetas acción: ', p_accion),
+                CONCAT('MiniReceta: ', IFNULL(p_nombre,''), ' | Ejecutado por: ', IFNULL(p_ejecutadoPor,0)),
+                NOW(), p_ip, p_ejecutadoPor);
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    -- ─────────────────────────────────────────────────────────
+    -- INSERT
+    -- ─────────────────────────────────────────────────────────
+    IF p_accion = 'INSERT' THEN
+
+        IF p_nombre IS NULL OR TRIM(p_nombre) = '' THEN
+            SET p_resultado  = 'ERROR: El nombre de la mini receta es obligatorio';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM miniRecetas WHERE nombre = TRIM(p_nombre)) THEN
+            SET p_resultado  = 'ERROR: Ya existe una mini receta con ese nombre';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        IF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+            SET p_resultado  = 'ERROR: Debe incluir al menos un insumo en la mini receta';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        START TRANSACTION;
+
+        INSERT INTO miniRecetas (nombre, descripcion, estatus, fechaCreacion)
+        VALUES (TRIM(p_nombre), p_descripcion, 1, NOW());
+
+        SET p_idGenerado  = LAST_INSERT_ID();
+        SET v_total_items = JSON_LENGTH(p_detalles);
+        SET v_idx         = 0;
+
+        WHILE v_idx < v_total_items DO
+            SET v_idMateriaP = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idMateriaP'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+
+            IF NOT EXISTS (SELECT 1 FROM materiasPrimas WHERE idMateriaP = v_idMateriaP AND estatus = 1) THEN
+                ROLLBACK;
+                SET p_resultado  = CONCAT('ERROR: La materia prima ID ', v_idMateriaP, ' no existe o está inactiva');
+                SET p_idGenerado = 0;
+                LEAVE sp_main;
+            END IF;
+
+            IF v_cantidad <= 0 THEN
+                ROLLBACK;
+                SET p_resultado  = 'ERROR: La cantidad de cada insumo debe ser mayor a 0';
+                SET p_idGenerado = 0;
+                LEAVE sp_main;
+            END IF;
+
+            INSERT INTO detalleMiniReceta (idMiniReceta, idMateriaP, cantidad)
+            VALUES (p_idGenerado, v_idMateriaP, v_cantidad);
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- Si alguna materia está inactiva → auto-desactivar
+        SELECT COUNT(*) INTO v_hay_inactivas
+        FROM detalleMiniReceta dmr
+        JOIN materiasPrimas mp ON mp.idMateriaP = dmr.idMateriaP
+        WHERE dmr.idMiniReceta = p_idGenerado AND mp.estatus = 0;
+
+        IF v_hay_inactivas > 0 THEN
+            UPDATE miniRecetas SET estatus = 0 WHERE idMiniReceta = p_idGenerado;
+        END IF;
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'MiniRecetas', 'CREAR',
+                'minireceta', CONCAT('ID:', p_idGenerado, ' | ', TRIM(p_nombre)), NOW(), p_ip);
+
+        SET p_resultado = 'SUCCESS: Mini receta registrada correctamente';
+        COMMIT;
+
+    -- ─────────────────────────────────────────────────────────
+    -- UPDATE
+    -- ─────────────────────────────────────────────────────────
+    ELSEIF p_accion = 'UPDATE' THEN
+
+        IF NOT EXISTS (SELECT 1 FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta) THEN
+            SET p_resultado  = 'ERROR: La mini receta no existe';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM miniRecetas WHERE nombre = TRIM(p_nombre) AND idMiniReceta != p_idMiniReceta) THEN
+            SET p_resultado  = 'ERROR: Ya existe otra mini receta con ese nombre';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        IF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+            SET p_resultado  = 'ERROR: Debe incluir al menos un insumo';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        START TRANSACTION;
+
+        UPDATE miniRecetas
+        SET nombre      = TRIM(p_nombre),
+            descripcion = p_descripcion
+        WHERE idMiniReceta = p_idMiniReceta;
+
+        DELETE FROM detalleMiniReceta WHERE idMiniReceta = p_idMiniReceta;
+
+        SET v_total_items = JSON_LENGTH(p_detalles);
+        SET v_idx         = 0;
+
+        WHILE v_idx < v_total_items DO
+            SET v_idMateriaP = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idMateriaP'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+
+            IF NOT EXISTS (SELECT 1 FROM materiasPrimas WHERE idMateriaP = v_idMateriaP AND estatus = 1) THEN
+                ROLLBACK;
+                SET p_resultado  = CONCAT('ERROR: La materia prima ID ', v_idMateriaP, ' no existe o está inactiva');
+                SET p_idGenerado = 0;
+                LEAVE sp_main;
+            END IF;
+
+            IF v_cantidad <= 0 THEN
+                ROLLBACK;
+                SET p_resultado  = 'ERROR: La cantidad debe ser mayor a 0';
+                SET p_idGenerado = 0;
+                LEAVE sp_main;
+            END IF;
+
+            INSERT INTO detalleMiniReceta (idMiniReceta, idMateriaP, cantidad)
+            VALUES (p_idMiniReceta, v_idMateriaP, v_cantidad);
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- Recalcular estatus tras edición
+        SELECT COUNT(*) INTO v_hay_inactivas
+        FROM detalleMiniReceta dmr
+        JOIN materiasPrimas mp ON mp.idMateriaP = dmr.idMateriaP
+        WHERE dmr.idMiniReceta = p_idMiniReceta AND mp.estatus = 0;
+
+        UPDATE miniRecetas
+        SET estatus = IF(v_hay_inactivas > 0, 0, 1)
+        WHERE idMiniReceta = p_idMiniReceta;
+
+        SET p_idGenerado = p_idMiniReceta;
+        SET p_resultado  = 'SUCCESS: Mini receta actualizada correctamente';
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'MiniRecetas', 'EDITAR',
+                'minireceta', CONCAT('ID:', p_idMiniReceta, ' | ', TRIM(p_nombre)), NOW(), p_ip);
+
+        COMMIT;
+
+    -- ─────────────────────────────────────────────────────────
+    -- CHANGE_STATUS  (solo activar; desactivar es automático)
+    -- ─────────────────────────────────────────────────────────
+    ELSEIF p_accion = 'CHANGE_STATUS' THEN
+
+        IF NOT EXISTS (SELECT 1 FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta) THEN
+            SET p_resultado  = 'ERROR: La mini receta no existe';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        -- Si se quiere activar, verificar que no haya materias inactivas
+        IF p_estatus = 1 THEN
+            SELECT COUNT(*) INTO v_hay_inactivas
+            FROM detalleMiniReceta dmr
+            JOIN materiasPrimas mp ON mp.idMateriaP = dmr.idMateriaP
+            WHERE dmr.idMiniReceta = p_idMiniReceta AND mp.estatus = 0;
+
+            IF v_hay_inactivas > 0 THEN
+                SET p_resultado  = 'ERROR: No se puede activar. Contiene materias primas desactivadas';
+                SET p_idGenerado = 0;
+                LEAVE sp_main;
+            END IF;
+        END IF;
+
+        SELECT nombre INTO v_nombre_mr FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta;
+
+        START TRANSACTION;
+        UPDATE miniRecetas SET estatus = p_estatus WHERE idMiniReceta = p_idMiniReceta;
+        SET p_idGenerado = p_idMiniReceta;
+        SET p_resultado  = IF(p_estatus = 1,
+            'SUCCESS: Mini receta activada correctamente',
+            'SUCCESS: Mini receta desactivada correctamente');
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'MiniRecetas',
+                IF(p_estatus = 1, 'ACTIVAR', 'DESACTIVAR'),
+                'minireceta', CONCAT('ID:', p_idMiniReceta, ' | ', v_nombre_mr), NOW(), p_ip);
+        COMMIT;
+
+    -- ─────────────────────────────────────────────────────────
+    -- DELETE
+    -- ─────────────────────────────────────────────────────────
+    ELSEIF p_accion = 'DELETE' THEN
+
+        IF NOT EXISTS (SELECT 1 FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta) THEN
+            SET p_resultado  = 'ERROR: La mini receta no existe';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        SELECT nombre INTO v_nombre_mr FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta;
+
+        START TRANSACTION;
+        -- El CASCADE elimina los detalles automáticamente
+        DELETE FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta;
+        SET p_idGenerado = p_idMiniReceta;
+        SET p_resultado  = 'SUCCESS: Mini receta eliminada correctamente';
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'MiniRecetas', 'ELIMINAR',
+                'minireceta', CONCAT('ID:', p_idMiniReceta, ' | ', v_nombre_mr), NOW(), p_ip);
+        COMMIT;
+
+    ELSE
+        SET p_resultado  = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+    END IF;
+
+END$$
+DELIMITER ;
+
+-- ============================================================
+-- SP: sp_desactivar_mini_recetas_por_materia
+-- Llamado en cascada cuando se desactiva una materia prima.
+-- ============================================================
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_desactivar_mini_recetas_por_materia$$
+CREATE PROCEDURE sp_desactivar_mini_recetas_por_materia(
+    IN  p_idMateriaP   INT,
+    IN  p_ip           VARCHAR(45),
+    IN  p_ejecutadoPor INT,
+    OUT p_nombres      TEXT   -- lista separada por comas de mini recetas desactivadas
+)
+BEGIN
+    DECLARE v_nombre_ejecutor VARCHAR(100) DEFAULT 'Sistema';
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    -- Obtener nombres afectados
+    SELECT GROUP_CONCAT(mr.nombre ORDER BY mr.nombre SEPARATOR ', ')
+    INTO p_nombres
+    FROM miniRecetas mr
+    JOIN detalleMiniReceta dmr ON dmr.idMiniReceta = mr.idMiniReceta
+    WHERE dmr.idMateriaP = p_idMateriaP
+      AND mr.estatus = 1;
+
+    -- Desactivar
+    UPDATE miniRecetas mr
+    JOIN detalleMiniReceta dmr ON dmr.idMiniReceta = mr.idMiniReceta
+    SET mr.estatus = 0
+    WHERE dmr.idMateriaP = p_idMateriaP
+      AND mr.estatus = 1;
+
+    -- Bitácora
+    IF p_nombres IS NOT NULL AND p_nombres != '' THEN
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'MiniRecetas', 'AUTO_DESACTIVAR',
+                'minireceta', CONCAT('Por materia prima ID:', p_idMateriaP, ' | Afectadas: ', p_nombres),
+                NOW(), p_ip);
+    END IF;
+END$$
+DELIMITER ;
