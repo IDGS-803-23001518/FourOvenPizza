@@ -1,0 +1,485 @@
+{% extends layout %} 
+{% block container %}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<style>
+  .font-playfair { font-family: 'Playfair Display', serif; }
+  .font-dm      { font-family: 'DM Sans', sans-serif; }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .anim-up   { animation: slideUp 0.45s ease both; }
+  .anim-up-1 { animation: slideUp 0.45s ease 0.05s both; }
+  .anim-up-2 { animation: slideUp 0.45s ease 0.10s both; }
+  .anim-up-3 { animation: slideUp 0.45s ease 0.15s both; }
+  .anim-up-4 { animation: slideUp 0.45s ease 0.20s both; }
+  .hkpi-bar { height: 2px; border-radius: 1px; background: rgba(255,255,255,0.10); margin-top: 0.75rem; overflow: hidden; }
+  .hkpi-bar-fill { height: 100%; background: #f29f05; border-radius: 1px; }
+  .prod-bar { height: 4px; background: #ede8e2; border-radius: 2px; overflow: hidden; }
+  .prod-bar-fill { height: 100%; background: #f29f05; border-radius: 2px; }
+  .chart-wrap { position: relative; }
+  .scrollable { max-height: 300px; overflow-y: auto; }
+  .badge-pv   { background:#fef3c7; color:#92400e; }
+  .badge-ol   { background:#dbeafe; color:#1e40af; }
+  .canal-dot-pv { background:#f29f05; }
+  .canal-dot-ol { background:#3b82f6; }
+</style>
+
+<!-- ══════════════════════════════════════════
+     NAV HERO
+══════════════════════════════════════════ -->
+<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg flex items-center"
+     style="border-bottom: 3px solid #f29f05; min-height: 4rem;">
+  <div class="container flex flex-wrap items-center justify-between mx-auto">
+    <div class="flex-1 flex justify-center">
+      <div class="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2 rounded-full">
+        <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Dashboard</span>
+      </div>
+    </div>
+    <div class="text-white/60 text-xs font-dm border border-white/20 rounded-full px-4 py-1.5" id="reloj">
+      {{ fecha_hoy }}
+    </div>
+  </div>
+</nav>
+
+<div class="container mx-auto px-4 sm:px-6 max-w-7xl font-dm">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for category, message in messages %}
+    <div id="flash-msg"
+        class="mb-4 p-4 rounded-lg {% if category=='success' %}bg-green-100 text-green-700{% elif category=='danger' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <!-- ══════════════════════════════════════
+       FILA KPIs — 4 tarjetas principales
+  ══════════════════════════════════════ -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+
+    <!-- Ventas totales hoy -->
+    <div class="rounded-2xl p-4 anim-up-1 relative overflow-hidden" style="background:#38230f; border:1px solid rgba(255,255,255,0.10);">
+      <p class="text-[0.65rem] uppercase tracking-widest text-white/50 mb-1">Ventas hoy (total)</p>
+      <p class="font-playfair text-2xl font-bold" style="color:#f29f05;">${{ '%.2f' % (resumen_hoy.total_ventas or 0) }}</p>
+      <p class="text-[0.65rem] text-white/40 mt-0.5">{{ resumen_hoy.num_ventas or 0 }} transacciones</p>
+      <div class="hkpi-bar"><div class="hkpi-bar-fill" style="width:{{ [(((resumen_hoy.total_ventas or 0)|float)/(meta_diaria or 1)*100),100]|min|int }}%"></div></div>
+    </div>
+
+    <!-- Ventas punto de venta hoy -->
+    <div class="rounded-2xl p-4 anim-up-2 relative overflow-hidden" style="background:#38230f; border:1px solid rgba(255,255,255,0.10);">
+      <p class="text-[0.65rem] uppercase tracking-widest text-white/50 mb-1">Punto de venta — hoy</p>
+      <p class="font-playfair text-2xl font-bold text-white">${{ '%.2f' % (resumen_hoy.ventas_pv or 0) }}</p>
+      <p class="text-[0.65rem] text-white/40 mt-0.5">{{ resumen_hoy.num_pv or 0 }} órdenes</p>
+      <div class="hkpi-bar"><div class="hkpi-bar-fill" style="width:{{ [(((resumen_hoy.ventas_pv or 0)|float)/(meta_diaria or 1)*100),100]|min|int }}%"></div></div>
+    </div>
+
+    <!-- Ventas en línea hoy -->
+    <div class="rounded-2xl p-4 anim-up-3 relative overflow-hidden" style="background:#38230f; border:1px solid rgba(255,255,255,0.10);">
+      <p class="text-[0.65rem] uppercase tracking-widest text-white/50 mb-1">En línea — hoy</p>
+      <p class="font-playfair text-2xl font-bold" style="color:#60a5fa;">${{ '%.2f' % (resumen_hoy.ventas_ol or 0) }}</p>
+      <p class="text-[0.65rem] text-white/40 mt-0.5">{{ resumen_hoy.num_ol or 0 }} órdenes</p>
+      <div class="hkpi-bar"><div class="hkpi-bar-fill" style="width:{{ [(((resumen_hoy.ventas_ol or 0)|float)/(meta_diaria or 1)*100),100]|min|int }}%; background:#60a5fa;"></div></div>
+    </div>
+
+    <!-- Ordenes activas -->
+    <div class="rounded-2xl p-4 anim-up-4 relative overflow-hidden" style="background:#38230f; border:1px solid rgba(255,255,255,0.10);">
+      <p class="text-[0.65rem] uppercase tracking-widest text-white/50 mb-1">Ordenes activas</p>
+      <p class="font-playfair text-2xl font-bold" style="color:#f29f05;">{{ ordenes_activas | length }}</p>
+      <p class="text-[0.65rem] text-white/40 mt-0.5">en producción ahora</p>
+      <div class="hkpi-bar"><div class="hkpi-bar-fill" style="width:{{ [ordenes_activas|length*20,100]|min }}%"></div></div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FILA 1: Tendencia 7 días + Accesos rápidos
+  ══════════════════════════════════════ -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+    <!-- Tendencia 7 días — doble línea PV vs Online -->
+    <div class="md:col-span-2 bg-white rounded-2xl shadow-md overflow-hidden anim-up-1">
+      <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Ingresos — Últimos 7 días</h2>
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1 text-[0.65rem] text-white/70"><span class="w-2 h-2 rounded-full inline-block" style="background:#f29f05;"></span>Punto venta</span>
+          <span class="flex items-center gap-1 text-[0.65rem] text-white/70"><span class="w-2 h-2 rounded-full inline-block" style="background:#60a5fa;"></span>En línea</span>
+        </div>
+      </div>
+      <div class="p-4">
+        {% if ventas_7d %}
+        <div class="chart-wrap" style="height:150px;">
+          <canvas id="chartSemana"></canvas>
+        </div>
+        <div class="flex justify-between mt-3">
+          <div>
+            <p class="text-[0.65rem] uppercase tracking-widest text-gray-500">Total 7 días</p>
+            <p class="font-playfair text-xl font-bold" style="color:#38230f;">
+              ${{ '%.2f' % (ventas_7d | sum(attribute='total_ingresos')) }}
+            </p>
+          </div>
+          <div class="text-center">
+            <p class="text-[0.65rem] uppercase tracking-widest text-gray-500">PV 7 días</p>
+            <p class="text-sm font-bold" style="color:#38230f;">${{ '%.2f' % (ventas_7d | sum(attribute='ingresos_pv')) }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[0.65rem] uppercase tracking-widest text-gray-500">Online 7 días</p>
+            <p class="text-sm font-bold" style="color:#3b82f6;">${{ '%.2f' % (ventas_7d | sum(attribute='ingresos_ol')) }}</p>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-center py-10 text-sm text-gray-400">Sin ventas en los últimos 7 días</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Accesos rápidos -->
+    <div class="flex flex-col gap-3 anim-up-2">
+      <p class="text-xs font-bold uppercase tracking-widest" style="color:#38230f;">Accesos rápidos</p>
+      <a href="{{ url_for('caja.utilidades') }}"
+         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
+        <span>&#9783;</span> Reporte utilidades
+      </a>
+      <a href="{{ url_for('caja.corte_caja') }}"
+         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
+        <span>&#9635;</span> Corte de caja
+      </a>
+      <a href="{{ url_for('ventas.punto_venta') }}"
+         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
+        <span>&#9786;</span> Nueva venta
+      </a>
+      <a href="{{ url_for('produccion.listado_ordenes') }}"
+         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
+        <span>&#9776;</span> Producción
+      </a>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FILA 2: Top productos + Órdenes producción + Alertas/Mermas
+  ══════════════════════════════════════ -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+    <!-- Top 5 productos -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden anim-up-1">
+      <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Top productos — Mes</h2>
+        <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#f29f05; color:#38230f;">Top 5</span>
+      </div>
+      <div class="px-5 py-3">
+        {% if top_productos %}
+          {% set max_u = top_productos[0].unidades_vendidas if top_productos else 1 %}
+          {% for p in top_productos[:5] %}
+          <div class="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+            <span class="font-playfair text-base font-bold w-5 text-center flex-shrink-0
+              {% if loop.index == 1 %}{% else %}text-gray-200{% endif %}"
+              style="{% if loop.index == 1 %}color:#f29f05;{% endif %}">
+              {{ loop.index }}
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-gray-800 truncate">{{ p.nombre_producto }}</p>
+              <p class="text-[0.62rem] text-gray-400">{{ p.tamano }}</p>
+            </div>
+            <div class="w-14 flex-shrink-0">
+              <div class="prod-bar">
+                <div class="prod-bar-fill" style="width:{{ ((p.unidades_vendidas/max_u)*100)|int if max_u>0 else 0 }}%"></div>
+              </div>
+            </div>
+            <span class="text-xs font-bold flex-shrink-0" style="color:#38230f;">{{ p.unidades_vendidas }} uds</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-center py-8 text-sm text-gray-400">Sin ventas este mes</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Órdenes de producción -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden anim-up-2">
+      <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Órdenes de Producción</h2>
+        <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#f29f05; color:#38230f;">Recientes</span>
+      </div>
+      <div class="px-5 py-3">
+        {% if ordenes_recientes %}
+          {% for o in ordenes_recientes[:7] %}
+          <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 gap-2">
+            <div>
+              <p class="text-[0.65rem] font-bold text-gray-400">#{{ o.idOrden }}</p>
+              <p class="text-[0.62rem] text-gray-400">{{ o.fecha.strftime('%d/%m %H:%M') if o.fecha else '' }}</p>
+            </div>
+            <p class="flex-1 text-center text-[0.68rem] text-gray-400">{{ o.nombre_usuario or '' }}</p>
+            <span class="text-[0.6rem] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide
+              {% if o.estado == 'Pendiente' %}bg-amber-100 text-amber-800
+              {% elif o.estado == 'En proceso' %}bg-blue-100 text-blue-800
+              {% elif o.estado == 'Terminada' %}bg-green-100 text-green-800
+              {% else %}bg-red-100 text-red-800{% endif %}">
+              {{ o.estado }}
+            </span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-center py-8 text-sm text-gray-400">Sin órdenes recientes</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Alertas stock + Mermas -->
+    <div class="flex flex-col gap-4 anim-up-3">
+
+      <!-- Alertas stock -->
+      <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+        <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+          <h2 class="text-sm font-bold text-white tracking-wide uppercase">Alertas de Stock</h2>
+          {% if alertas_stock %}
+          <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#f29f05; color:#38230f;">
+            {{ alertas_stock | length }} insumo(s)
+          </span>
+          {% endif %}
+        </div>
+        <div class="px-4 py-3">
+          {% if alertas_stock %}
+            {% for a in alertas_stock[:5] %}
+            <div class="flex items-center justify-between px-3 py-2 rounded-lg mb-1.5 border
+              {% if a.stock <= 0 %}bg-red-50 border-red-200{% else %}bg-amber-50 border-amber-200{% endif %}">
+              <div>
+                <p class="text-xs font-semibold text-gray-800">{{ a.nombre }}</p>
+                <p class="text-[0.6rem] text-gray-500">{{ a.categoria }}</p>
+              </div>
+              <span class="text-xs font-bold text-red-600">{{ '%.1f' % a.stock }} / {{ '%.1f' % a.stockMinimo }}</span>
+            </div>
+            {% endfor %}
+            {% if alertas_stock | length > 5 %}
+            <p class="text-center text-[0.65rem] text-gray-400 mt-1">+{{ alertas_stock|length - 5 }} más en inventario</p>
+            {% endif %}
+          {% else %}
+            <p class="text-center py-4 text-sm text-gray-400">Stock en niveles normales</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Mermas hoy -->
+      <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+        <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+          <h2 class="text-sm font-bold text-white tracking-wide uppercase">Mermas — Hoy</h2>
+          {% if mermas_hoy %}
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-red-100 border border-red-200 text-red-700">
+            -${{ '%.2f' % (mermas_hoy | sum(attribute='valor_perdida')) }}
+          </span>
+          {% endif %}
+        </div>
+        <div class="px-4 py-3">
+          {% if mermas_hoy %}
+            {% for m in mermas_hoy[:4] %}
+            <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+              <div>
+                <p class="text-xs font-semibold text-gray-800">{{ m.materia_prima }}</p>
+                <p class="text-[0.6rem] text-gray-400">{{ m.cantidad_merma }} u.</p>
+              </div>
+              <span class="text-xs font-bold text-red-600">-${{ '%.2f' % (m.valor_perdida or 0) }}</span>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-center py-4 text-sm text-gray-400">Sin mermas registradas hoy</p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FILA 3: Ventas recientes + Ventas en línea
+  ══════════════════════════════════════ -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+
+    <!-- Todas las ventas de hoy (PV + Online) -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden anim-up-1">
+      <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#38230f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Ventas recientes — Hoy</h2>
+        <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#f29f05; color:#38230f;">
+          {{ ventas_hoy | length }} ventas
+        </span>
+      </div>
+      <div class="px-5 py-3 scrollable">
+        {% if ventas_hoy %}
+          {% for v in ventas_hoy %}
+          <div class="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+            <span class="w-2 h-2 rounded-full flex-shrink-0 mt-1.5
+              {% if v.estado == 'Cancelada' %}bg-red-500
+              {% elif v.estado != 'Confirmada' %}bg-gray-300
+              {% else %}{% if v.tipo == 'En linea' %}bg-blue-400{% else %}bg-amber-400{% endif %}
+              {% endif %}">
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs text-gray-700">
+                <strong>{{ v.nombreCliente or 'Cliente' }}</strong>
+                <span class="text-gray-400"> — {{ v.metodoPago }}</span>
+              </p>
+              <p class="text-[0.62rem] text-gray-400">{{ v.fecha.strftime('%H:%M') if v.fecha else '' }} &bull; {{ v.estado }}</p>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[0.55rem] font-bold px-1.5 py-0.5 rounded-full
+                {% if v.tipo == 'En linea' %}badge-ol{% else %}badge-pv{% endif %}">
+                {{ 'Online' if v.tipo == 'En linea' else 'PV' }}
+              </span>
+              <span class="text-sm font-bold" style="color:#38230f;">${{ '%.2f' % (v.total or 0) }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-center py-8 text-sm text-gray-400">Sin ventas registradas hoy</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Ventas en línea — detalle -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden anim-up-2">
+      <div class="px-5 py-3 rounded-t-2xl flex items-center justify-between" style="background:#1e3a5f;">
+        <h2 class="text-sm font-bold text-white tracking-wide uppercase">Ventas en línea — Hoy</h2>
+        <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#60a5fa; color:#1e3a5f;">
+          {{ ventas_online_hoy | length }} órdenes
+        </span>
+      </div>
+
+      <!-- Mini-KPIs online -->
+      <div class="grid grid-cols-2 gap-3 px-5 pt-4 pb-2">
+        <div class="rounded-xl p-3" style="background:#eff6ff; border:1px solid #bfdbfe;">
+          <p class="text-[0.62rem] uppercase tracking-widest text-blue-500 mb-0.5">Total online hoy</p>
+          <p class="font-playfair text-xl font-bold text-blue-700">${{ '%.2f' % (resumen_hoy.ventas_ol or 0) }}</p>
+        </div>
+        <div class="rounded-xl p-3" style="background:#eff6ff; border:1px solid #bfdbfe;">
+          <p class="text-[0.62rem] uppercase tracking-widest text-blue-500 mb-0.5">Ticket promedio</p>
+          <p class="font-playfair text-xl font-bold text-blue-700">
+            ${% if resumen_hoy.num_ol and resumen_hoy.num_ol > 0 %}
+              {{ '%.2f' % ((resumen_hoy.ventas_ol or 0) / resumen_hoy.num_ol) }}
+            {% else %}0.00{% endif %}
+          </p>
+        </div>
+      </div>
+
+      <div class="px-5 pb-3 scrollable">
+        {% if ventas_online_hoy %}
+          {% for v in ventas_online_hoy %}
+          <div class="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+            <span class="w-2 h-2 rounded-full flex-shrink-0 mt-1.5
+              {% if v.estado == 'Cancelada' %}bg-red-500
+              {% elif v.estado != 'Confirmada' %}bg-gray-300
+              {% else %}bg-blue-400{% endif %}">
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-gray-800 truncate">{{ v.nombreCliente or 'Cliente en línea' }}</p>
+              <p class="text-[0.62rem] text-gray-400">
+                {{ v.fecha.strftime('%H:%M') if v.fecha else '' }}
+                &bull; {{ v.metodoPago }}
+                &bull; <span class="{% if v.estado=='Confirmada' %}text-green-600{% elif v.estado=='Cancelada' %}text-red-500{% else %}text-amber-600{% endif %} font-semibold">{{ v.estado }}</span>
+              </p>
+            </div>
+            <span class="text-sm font-bold flex-shrink-0" style="color:#1e40af;">${{ '%.2f' % (v.total or 0) }}</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-center py-8 text-sm text-gray-400">Sin ventas en línea hoy</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FILA 4: Indicadores del mes
+  ══════════════════════════════════════ -->
+  <div class="px-5 py-3 rounded-t-2xl flex items-center gap-3 mb-0 rounded-b-none" style="background:#38230f;">
+    <h2 class="text-sm font-bold text-white tracking-wide uppercase">Indicadores generales</h2>
+    <span class="text-xs font-bold px-3 py-1 rounded-full" style="background:#f29f05; color:#38230f;">Mes en curso</span>
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-2 gap-3 mb-6">
+    <div class="bg-amber-50 rounded-b-2xl rounded-tr-2xl border-l-4 p-4 anim-up-1" style="border-color:#f29f05;">
+      <p class="text-[0.62rem] uppercase tracking-widest text-gray-500">Total ventas mes</p>
+      <p class="font-playfair text-2xl font-bold mt-0.5" style="color:#38230f;">{{ resumen_mes.num_ventas or 0 }}</p>
+      <p class="text-[0.62rem] text-gray-400 mt-0.5">transacciones confirmadas</p>
+    </div>
+    <div class="bg-amber-50 rounded-2xl border-l-4 p-4 anim-up-2" style="border-color:#f29f05;">
+      <p class="text-[0.62rem] uppercase tracking-widest text-gray-500">Unidades vendidas</p>
+      <p class="font-playfair text-2xl font-bold mt-0.5" style="color:#38230f;">{{ resumen_mes.total_unidades or 0 }}</p>
+      <p class="text-[0.62rem] text-gray-400 mt-0.5">productos este mes</p>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+/* ════ RELOJ ════ */
+(function() {
+  function tick() {
+    const now = new Date();
+    const dias   = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const meses  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const el = document.getElementById('reloj');
+    if (el) el.textContent = `${dias[now.getDay()]} ${now.getDate()} ${meses[now.getMonth()]} — ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  }
+  tick();
+  setInterval(tick, 30000);
+})();
+
+/* ════ DATOS JINJA ════ */
+const DIAS7_LABELS  = [{% for d in ventas_7d %}"{{ d.dia.strftime('%a %d') if d.dia else '' }}"{% if not loop.last %},{% endif %}{% endfor %}];
+const DIAS7_PV      = [{% for d in ventas_7d %}{{ d.ingresos_pv | float }}{% if not loop.last %},{% endif %}{% endfor %}];
+const DIAS7_OL      = [{% for d in ventas_7d %}{{ d.ingresos_ol | float }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+/* Tendencia 7 días — doble línea */
+if (DIAS7_LABELS.length > 0) {
+  new Chart(document.getElementById('chartSemana'), {
+    type: 'line',
+    data: {
+      labels: DIAS7_LABELS,
+      datasets: [
+        {
+          label: 'Punto venta',
+          data: DIAS7_PV,
+          borderColor: '#f29f05',
+          backgroundColor: 'rgba(242,159,5,0.08)',
+          borderWidth: 2,
+          pointBackgroundColor: '#38230f',
+          pointRadius: 3,
+          tension: 0.4,
+          fill: true,
+        },
+        {
+          label: 'En línea',
+          data: DIAS7_OL,
+          borderColor: '#60a5fa',
+          backgroundColor: 'rgba(96,165,250,0.08)',
+          borderWidth: 2,
+          pointBackgroundColor: '#1e40af',
+          pointRadius: 3,
+          tension: 0.4,
+          fill: true,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ' $' + c.parsed.y.toFixed(2) } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#b0a090' } },
+        y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 9 }, color: '#b0a090', callback: v => '$' + v.toFixed(0) } }
+      }
+    }
+  });
+}
+</script>
+
+{% endblock %}

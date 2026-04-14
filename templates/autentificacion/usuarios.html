@@ -3,6 +3,265 @@
 {% block title %}Usuarios{% endblock %}
 
 {% block container %}
+<!-- ── Estilos de paginación ──────────────────────────────────────── -->
+<style>
+    .pag-hidden {
+        display: none !important;
+    }
+
+    .pag-wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.85rem 1.25rem;
+        background: #fff;
+        border-top: 1px solid #f0e8dc;
+        border-radius: 0 0 1rem 1rem;
+    }
+
+    .pag-info {
+        font-size: 0.78rem;
+        color: #6b7280;
+    }
+
+    .pag-info strong {
+        color: #38230f;
+    }
+
+    .pag-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .pag-por-pagina {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.78rem;
+        color: #6b7280;
+    }
+
+    .pag-select {
+        border: 1px solid #d1d5db;
+        border-radius: 0.4rem;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.78rem;
+        color: #38230f;
+        font-weight: 600;
+        cursor: pointer;
+        outline: none;
+    }
+
+    .pag-select:focus {
+        box-shadow: 0 0 0 2px rgba(242, 159, 5, 0.35);
+        border-color: #f29f05;
+    }
+
+    .pag-botones {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .pag-btn {
+        min-width: 2rem;
+        height: 2rem;
+        border-radius: 0.4rem;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        color: #38230f;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        padding: 0 0.4rem;
+    }
+
+    .pag-btn:hover:not(:disabled) {
+        background: #f29f05;
+        color: #fff;
+        border-color: #f29f05;
+    }
+
+    .pag-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
+
+    .pag-btn-active {
+        background: #38230f !important;
+        color: #fff !important;
+        border-color: #38230f !important;
+    }
+
+    .pag-ellipsis {
+        padding: 0 0.2rem;
+        color: #9ca3af;
+        font-size: 0.78rem;
+        user-select: none;
+    }
+
+    /* Ocultar paginación según dispositivo */
+    @media (min-width: 768px) {
+        #pag-usuarios-cards {
+            display: none !important;
+        }
+    }
+
+    @media (max-width: 767px) {
+        #pag-usuarios-desktop {
+            display: none !important;
+        }
+    }
+
+    /* Control de visibilidad para paginación */
+    #pag-usuarios-desktop,
+    #pag-usuarios-cards {
+        transition: display 0.3s ease;
+    }
+
+    /* Asegurar que los elementos ocultos no ocupen espacio */
+    .filtro-hidden,
+    .pag-hidden {
+        display: none !important;
+    }
+
+    /* ── Mejora del select para móvil y desktop ── */
+    .pag-select {
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #38230f;
+        background-color: #fff;
+        cursor: pointer;
+        outline: none;
+        font-family: inherit;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2338230f' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+        background-size: 1.2em;
+        padding-right: 2rem;
+    }
+
+    .pag-select option {
+        font-weight: normal;
+        font-size: 0.85rem;
+        padding: 0.5rem;
+    }
+
+    /* ── Estilos específicos para móvil ── */
+    @media (max-width: 767px) {
+        #pag-usuarios-cards {
+            position: sticky;
+            bottom: 0;
+            background: #fff;
+            z-index: 10;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            margin-top: 0.5rem;
+            padding: 0.75rem 1rem;
+        }
+
+        #pag-usuarios-cards .pag-info {
+            font-size: 0.7rem;
+            text-align: center;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        #pag-usuarios-cards .pag-controls {
+            flex-direction: column;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        #pag-usuarios-cards .pag-por-pagina {
+            width: 100%;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        #pag-usuarios-cards .pag-select {
+            font-size: 0.85rem;
+            padding: 0.5rem 2rem 0.5rem 0.75rem;
+            min-width: 70px;
+        }
+
+        #pag-usuarios-cards .pag-botones {
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        #pag-usuarios-cards .pag-btn {
+            min-width: 2.5rem;
+            height: 2.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            padding: 0 0.6rem;
+            touch-action: manipulation;
+        }
+
+        #pag-usuarios-cards .pag-botones .pag-btn:first-child,
+        #pag-usuarios-cards .pag-botones .pag-btn:last-child {
+            min-width: 3rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        #pag-usuarios-cards .pag-btn-active {
+            background: #f29f05 !important;
+            border-color: #f29f05 !important;
+            color: #fff !important;
+            transform: scale(1.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #pag-usuarios-cards .pag-btn:active {
+            transform: scale(0.95);
+            transition: transform 0.05s;
+        }
+
+        #pag-usuarios-cards .pag-ellipsis {
+            padding: 0 0.3rem;
+            font-size: 0.9rem;
+        }
+    }
+
+    /* ── Mejoras para desktop también ── */
+    @media (min-width: 768px) {
+        .pag-select {
+            font-size: 0.8rem;
+            padding: 0.3rem 2rem 0.3rem 0.75rem;
+            font-weight: 500;
+        }
+
+        .pag-btn {
+            min-width: 2.2rem;
+            height: 2.2rem;
+            font-size: 0.85rem;
+        }
+
+        .pag-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    }
+
+    /* ── Animación suave para cambios de página ── */
+    .usuario-row,
+    .usuario-card {
+        transition: opacity 0.2s ease;
+    }
+</style>
+
 <nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
     style="border-bottom: 3px solid #f29f05;">
     <div class="container flex flex-wrap items-center justify-between mx-auto">
@@ -17,17 +276,6 @@
 </nav>
 
 <div class="container mx-auto px-4 sm:px-6 max-w-6xl">
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div
-        class="mb-4 p-4 rounded-lg {% if category == 'success' %}bg-green-100 text-green-700{% elif category == 'danger' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
-        {{ message }}
-    </div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
 
     <div class="flex justify-end mb-4">
         <button onclick="abrirModalRegistro()"
@@ -84,7 +332,7 @@
     </div>
 
     <!-- Tabla de Usuarios -->
-    <div class="rounded-2xl overflow-hidden shadow-md">
+    <div class="rounded-2xl overflow-hidden shadow-md mb-6">
         <div class="overflow-x-auto" id="tabla-desktop">
             <table class="w-full text-sm text-left">
                 <thead>
@@ -437,6 +685,126 @@
 </div>
 
 <script>
+    /* ── Paginación ─────────────────────────── */
+    let pagUsuarios = null;
+    let pagUsuariosCards = null;
+
+    function crearPaginacion(opciones) {
+        const { contenedorItems, itemsSelector, contenedorId, selectorId } = opciones;
+        let paginaActual = 1;
+        let porPagina = 10;
+
+        const globalName = '__pag_' + selectorId.replace(/-/g, '_');
+
+        function obtenerItems() {
+            return Array.from(contenedorItems.querySelectorAll(itemsSelector))
+                .filter(item => !item.classList.contains('filtro-hidden'));
+        }
+
+        function mostrarItems() {
+            const items = obtenerItems();
+            const total = items.length;
+            const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+
+            if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+
+            const inicio = (paginaActual - 1) * porPagina;
+            const fin = inicio + porPagina;
+
+            items.forEach((el, i) => {
+                if (i < inicio || i >= fin) {
+                    el.classList.add('pag-hidden');
+                } else {
+                    el.classList.remove('pag-hidden');
+                }
+            });
+
+            renderControles(total, totalPaginas, inicio, fin);
+        }
+
+        function renderControles(total, totalPaginas, inicio, fin) {
+            const contenedor = document.getElementById(contenedorId);
+            if (!contenedor) return;
+
+            let ctrl = document.getElementById(selectorId);
+            if (!ctrl) {
+                ctrl = document.createElement('div');
+                ctrl.id = selectorId;
+                contenedor.parentNode.insertBefore(ctrl, contenedor.nextSibling);
+            }
+
+            const mostradoIni = total === 0 ? 0 : inicio + 1;
+            const mostradoFin = Math.min(fin, total);
+
+            let botonesHTML = '';
+            const delta = 2;
+            let rango = [];
+
+            for (let i = Math.max(1, paginaActual - delta); i <= Math.min(totalPaginas, paginaActual + delta); i++) {
+                rango.push(i);
+            }
+
+            if (rango[0] > 1) {
+                botonesHTML += `<button class="pag-btn" onclick="${globalName}.irA(1)">1</button>`;
+                if (rango[0] > 2) botonesHTML += `<span class="pag-ellipsis">…</span>`;
+            }
+
+            rango.forEach(p => {
+                botonesHTML += `<button class="pag-btn ${p === paginaActual ? 'pag-btn-active' : ''}" onclick="${globalName}.irA(${p})">${p}</button>`;
+            });
+
+            if (rango[rango.length - 1] < totalPaginas) {
+                if (rango[rango.length - 1] < totalPaginas - 1) botonesHTML += `<span class="pag-ellipsis">…</span>`;
+                botonesHTML += `<button class="pag-btn" onclick="${globalName}.irA(${totalPaginas})">${totalPaginas}</button>`;
+            }
+
+            ctrl.className = 'pag-wrapper';
+            ctrl.innerHTML = `
+        <div class="pag-info">Mostrando <strong>${mostradoIni}–${mostradoFin}</strong> de <strong>${total}</strong> registros</div>
+        <div class="pag-controls">
+            <div class="pag-por-pagina">
+                Mostrar
+                <select class="pag-select" onchange="${globalName}.cambiarPorPagina(this.value)">
+                    <option value="10" ${porPagina === 10 ? 'selected' : ''}>10</option>
+                    <option value="15" ${porPagina === 15 ? 'selected' : ''}>15</option>
+                    <option value="20" ${porPagina === 20 ? 'selected' : ''}>20</option>
+                    <option value="50" ${porPagina === 50 ? 'selected' : ''}>50</option>
+                </select>
+                por página
+            </div>
+            <div class="pag-botones">
+                <button class="pag-btn" onclick="${globalName}.irA(${paginaActual - 1})" ${paginaActual <= 1 ? 'disabled' : ''}>‹</button>
+                ${botonesHTML}
+                <button class="pag-btn" onclick="${globalName}.irA(${paginaActual + 1})" ${paginaActual >= totalPaginas ? 'disabled' : ''}>›</button>
+            </div>
+        </div>`;
+        }
+
+        const api = {
+            refresh() {
+                paginaActual = 1;
+                mostrarItems();
+            },
+            irA(p) {
+                if (p < 1) return;
+                const items = obtenerItems();
+                const totalPaginas = Math.max(1, Math.ceil(items.length / porPagina));
+                if (p > totalPaginas) return;
+                paginaActual = p;
+                mostrarItems();
+            },
+            cambiarPorPagina(val) {
+                porPagina = parseInt(val);
+                paginaActual = 1;
+                mostrarItems();
+            }
+        };
+
+        window[globalName] = api;
+        mostrarItems();
+        return api;
+    }
+
     function abrirModalRegistro() {
         document.getElementById('modal-registro').classList.remove('hidden');
     }
@@ -474,60 +842,62 @@
         const rol = document.getElementById('filtro-rol').value;
         const estatus = document.getElementById('filtro-estatus').value;
 
-        const filas = document.querySelectorAll('.usuario-row');
-        const cards = document.querySelectorAll('.usuario-card');
+        function coincide(el) {
+            const fnombre = el.dataset.nombre.toLowerCase();
+            const fusername = el.dataset.username.toLowerCase();
+            const frol = el.dataset.rol;
+            const festatus = el.dataset.estatus;
 
-        let visibles = 0;
+            return (!nombre || fnombre.includes(nombre) || fusername.includes(nombre)) &&
+                (!rol || frol === rol) &&
+                (!estatus || festatus === estatus);
+        }
 
-        filas.forEach(fila => {
-            const fnombre = fila.dataset.nombre.toLowerCase();
-            const fusername = fila.dataset.username.toLowerCase();
-            const frol = fila.dataset.rol;
-            const festatus = fila.dataset.estatus;
-
-            const coincideNombre = !nombre || fnombre.includes(nombre) || fusername.includes(nombre);
-            const coincideRol = !rol || frol === rol;
-            const coincideEstatus = !estatus || festatus === estatus;
-
-            if (coincideNombre && coincideRol && coincideEstatus) {
-                fila.classList.remove('hidden');
-                visibles++;
+        // Aplicar filtros
+        document.querySelectorAll('.usuario-row').forEach(fila => {
+            if (!coincide(fila)) {
+                fila.classList.add('filtro-hidden');
             } else {
-                fila.classList.add('hidden');
+                fila.classList.remove('filtro-hidden');
             }
         });
 
-        cards.forEach(card => {
-            const fnombre = card.dataset.nombre.toLowerCase();
-            const fusername = card.dataset.username.toLowerCase();
-            const frol = card.dataset.rol;
-            const festatus = card.dataset.estatus;
-
-            const coincideNombre = !nombre || fnombre.includes(nombre) || fusername.includes(nombre);
-            const coincideRol = !rol || frol === rol;
-            const coincideEstatus = !estatus || festatus === estatus;
-
-            if (coincideNombre && coincideRol && coincideEstatus) {
-                card.classList.remove('hidden');
-                visibles++;
+        document.querySelectorAll('.usuario-card').forEach(card => {
+            if (!coincide(card)) {
+                card.classList.add('filtro-hidden');
             } else {
-                card.classList.add('hidden');
+                card.classList.remove('filtro-hidden');
             }
         });
 
-        document.getElementById('sin-resultados').classList.toggle('hidden', visibles > 0);
+        // Refrescar paginación
+        if (pagUsuarios) pagUsuarios.refresh();
+        if (pagUsuariosCards) pagUsuariosCards.refresh();
+
+        // Mostrar/ocultar mensaje sin resultados
+        const filasVisibles = document.querySelectorAll('.usuario-row:not(.filtro-hidden)');
+        const sinResultados = document.getElementById('sin-resultados');
+        if (sinResultados) {
+            sinResultados.classList.toggle('hidden', filasVisibles.length > 0);
+        }
     }
 
     function handleResponsive() {
         const tablaDesktop = document.getElementById('tabla-desktop');
         const cardsMobile = document.getElementById('cards-usuarios');
+        const pagDesktop = document.getElementById('pag-usuarios-desktop');
+        const pagCards = document.getElementById('pag-usuarios-cards');
 
         if (window.innerWidth >= 768) {
             if (tablaDesktop) tablaDesktop.style.display = 'block';
             if (cardsMobile) cardsMobile.style.display = 'none';
+            if (pagDesktop) pagDesktop.style.display = 'flex';
+            if (pagCards) pagCards.style.display = 'none';
         } else {
             if (tablaDesktop) tablaDesktop.style.display = 'none';
             if (cardsMobile) cardsMobile.style.display = 'block';
+            if (pagDesktop) pagDesktop.style.display = 'none';
+            if (pagCards) pagCards.style.display = 'flex';
         }
     }
 
@@ -626,8 +996,7 @@
 
     function mostrarFlash(mensaje, tipo) {
         const flash = document.createElement('div');
-        flash.className = `fixed top-5 right-5 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-semibold transition-all duration-300 ${tipo === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-            }`;
+        flash.className = `fixed top-5 right-5 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-semibold transition-all duration-300 ${tipo === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
         flash.textContent = mensaje;
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 3000);
@@ -705,6 +1074,45 @@
 
     document.getElementById('modal-edicion').addEventListener('click', function (e) {
         if (e.target === this) cerrarModalEdicion();
+    });
+
+    /* ── Init ───────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', function () {
+        // Inicializar paginación para escritorio
+        const tablaDesktop = document.getElementById('tabla-desktop');
+        if (tablaDesktop) {
+            pagUsuarios = crearPaginacion({
+                contenedorItems: tablaDesktop,
+                itemsSelector: '.usuario-row',
+                contenedorId: 'tabla-desktop',
+                selectorId: 'pag-usuarios-desktop',
+            });
+        }
+
+        // Inicializar paginación para móvil
+        const cardsUsuarios = document.getElementById('cards-usuarios');
+        if (cardsUsuarios) {
+            pagUsuariosCards = crearPaginacion({
+                contenedorItems: cardsUsuarios,
+                itemsSelector: '.usuario-card',
+                contenedorId: 'cards-usuarios',
+                selectorId: 'pag-usuarios-cards',
+            });
+        }
+
+        // Aplicar filtros iniciales
+        filtrarUsuarios();
+        handleResponsive();
+
+        // Configurar event listeners para filtros
+        const filtros = ['filtro-usuario', 'filtro-rol', 'filtro-estatus'];
+        filtros.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keyup', filtrarUsuarios);
+                el.addEventListener('change', filtrarUsuarios);
+            }
+        });
     });
 
     window.addEventListener('load', handleResponsive);

@@ -1,0 +1,87 @@
+{# Partial: ventas/_detalle_venta.html
+   Usado por el modal "Ver detalle" en punto_venta.html e historial_ventas.html #}
+
+{% if venta %}
+<div class="space-y-4">
+
+  <!-- Cabecera de datos -->
+  <div class="grid grid-cols-2 gap-3 text-sm">
+    <div class="bg-gray-50 rounded-xl p-3">
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Cliente</p>
+      <p class="font-semibold text-gray-800">{{ venta.nombreCliente or 'Consumidor final' }}</p>
+    </div>
+    <div class="bg-gray-50 rounded-xl p-3">
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Atendido por</p>
+      <p class="font-semibold text-gray-800">{{ venta.nombre_usuario }}</p>
+    </div>
+    <div class="bg-gray-50 rounded-xl p-3">
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Fecha</p>
+      <p class="font-semibold text-gray-800">
+        {{ venta.fecha.strftime('%d/%m/%Y %H:%M') if venta.fecha else '—' }}
+      </p>
+    </div>
+    <div class="bg-gray-50 rounded-xl p-3">
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Método de pago</p>
+      <p class="font-semibold text-gray-800">
+        {{ venta.metodoPago }}
+      </p>
+    </div>
+    <div class="bg-gray-50 rounded-xl p-3 col-span-2">
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Estado</p>
+      <span class="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-full
+        {% if venta.estado == 'Confirmada' %}bg-green-100 text-green-700
+        {% elif venta.estado == 'Cancelada' %}bg-red-100 text-red-700
+        {% elif venta.estado == 'En proceso' %}bg-blue-100 text-blue-700
+        {% else %}bg-amber-100 text-amber-700{% endif %}">
+        <span class="w-2 h-2 rounded-full inline-block
+          {% if venta.estado == 'Confirmada' %}bg-green-500
+          {% elif venta.estado == 'Cancelada' %}bg-red-500
+          {% elif venta.estado == 'En proceso' %}bg-blue-500 animate-pulse
+          {% else %}bg-amber-500{% endif %}"></span>
+        {{ venta.estado }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Tabla de productos -->
+  <div>
+    <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Productos</p>
+    <div class="rounded-xl overflow-hidden border border-gray-200">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50">
+            <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Producto</th>
+            <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Tamaño</th>
+            <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Cant</th>
+            <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">P/U</th>
+            <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in detalle %}
+          <tr class="border-b border-gray-50 hover:bg-amber-50 transition">
+            <td class="px-4 py-3 font-semibold text-gray-800">{{ d.nombre_producto }}</td>
+            <td class="px-4 py-3 text-gray-500 text-xs">{{ d.tamano }}</td>
+            <td class="px-4 py-3 text-center">
+              <span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-xs font-black"
+                    style="background-color:#f29f05;">{{ d.cantidad | int }}</span>
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700">${{ '%.2f' % d.precio }}</td>
+            <td class="px-4 py-3 text-right font-bold" style="color:#38230f;">${{ '%.2f' % d.subtotal }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="border-t-2" style="border-color:#f29f05;">
+            <td colspan="4" class="px-4 py-3 text-right text-sm font-bold text-gray-700">TOTAL</td>
+            <td class="px-4 py-3 text-right text-base font-black" style="color:#38230f;">${{ '%.2f' % total }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% else %}
+<p class="text-center text-gray-400 py-6 text-sm">No se encontró la venta.</p>
+{% endif %}

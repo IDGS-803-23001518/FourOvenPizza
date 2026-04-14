@@ -1,0 +1,26 @@
+DROP USER IF EXISTS 'backup_agent'@'127.0.0.1';
+DROP USER IF EXISTS 'backup_agent'@'localhost';
+
+-- Crear usuario con contraseña fuerte
+CREATE USER 'backup_agent'@'127.0.0.1' IDENTIFIED BY 'Bk@g3nt_F0urOv3n#2024!';
+CREATE USER 'backup_agent'@'localhost'  IDENTIFIED BY 'Bk@g3nt_F0urOv3n#2024!';
+
+-- Permisos mínimos necesarios para dump/restore (sin SUPER ni root)
+GRANT SELECT, LOCK TABLES, SHOW VIEW, TRIGGER, EVENT
+    ON FourOvenPizzaDB.*
+    TO 'backup_agent'@'127.0.0.1';
+
+GRANT SELECT, LOCK TABLES, SHOW VIEW, TRIGGER, EVENT
+    ON FourOvenPizzaDB.*
+    TO 'backup_agent'@'localhost';
+
+-- Para restauración (INSERT, CREATE, DROP sobre la misma BD)
+GRANT INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, INDEX, REFERENCES, CREATE VIEW
+    ON FourOvenPizzaDB.*
+    TO 'backup_agent'@'127.0.0.1';
+
+GRANT INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, INDEX, REFERENCES, CREATE VIEW
+    ON FourOvenPizzaDB.*
+    TO 'backup_agent'@'localhost';
+
+FLUSH PRIVILEGES;
