@@ -367,10 +367,6 @@ class CajaMovimientos(db.Model):
 
     usuario = db.relationship('Usuarios', back_populates='caja_movimientos')
 
-# ================================================================
-# AGREGAR ESTAS CLASES AL ARCHIVO models.py EXISTENTE
-# ================================================================
-
 class MiniRecetas(db.Model):
     __tablename__ = "miniRecetas"
     idMiniReceta  = db.Column(db.Integer, primary_key=True, autoincrement=True)

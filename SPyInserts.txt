@@ -3571,3 +3571,313 @@ BEGIN
     ORDER BY (mp.stock - mp.stockMinimo) ASC;
 END$$
 DELIMITER ;
+
+-- ============================================================
+-- SP: sp_gestion_mini_recetas
+-- Acciones: INSERT, UPDATE, CHANGE_STATUS, DELETE
+-- ============================================================
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_gestion_mini_recetas$$
+CREATE PROCEDURE sp_gestion_mini_recetas(
+    IN  p_accion        VARCHAR(20),
+    IN  p_idMiniReceta  INT,
+    IN  p_nombre        VARCHAR(100),
+    IN  p_descripcion   VARCHAR(200),
+    IN  p_estatus       TINYINT,
+    IN  p_ip            VARCHAR(45),
+    IN  p_ejecutadoPor  INT,
+    IN  p_detalles      JSON,   -- [{idMateriaP, cantidad}]  solo en INSERT/UPDATE
+    OUT p_resultado     VARCHAR(255),
+    OUT p_idGenerado    INT
+)
+sp_main: BEGIN
+    DECLARE v_nombre_ejecutor VARCHAR(100) DEFAULT 'Sistema';
+    DECLARE v_idx             INT          DEFAULT 0;
+    DECLARE v_total_items     INT          DEFAULT 0;
+    DECLARE v_idMateriaP      INT;
+    DECLARE v_cantidad        DECIMAL(10,2);
+    DECLARE v_nombre_mr       VARCHAR(100) DEFAULT '';
+    DECLARE v_hay_inactivas   INT          DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_resultado  = 'ERROR: Ocurrió un error inesperado en la operación';
+        SET p_idGenerado = 0;
+        INSERT INTO bitacora_sistema (nivel, modulo, mensaje, detalles, fecha, ip, usuarioId)
+        VALUES ('ERROR', 'MiniRecetas',
+                CONCAT('Error en sp_gestion_mini_recetas acción: ', p_accion),
+                CONCAT('MiniReceta: ', IFNULL(p_nombre,''), ' | Ejecutado por: ', IFNULL(p_ejecutadoPor,0)),
+                NOW(), p_ip, p_ejecutadoPor);
+    END;
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    -- ─────────────────────────────────────────────────────────
+    -- INSERT
+    -- ─────────────────────────────────────────────────────────
+    IF p_accion = 'INSERT' THEN
+
+        IF p_nombre IS NULL OR TRIM(p_nombre) = '' THEN
+            SET p_resultado  = 'ERROR: El nombre de la mini receta es obligatorio';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM miniRecetas WHERE nombre = TRIM(p_nombre)) THEN
+            SET p_resultado  = 'ERROR: Ya existe una mini receta con ese nombre';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        IF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+            SET p_resultado  = 'ERROR: Debe incluir al menos un insumo en la mini receta';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        START TRANSACTION;
+
+        INSERT INTO miniRecetas (nombre, descripcion, estatus, fechaCreacion)
+        VALUES (TRIM(p_nombre), p_descripcion, 1, NOW());
+
+        SET p_idGenerado  = LAST_INSERT_ID();
+        SET v_total_items = JSON_LENGTH(p_detalles);
+        SET v_idx         = 0;
+
+        WHILE v_idx < v_total_items DO
+            SET v_idMateriaP = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idMateriaP'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+
+            IF NOT EXISTS (SELECT 1 FROM materiasPrimas WHERE idMateriaP = v_idMateriaP AND estatus = 1) THEN
+                ROLLBACK;
+                SET p_resultado  = CONCAT('ERROR: La materia prima ID ', v_idMateriaP, ' no existe o está inactiva');
+                SET p_idGenerado = 0;
+                LEAVE sp_main;
+            END IF;
+
+            IF v_cantidad <= 0 THEN
+                ROLLBACK;
+                SET p_resultado  = 'ERROR: La cantidad de cada insumo debe ser mayor a 0';
+                SET p_idGenerado = 0;
+                LEAVE sp_main;
+            END IF;
+
+            INSERT INTO detalleMiniReceta (idMiniReceta, idMateriaP, cantidad)
+            VALUES (p_idGenerado, v_idMateriaP, v_cantidad);
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- Si alguna materia está inactiva → auto-desactivar
+        SELECT COUNT(*) INTO v_hay_inactivas
+        FROM detalleMiniReceta dmr
+        JOIN materiasPrimas mp ON mp.idMateriaP = dmr.idMateriaP
+        WHERE dmr.idMiniReceta = p_idGenerado AND mp.estatus = 0;
+
+        IF v_hay_inactivas > 0 THEN
+            UPDATE miniRecetas SET estatus = 0 WHERE idMiniReceta = p_idGenerado;
+        END IF;
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'MiniRecetas', 'CREAR',
+                'minireceta', CONCAT('ID:', p_idGenerado, ' | ', TRIM(p_nombre)), NOW(), p_ip);
+
+        SET p_resultado = 'SUCCESS: Mini receta registrada correctamente';
+        COMMIT;
+
+    -- ─────────────────────────────────────────────────────────
+    -- UPDATE
+    -- ─────────────────────────────────────────────────────────
+    ELSEIF p_accion = 'UPDATE' THEN
+
+        IF NOT EXISTS (SELECT 1 FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta) THEN
+            SET p_resultado  = 'ERROR: La mini receta no existe';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM miniRecetas WHERE nombre = TRIM(p_nombre) AND idMiniReceta != p_idMiniReceta) THEN
+            SET p_resultado  = 'ERROR: Ya existe otra mini receta con ese nombre';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        IF p_detalles IS NULL OR JSON_LENGTH(p_detalles) = 0 THEN
+            SET p_resultado  = 'ERROR: Debe incluir al menos un insumo';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        START TRANSACTION;
+
+        UPDATE miniRecetas
+        SET nombre      = TRIM(p_nombre),
+            descripcion = p_descripcion
+        WHERE idMiniReceta = p_idMiniReceta;
+
+        DELETE FROM detalleMiniReceta WHERE idMiniReceta = p_idMiniReceta;
+
+        SET v_total_items = JSON_LENGTH(p_detalles);
+        SET v_idx         = 0;
+
+        WHILE v_idx < v_total_items DO
+            SET v_idMateriaP = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].idMateriaP'))) AS UNSIGNED);
+            SET v_cantidad   = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_detalles, CONCAT('$[', v_idx, '].cantidad')))   AS DECIMAL(10,2));
+
+            IF NOT EXISTS (SELECT 1 FROM materiasPrimas WHERE idMateriaP = v_idMateriaP AND estatus = 1) THEN
+                ROLLBACK;
+                SET p_resultado  = CONCAT('ERROR: La materia prima ID ', v_idMateriaP, ' no existe o está inactiva');
+                SET p_idGenerado = 0;
+                LEAVE sp_main;
+            END IF;
+
+            IF v_cantidad <= 0 THEN
+                ROLLBACK;
+                SET p_resultado  = 'ERROR: La cantidad debe ser mayor a 0';
+                SET p_idGenerado = 0;
+                LEAVE sp_main;
+            END IF;
+
+            INSERT INTO detalleMiniReceta (idMiniReceta, idMateriaP, cantidad)
+            VALUES (p_idMiniReceta, v_idMateriaP, v_cantidad);
+
+            SET v_idx = v_idx + 1;
+        END WHILE;
+
+        -- Recalcular estatus tras edición
+        SELECT COUNT(*) INTO v_hay_inactivas
+        FROM detalleMiniReceta dmr
+        JOIN materiasPrimas mp ON mp.idMateriaP = dmr.idMateriaP
+        WHERE dmr.idMiniReceta = p_idMiniReceta AND mp.estatus = 0;
+
+        UPDATE miniRecetas
+        SET estatus = IF(v_hay_inactivas > 0, 0, 1)
+        WHERE idMiniReceta = p_idMiniReceta;
+
+        SET p_idGenerado = p_idMiniReceta;
+        SET p_resultado  = 'SUCCESS: Mini receta actualizada correctamente';
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'MiniRecetas', 'EDITAR',
+                'minireceta', CONCAT('ID:', p_idMiniReceta, ' | ', TRIM(p_nombre)), NOW(), p_ip);
+
+        COMMIT;
+
+    -- ─────────────────────────────────────────────────────────
+    -- CHANGE_STATUS  (solo activar; desactivar es automático)
+    -- ─────────────────────────────────────────────────────────
+    ELSEIF p_accion = 'CHANGE_STATUS' THEN
+
+        IF NOT EXISTS (SELECT 1 FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta) THEN
+            SET p_resultado  = 'ERROR: La mini receta no existe';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        -- Si se quiere activar, verificar que no haya materias inactivas
+        IF p_estatus = 1 THEN
+            SELECT COUNT(*) INTO v_hay_inactivas
+            FROM detalleMiniReceta dmr
+            JOIN materiasPrimas mp ON mp.idMateriaP = dmr.idMateriaP
+            WHERE dmr.idMiniReceta = p_idMiniReceta AND mp.estatus = 0;
+
+            IF v_hay_inactivas > 0 THEN
+                SET p_resultado  = 'ERROR: No se puede activar. Contiene materias primas desactivadas';
+                SET p_idGenerado = 0;
+                LEAVE sp_main;
+            END IF;
+        END IF;
+
+        SELECT nombre INTO v_nombre_mr FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta;
+
+        START TRANSACTION;
+        UPDATE miniRecetas SET estatus = p_estatus WHERE idMiniReceta = p_idMiniReceta;
+        SET p_idGenerado = p_idMiniReceta;
+        SET p_resultado  = IF(p_estatus = 1,
+            'SUCCESS: Mini receta activada correctamente',
+            'SUCCESS: Mini receta desactivada correctamente');
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'MiniRecetas',
+                IF(p_estatus = 1, 'ACTIVAR', 'DESACTIVAR'),
+                'minireceta', CONCAT('ID:', p_idMiniReceta, ' | ', v_nombre_mr), NOW(), p_ip);
+        COMMIT;
+
+    -- ─────────────────────────────────────────────────────────
+    -- DELETE
+    -- ─────────────────────────────────────────────────────────
+    ELSEIF p_accion = 'DELETE' THEN
+
+        IF NOT EXISTS (SELECT 1 FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta) THEN
+            SET p_resultado  = 'ERROR: La mini receta no existe';
+            SET p_idGenerado = 0;
+            LEAVE sp_main;
+        END IF;
+
+        SELECT nombre INTO v_nombre_mr FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta;
+
+        START TRANSACTION;
+        -- El CASCADE elimina los detalles automáticamente
+        DELETE FROM miniRecetas WHERE idMiniReceta = p_idMiniReceta;
+        SET p_idGenerado = p_idMiniReceta;
+        SET p_resultado  = 'SUCCESS: Mini receta eliminada correctamente';
+
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'MiniRecetas', 'ELIMINAR',
+                'minireceta', CONCAT('ID:', p_idMiniReceta, ' | ', v_nombre_mr), NOW(), p_ip);
+        COMMIT;
+
+    ELSE
+        SET p_resultado  = 'ERROR: Acción no válida';
+        SET p_idGenerado = 0;
+    END IF;
+
+END$$
+DELIMITER ;
+
+-- ============================================================
+-- SP: sp_desactivar_mini_recetas_por_materia
+-- Llamado en cascada cuando se desactiva una materia prima.
+-- ============================================================
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_desactivar_mini_recetas_por_materia$$
+CREATE PROCEDURE sp_desactivar_mini_recetas_por_materia(
+    IN  p_idMateriaP   INT,
+    IN  p_ip           VARCHAR(45),
+    IN  p_ejecutadoPor INT,
+    OUT p_nombres      TEXT   -- lista separada por comas de mini recetas desactivadas
+)
+BEGIN
+    DECLARE v_nombre_ejecutor VARCHAR(100) DEFAULT 'Sistema';
+
+    IF p_ejecutadoPor IS NOT NULL THEN
+        SELECT nombre INTO v_nombre_ejecutor FROM usuarios WHERE idUsuario = p_ejecutadoPor;
+    END IF;
+
+    -- Obtener nombres afectados
+    SELECT GROUP_CONCAT(mr.nombre ORDER BY mr.nombre SEPARATOR ', ')
+    INTO p_nombres
+    FROM miniRecetas mr
+    JOIN detalleMiniReceta dmr ON dmr.idMiniReceta = mr.idMiniReceta
+    WHERE dmr.idMateriaP = p_idMateriaP
+      AND mr.estatus = 1;
+
+    -- Desactivar
+    UPDATE miniRecetas mr
+    JOIN detalleMiniReceta dmr ON dmr.idMiniReceta = mr.idMiniReceta
+    SET mr.estatus = 0
+    WHERE dmr.idMateriaP = p_idMateriaP
+      AND mr.estatus = 1;
+
+    -- Bitácora
+    IF p_nombres IS NOT NULL AND p_nombres != '' THEN
+        INSERT INTO bitacora_eventos (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+        VALUES (p_ejecutadoPor, v_nombre_ejecutor, 'MiniRecetas', 'AUTO_DESACTIVAR',
+                'minireceta', CONCAT('Por materia prima ID:', p_idMateriaP, ' | Afectadas: ', p_nombres),
+                NOW(), p_ip);
+    END IF;
+END$$
+DELIMITER ;
