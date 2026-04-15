@@ -1,13 +1,15 @@
-{% extends "layoutAdmin.html" %}
+{% extends layout %}
 {% block container %}
 
-<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
+<nav
+  class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
   style="border-bottom: 3px solid #f29f05;">
   <div class="container flex flex-wrap items-center justify-between mx-auto">
     <div class="flex-1 flex justify-center">
       <div class="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2 rounded-full">
         <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Corte de</span>
-        <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap" style="color:#f29f05;">Caja</span>
+        <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap"
+          style="color:#f29f05;">Caja</span>
       </div>
     </div>
   </div>
@@ -17,17 +19,17 @@
 
   <!-- Flash -->
   {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <div class="mb-4 space-y-2" id="flashZona">
-        {% for category, message in messages %}
-          <div class="px-4 py-3 rounded-xl text-sm font-semibold shadow-md
+  {% if messages %}
+  <div class="mb-4 space-y-2" id="flashZona">
+    {% for category, message in messages %}
+    <div class="px-4 py-3 rounded-xl text-sm font-semibold shadow-md
             {% if category == 'success' %}bg-green-100 text-green-700 border border-green-300
             {% else %}bg-red-100 text-red-700 border border-red-300{% endif %}">
-            {{ message }}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% endwith %}
 
   <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-6">
@@ -60,6 +62,17 @@
           <h2 class="text-sm font-bold text-white tracking-wide">REGISTRAR CORTE DE CAJA</h2>
         </div>
         <div class="p-5">
+          {% if corte_bloqueado %}
+          <div
+            class="mb-4 flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-800 text-sm font-semibold">
+            <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <span>Ya se realizó un corte de caja. No se puede registrar otro hasta que haya nuevas ventas
+              confirmadas.</span>
+          </div>
+          {% endif %}
           <form id="formCorte" method="POST" action="{{ url_for('caja.registrar_corte') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -68,9 +81,7 @@
                 <label class="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
                   Fecha del corte
                 </label>
-                <input type="date" name="fecha" id="inputFecha"
-                  value="{{ fecha_hoy }}"
-                  max="{{ fecha_hoy }}"
+                <input type="date" name="fecha" id="inputFecha" value="{{ fecha_hoy }}" max="{{ fecha_hoy }}"
                   class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition">
               </div>
               <div>
@@ -93,8 +104,8 @@
                 </label>
                 <div class="relative">
                   <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">$</span>
-                  <input type="number" name="efectivo_inicial" id="inputEfectivoInicial"
-                    min="0" step="0.01" value="0.00" required
+                  <input type="number" name="efectivo_inicial" id="inputEfectivoInicial" min="0" step="0.01"
+                    value="0.00" required
                     class="w-full border border-gray-300 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition"
                     oninput="calcularSaldo()">
                 </div>
@@ -105,8 +116,8 @@
                 </label>
                 <div class="relative">
                   <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">$</span>
-                  <input type="number" name="saldo_contado" id="inputSaldoContado"
-                    min="0" step="0.01" value="0.00" required
+                  <input type="number" name="saldo_contado" id="inputSaldoContado" min="0" step="0.01" value="0.00"
+                    required
                     class="w-full border border-gray-300 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition"
                     oninput="calcularSaldo()">
                 </div>
@@ -120,9 +131,7 @@
               <div class="grid grid-cols-3 gap-3 text-center">
                 <div>
                   <p class="text-xs text-gray-400 mb-0.5">Saldo esperado</p>
-                  <p id="lblSaldoEsperado" class="text-base font-black" style="color:#38230f;">
-                    ${{ '%.2f' % ((resumen.total_efectivo or 0) - (resumen.total_egresos or 0)) }}
-                  </p>
+                  <p id="lblSaldoEsperado" class="text-base font-black" style="color:#38230f;">$0.00</p>
                   <p class="text-[10px] text-gray-400">efectivo inicial + ventas en efectivo</p>
                 </div>
                 <div>
@@ -142,8 +151,7 @@
               <label class="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
                 Observaciones
               </label>
-              <textarea name="observaciones" rows="2" maxlength="500"
-                placeholder="Notas adicionales sobre el corte..."
+              <textarea name="observaciones" rows="2" maxlength="500" placeholder="Notas adicionales sobre el corte..."
                 class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition resize-none"></textarea>
             </div>
 
@@ -152,10 +160,16 @@
                 class="flex-1 px-4 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition text-sm">
                 Limpiar
               </button>
-              <button type="button" onclick="confirmarCorte()"
+              <button type="button" {% if corte_bloqueado %} disabled
+                class="flex-grow px-6 py-3 rounded-xl text-white font-bold text-sm shadow-md opacity-40 cursor-not-allowed bg-gray-400"
+                {% else %} onclick="confirmarCorte()"
                 class="flex-grow px-6 py-3 rounded-xl text-white font-bold transition hover:brightness-110 text-sm shadow-md"
-                style="background-color:#38230f;">
+                style="background-color:#38230f;" {% endif %}>
+                {% if corte_bloqueado %}
+                Corte ya realizado
+                {% else %}
                 Registrar Corte
+                {% endif %}
               </button>
             </div>
 
@@ -174,10 +188,12 @@
           {% for m in movimientos %}
           <div class="flex items-center justify-between px-5 py-3 hover:bg-amber-50 transition">
             <div class="flex items-center gap-3 min-w-0">
-              <span class="w-2 h-2 rounded-full shrink-0 {% if m.tipo == 'INGRESO' or m.tipo == 'Ingreso' %}bg-green-500{% elif m.tipo == 'EGRESO' %}bg-red-400{% else %}bg-amber-400{% endif %}"></span>
+              <span
+                class="w-2 h-2 rounded-full shrink-0 {% if m.tipo == 'INGRESO' or m.tipo == 'Ingreso' %}bg-green-500{% elif m.tipo == 'EGRESO' %}bg-red-400{% else %}bg-amber-400{% endif %}"></span>
               <div class="min-w-0">
                 <p class="text-xs font-semibold text-gray-800 truncate">{{ m.descripcion }}</p>
-                <p class="text-[10px] text-gray-400">{{ m.fecha.strftime('%H:%M') if m.fecha else '' }} · {{ m.nombre_usuario }}</p>
+                <p class="text-[10px] text-gray-400">{{ m.fecha.strftime('%H:%M') if m.fecha else '' }} · {{
+                  m.nombre_usuario }}</p>
               </div>
             </div>
             <span class="text-sm font-black shrink-0 ml-3
@@ -210,8 +226,8 @@
         <div class="divide-y divide-gray-100 max-h-[calc(100vh-220px)] overflow-y-auto">
           {% for c in cortes %}
           <div class="p-4 hover:bg-amber-50 transition-colors duration-100 cursor-pointer"
-               onclick="abrirDetalle({{ loop.index0 }})"
-               style="animation: fadeUp .25s ease both; animation-delay: {{ loop.index0 * 0.04 }}s">
+            onclick="abrirDetalle({{ loop.index0 }})"
+            style="animation: fadeUp .25s ease both; animation-delay: {{ loop.index0 * 0.04 }}s">
 
             <div class="flex items-start justify-between gap-2 mb-2">
               <div class="min-w-0">
@@ -223,18 +239,19 @@
               </div>
               <!-- Diferencia badge -->
               {% if c.diferencia > 0 %}
-              <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0 whitespace-nowrap">
+              <span
+                class="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0 whitespace-nowrap">
                 +${{ '%.2f' % c.diferencia }}
               </span>
-              {% elif c.diferencia < 0 %}
-              <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600 shrink-0 whitespace-nowrap">
+              {% elif c.diferencia < 0 %} <span
+                class="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600 shrink-0 whitespace-nowrap">
                 −${{ '%.2f' % (c.diferencia | abs) }}
-              </span>
-              {% else %}
-              <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 shrink-0">
-                Cuadrado
-              </span>
-              {% endif %}
+                </span>
+                {% else %}
+                <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 shrink-0">
+                  Cuadrado
+                </span>
+                {% endif %}
             </div>
 
             <div class="grid grid-cols-3 gap-1 text-center">
@@ -274,15 +291,17 @@
   <div class="bg-white rounded-2xl shadow-xl p-6 w-96 text-center">
     <div class="flex justify-center mb-3">
       <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background-color:#fff8e1;">
-        <svg class="w-6 h-6" style="color:#f29f05;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+        <svg class="w-6 h-6" style="color:#f29f05;" fill="none" stroke="currentColor" stroke-width="2"
+          viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
       </div>
     </div>
     <h3 class="text-base font-bold text-gray-800 mb-1">Registrar corte de caja</h3>
     <p id="modalCorteMensaje" class="text-sm text-gray-500 mb-2"></p>
     <div id="modalDiferenciaInfo" class="mb-4 p-3 rounded-xl text-sm font-semibold"></div>
-    <p class="text-xs text-gray-400 mb-5">Esta acción no se puede deshacer. El corte quedará registrado de forma permanente.</p>
+    <p class="text-xs text-gray-400 mb-5">Esta acción no se puede deshacer. El corte quedará registrado de forma
+      permanente.</p>
     <div class="flex gap-3">
       <button type="button" onclick="cerrarModal('modalConfirmarCorte')"
         class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition">
@@ -306,7 +325,7 @@
       <h3 class="text-base font-bold text-white tracking-wide">DETALLE DEL CORTE</h3>
       <button onclick="cerrarModal('modalDetalleCorte')" class="text-white hover:text-gray-300 transition">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
@@ -317,188 +336,192 @@
 
 <style>
   @keyframes fadeUp {
-    from { opacity:0; transform:translateY(10px); }
-    to   { opacity:1; transform:translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 </style>
 
 <!-- Datos de cortes para modal -->
 <script>
-const CORTES_DATA = [
-  {% for c in cortes %}
-  {
-    idCorte:         {{ c.idCorte }},
-    fecha:           "{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '' }}",
-    turno:           "{{ c.turno }}",
-    nombre_usuario:  "{{ c.nombre_usuario }}",
-    efectivoInicial: {{ c.efectivoInicial | float }},
-    totalVentas:     {{ c.totalVentas | float }},
-    totalEfectivo:   {{ c.totalEfectivo | float }},
-    totalTarjeta:    {{ c.totalTarjeta | float }},
-    totalEgresos:    {{ c.totalEgresos | float }},
-    saldoFinal:      {{ c.saldoFinal | float }},
-    saldoContado:    {{ c.saldoContado | float }},
-    diferencia:      {{ c.diferencia | float }},
-    observaciones:   "{{ c.observaciones or '' }}",
-  }{% if not loop.last %},{% endif %}
-  {% endfor %}
-];
+  const CORTES_DATA = [
+    {% for c in cortes %}
+    {
+      idCorte:         {{ c.idCorte }},
+      fecha:           "{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '' }}",
+      turno:           "{{ c.turno }}",
+      nombre_usuario:  "{{ c.nombre_usuario }}",
+      efectivoInicial: {{ c.efectivoInicial | float }},
+      totalVentas:     {{ c.totalVentas | float }},
+      totalEfectivo:   {{ c.totalEfectivo | float }},
+      totalTarjeta:    {{ c.totalTarjeta | float }},
+      totalEgresos:    {{ c.totalEgresos | float }},
+      saldoFinal:      {{ c.saldoFinal | float }},
+      saldoContado:    {{ c.saldoContado | float }},
+      diferencia:      {{ c.diferencia | float }},
+      observaciones:   "{{ c.observaciones or '' }}",
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
 
-const SALDO_BASE = {{ (resumen.total_efectivo or 0) | float }};
+  const SALDO_BASE = {{ resumen.total_efectivo | float }};
 
-/* ════════════ MODALES ════════════ */
-function cerrarModal(id) {
-  document.getElementById(id).classList.add('hidden');
-  document.body.style.overflow = '';
-}
-['modalConfirmarCorte', 'modalDetalleCorte'].forEach(id => {
-  document.getElementById(id).addEventListener('click', function(e) {
-    if (e.target === this) cerrarModal(id);
+  /* ════════════ MODALES ════════════ */
+  function cerrarModal(id) {
+    document.getElementById(id).classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  ['modalConfirmarCorte', 'modalDetalleCorte'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function(e) {
+      if (e.target === this) cerrarModal(id);
+    });
   });
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') ['modalConfirmarCorte', 'modalDetalleCorte'].forEach(cerrarModal);
-});
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') ['modalConfirmarCorte', 'modalDetalleCorte'].forEach(cerrarModal);
+  });
 
-/* ════════════ CÁLCULO SALDO ════════════ */
-function calcularSaldo() {
-  const efectivoInicial = parseFloat(document.getElementById('inputEfectivoInicial').value || 0);
-  const saldoContado    = parseFloat(document.getElementById('inputSaldoContado').value || 0);
-  const saldoEsperado   = efectivoInicial + SALDO_BASE;
-  const diferencia      = saldoContado - saldoEsperado;
+  /* ════════════ CÁLCULO SALDO ════════════ */
+  function calcularSaldo() {
+    const efectivoInicial = parseFloat(document.getElementById('inputEfectivoInicial').value) || 0;
+    const saldoContado    = parseFloat(document.getElementById('inputSaldoContado').value) || 0;
+    const saldoEsperado   = efectivoInicial + SALDO_BASE;
+    const diferencia      = saldoContado - saldoEsperado;
 
-  document.getElementById('lblSaldoEsperado').textContent = '$' + saldoEsperado.toFixed(2);
-  document.getElementById('lblContado').textContent       = '$' + saldoContado.toFixed(2);
+    document.getElementById('lblSaldoEsperado').textContent = '$' + saldoEsperado.toFixed(2);
+    document.getElementById('lblContado').textContent       = '$' + saldoContado.toFixed(2);
 
-  const lblDif   = document.getElementById('lblDiferencia');
-  const lblEstado = document.getElementById('lblEstadoDif');
+    const lblDif    = document.getElementById('lblDiferencia');
+    const lblEstado = document.getElementById('lblEstadoDif');
 
-  if (diferencia > 0) {
-    lblDif.textContent    = '+$' + diferencia.toFixed(2);
-    lblDif.className      = 'text-base font-black text-green-600';
-    lblEstado.textContent = 'Sobrante';
-  } else if (diferencia < 0) {
-    lblDif.textContent    = '−$' + Math.abs(diferencia).toFixed(2);
-    lblDif.className      = 'text-base font-black text-red-500';
-    lblEstado.textContent = 'Faltante';
-  } else {
-    lblDif.textContent    = '$0.00';
-    lblDif.className      = 'text-base font-black text-gray-400';
-    lblEstado.textContent = 'Cuadrado';
+    if (diferencia > 0) {
+      lblDif.textContent    = '+$' + diferencia.toFixed(2);
+      lblDif.className      = 'text-base font-black text-green-600';
+      lblEstado.textContent = 'Sobrante';
+    } else if (diferencia < 0) {
+      lblDif.textContent    = '−$' + Math.abs(diferencia).toFixed(2);
+      lblDif.className      = 'text-base font-black text-red-500';
+      lblEstado.textContent = 'Faltante';
+    } else {
+      lblDif.textContent    = '$0.00';
+      lblDif.className      = 'text-base font-black text-gray-400';
+      lblEstado.textContent = 'Cuadrado';
+    }
   }
-}
-calcularSaldo();
+  calcularSaldo();
 
-/* ════════════ CONFIRMAR CORTE ════════════ */
-function confirmarCorte() {
-  const efectivoInicial = parseFloat(document.getElementById('inputEfectivoInicial').value || 0);
-  const saldoContado    = parseFloat(document.getElementById('inputSaldoContado').value || 0);
-  const saldoEsperado   = efectivoInicial + SALDO_BASE;
-  const diferencia      = saldoContado - saldoEsperado;
+  /* ════════════ CONFIRMAR CORTE ════════════ */
+  function confirmarCorte() {
+    const efectivoInicial = parseFloat(document.getElementById('inputEfectivoInicial').value) || 0;
+    const saldoContado    = parseFloat(document.getElementById('inputSaldoContado').value) || 0;
+    const saldoEsperado   = efectivoInicial + SALDO_BASE;
+    const diferencia      = saldoContado - saldoEsperado;
 
-  document.getElementById('modalCorteMensaje').textContent =
-    `Turno: ${document.querySelector('[name=turno]').value} | ` +
-    `Contado: $${saldoContado.toFixed(2)} | Esperado: $${saldoEsperado.toFixed(2)}`;
+    document.getElementById('modalCorteMensaje').textContent =
+      `Turno: ${document.querySelector('[name=turno]').value} | ` +
+      `Contado: $${saldoContado.toFixed(2)} | Esperado: $${saldoEsperado.toFixed(2)}`;
 
-  const infoDif = document.getElementById('modalDiferenciaInfo');
-  if (diferencia > 0) {
-    infoDif.className   = 'mb-4 p-3 rounded-xl text-sm font-semibold bg-green-100 text-green-700';
-    infoDif.textContent = `Sobrante de $${diferencia.toFixed(2)}`;
-  } else if (diferencia < 0) {
-    infoDif.className   = 'mb-4 p-3 rounded-xl text-sm font-semibold bg-red-100 text-red-600';
-    infoDif.textContent = `Faltante de $${Math.abs(diferencia).toFixed(2)}`;
-  } else {
-    infoDif.className   = 'mb-4 p-3 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600';
-    infoDif.textContent = '✔ Caja cuadrada';
+    const infoDif = document.getElementById('modalDiferenciaInfo');
+    if (diferencia > 0) {
+      infoDif.className   = 'mb-4 p-3 rounded-xl text-sm font-semibold bg-green-100 text-green-700';
+      infoDif.textContent = `Sobrante de $${diferencia.toFixed(2)}`;
+    } else if (diferencia < 0) {
+      infoDif.className   = 'mb-4 p-3 rounded-xl text-sm font-semibold bg-red-100 text-red-600';
+      infoDif.textContent = `Faltante de $${Math.abs(diferencia).toFixed(2)}`;
+    } else {
+      infoDif.className   = 'mb-4 p-3 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600';
+      infoDif.textContent = '✔ Caja cuadrada';
+    }
+
+    document.getElementById('modalConfirmarCorte').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
   }
 
-  document.getElementById('modalConfirmarCorte').classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
+  /* ════════════ MODAL DETALLE CORTE ════════════ */
+  function abrirDetalle(idx) {
+    const c = CORTES_DATA[idx];
+    const pct = c.totalVentas > 0 ? ((c.totalEfectivo / c.totalVentas) * 100).toFixed(1) : 0;
+    const difClass = c.diferencia > 0
+      ? 'bg-green-100 text-green-700'
+      : c.diferencia < 0 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500';
+    const difTxt = c.diferencia > 0
+      ? `+$${c.diferencia.toFixed(2)} (sobrante)`
+      : c.diferencia < 0 ? `−$${Math.abs(c.diferencia).toFixed(2)} (faltante)` : '$0.00 (cuadrado)';
 
-/* ════════════ MODAL DETALLE CORTE ════════════ */
-function abrirDetalle(idx) {
-  const c = CORTES_DATA[idx];
-  const pct = c.totalVentas > 0 ? ((c.totalEfectivo / c.totalVentas) * 100).toFixed(1) : 0;
-  const difClass = c.diferencia > 0
-    ? 'bg-green-100 text-green-700'
-    : c.diferencia < 0 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500';
-  const difTxt = c.diferencia > 0
-    ? `+$${c.diferencia.toFixed(2)} (sobrante)`
-    : c.diferencia < 0 ? `−$${Math.abs(c.diferencia).toFixed(2)} (faltante)` : '$0.00 (cuadrado)';
-
-  document.getElementById('detalleCorteContenido').innerHTML = `
-    <div class="space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm font-bold" style="color:#38230f;">${c.fecha} — ${c.turno}</p>
-          <p class="text-xs text-gray-400">Registrado por: ${c.nombre_usuario}</p>
+    document.getElementById('detalleCorteContenido').innerHTML = `
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-bold" style="color:#38230f;">${c.fecha} — ${c.turno}</p>
+            <p class="text-xs text-gray-400">Registrado por: ${c.nombre_usuario}</p>
+          </div>
+          <span class="text-xs font-bold px-3 py-1 rounded-full ${difClass}">${difTxt}</span>
         </div>
-        <span class="text-xs font-bold px-3 py-1 rounded-full ${difClass}">${difTxt}</span>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-amber-50 rounded-xl p-3 text-center">
+            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Total Ventas</p>
+            <p class="text-base font-black" style="color:#38230f;">$${c.totalVentas.toFixed(2)}</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-3 text-center">
+            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Egresos</p>
+            <p class="text-base font-black text-red-500">$${c.totalEgresos.toFixed(2)}</p>
+          </div>
+          <div class="bg-green-50 rounded-xl p-3 text-center">
+            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Efectivo Ventas</p>
+            <p class="text-base font-black text-green-600">$${c.totalEfectivo.toFixed(2)}</p>
+            <p class="text-[10px] text-gray-400">${pct}% del total</p>
+          </div>
+          <div class="bg-blue-50 rounded-xl p-3 text-center">
+            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Tarjeta</p>
+            <p class="text-base font-black text-blue-600">$${c.totalTarjeta.toFixed(2)}</p>
+          </div>
+        </div>
+        <div class="border border-gray-200 rounded-xl divide-y divide-gray-100">
+          <div class="flex justify-between px-4 py-2.5 text-sm">
+            <span class="text-gray-500">Efectivo inicial</span>
+            <span class="font-semibold">$${c.efectivoInicial.toFixed(2)}</span>
+          </div>
+          <div class="flex justify-between px-4 py-2.5 text-sm">
+            <span class="text-gray-500">Saldo esperado</span>
+            <span class="font-semibold">$${c.saldoFinal.toFixed(2)}</span>
+          </div>
+          <div class="flex justify-between px-4 py-2.5 text-sm">
+            <span class="text-gray-500">Saldo contado</span>
+            <span class="font-semibold">$${c.saldoContado.toFixed(2)}</span>
+          </div>
+          <div class="flex justify-between px-4 py-2.5 text-sm font-bold" style="color:#38230f;">
+            <span>Diferencia</span>
+            <span>${difTxt}</span>
+          </div>
+        </div>
+        ${c.observaciones ? `
+        <div class="bg-amber-50 rounded-xl p-3 border border-amber-200">
+          <p class="text-[10px] font-bold text-gray-500 uppercase mb-1">Observaciones</p>
+          <p class="text-xs text-gray-700">${c.observaciones}</p>
+        </div>` : ''}
       </div>
+    `;
 
-      <div class="grid grid-cols-2 gap-3">
-        <div class="bg-amber-50 rounded-xl p-3 text-center">
-          <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Total Ventas</p>
-          <p class="text-base font-black" style="color:#38230f;">$${c.totalVentas.toFixed(2)}</p>
-        </div>
-        <div class="bg-gray-50 rounded-xl p-3 text-center">
-          <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Egresos</p>
-          <p class="text-base font-black text-red-500">$${c.totalEgresos.toFixed(2)}</p>
-        </div>
-        <div class="bg-green-50 rounded-xl p-3 text-center">
-          <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Efectivo Ventas</p>
-          <p class="text-base font-black text-green-600">$${c.totalEfectivo.toFixed(2)}</p>
-          <p class="text-[10px] text-gray-400">${pct}% del total</p>
-        </div>
-        <div class="bg-blue-50 rounded-xl p-3 text-center">
-          <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Tarjeta</p>
-          <p class="text-base font-black text-blue-600">$${c.totalTarjeta.toFixed(2)}</p>
-        </div>
-      </div>
-
-      <div class="border border-gray-200 rounded-xl divide-y divide-gray-100">
-        <div class="flex justify-between px-4 py-2.5 text-sm">
-          <span class="text-gray-500">Efectivo inicial</span>
-          <span class="font-semibold">${'$' + c.efectivoInicial.toFixed(2)}</span>
-        </div>
-        <div class="flex justify-between px-4 py-2.5 text-sm">
-          <span class="text-gray-500">Saldo esperado</span>
-          <span class="font-semibold">${'$' + c.saldoFinal.toFixed(2)}</span>
-        </div>
-        <div class="flex justify-between px-4 py-2.5 text-sm">
-          <span class="text-gray-500">Saldo contado</span>
-          <span class="font-semibold">${'$' + c.saldoContado.toFixed(2)}</span>
-        </div>
-        <div class="flex justify-between px-4 py-2.5 text-sm font-bold" style="color:#38230f;">
-          <span>Diferencia</span>
-          <span>${difTxt}</span>
-        </div>
-      </div>
-
-      ${c.observaciones ? `
-      <div class="bg-amber-50 rounded-xl p-3 border border-amber-200">
-        <p class="text-[10px] font-bold text-gray-500 uppercase mb-1">Observaciones</p>
-        <p class="text-xs text-gray-700">${c.observaciones}</p>
-      </div>` : ''}
-    </div>
-  `;
-
-  document.getElementById('modalDetalleCorte').classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
-
-/* ════════════ AUTO-DISMISS FLASH ════════════ */
-document.addEventListener('DOMContentLoaded', () => {
-  const flash = document.getElementById('flashZona');
-  if (flash) {
-    setTimeout(() => {
-      flash.style.transition = 'opacity .5s ease';
-      flash.style.opacity = '0';
-      setTimeout(() => flash.remove(), 500);
-    }, 5000);
+    document.getElementById('modalDetalleCorte').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
   }
-});
+
+  /* ════════════ AUTO-DISMISS FLASH ════════════ */
+  document.addEventListener('DOMContentLoaded', () => {
+    const flash = document.getElementById('flashZona');
+    if (flash) {
+      setTimeout(() => {
+        flash.style.transition = 'opacity .5s ease';
+        flash.style.opacity = '0';
+        setTimeout(() => flash.remove(), 500);
+      }, 5000);
+    }
+  });
 </script>
 
 {% endblock %}

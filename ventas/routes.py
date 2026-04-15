@@ -40,6 +40,7 @@ def _texto_resultado(resultado):
 
 def _productos_disponibles_venta():
     """Productos activos con receta activa (para punto de venta)."""
+    from productos.routes import _capacidad_produccion
     rows = db.session.execute(
         text(
             "CALL sp_listar_productos(:nombre,:precio_ini,:precio_fin,:estatus,:tamano,:estatus_receta)"
@@ -53,14 +54,46 @@ def _productos_disponibles_venta():
             "estatus_receta": "1",
         },
     ).mappings().all()
-    return rows
+
+    resultado = []
+    for p in rows:
+        cap = _capacidad_produccion(p["idProducto"])
+        resultado.append({**p, "capacidad_produccion": cap})
+    return resultado
 
 
 def _ventas_hoy():
-    """Últimas ventas del día para la tabla lateral."""
+    """Últimas ventas del día (Punto de venta) para la tabla lateral."""
     rows = db.session.execute(
         text("CALL sp_listar_ventas_hoy(:uid)"),
         {"uid": None},
+    ).mappings().all()
+    return rows
+
+
+def _ventas_online_hoy():
+    """Ventas en línea del día para la tabla lateral."""
+    rows = db.session.execute(
+        text("""
+            SELECT
+                v.idVenta,
+                v.nombreCliente,
+                v.fecha,
+                v.tipo,
+                v.metodoPago,
+                v.estado,
+                u.nombre AS nombre_usuario,
+                SUM(dv.cantidad * dv.precio) AS total
+            FROM ventas v
+            JOIN usuarios u ON u.idUsuario = v.idUsuario
+            JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+            WHERE DATE(v.fecha) = CURDATE()
+              AND v.tipo = 'En línea'
+              AND v.estado NOT IN ('Reservado_temp')
+            GROUP BY v.idVenta, v.nombreCliente, v.fecha, v.tipo, v.metodoPago, v.estado, u.nombre
+            ORDER BY v.fecha DESC
+            LIMIT 30
+        """)
     ).mappings().all()
     return rows
 
@@ -103,7 +136,7 @@ def _generar_ticket_pdf(id_venta):
 
     elementos = []
 
-    elementos.append(Paragraph("🍕 FOUR OVEN PIZZA", estilo_titulo))
+    elementos.append(Paragraph("FOUR OVEN PIZZA", estilo_titulo))
     elementos.append(Paragraph("Pizzería artesanal", estilo_sub))
     elementos.append(Spacer(1, 0.3 * cm))
     elementos.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#f29f05")))
@@ -143,8 +176,8 @@ def _generar_ticket_pdf(id_venta):
     elementos.append(Spacer(1, 0.1 * cm))
     elementos.append(Paragraph(f"<b>TOTAL: ${total:.2f}</b>", estilo_derecha))
     elementos.append(Spacer(1, 0.4 * cm))
-    elementos.append(Paragraph("¡Gracias por su preferencia!", estilo_centro))
-    elementos.append(Paragraph("Vuelva pronto 🍕", estilo_centro))
+    elementos.append(Paragraph("Gracias por su preferencia!", estilo_centro))
+    elementos.append(Paragraph("Vuelva pronto", estilo_centro))
 
     doc.build(elementos)
     pdf_bytes = buffer.getvalue()
@@ -192,12 +225,14 @@ def _generar_ticket_pdf(id_venta):
 def punto_venta():
     productos_disponibles = _productos_disponibles_venta()
     ventas_hoy = _ventas_hoy()
+    ventas_online_hoy = _ventas_online_hoy()
     form_error = session.pop("ventas_form_error", None)
 
     return render_template(
         "ventas/punto_venta.html",
         productos_disponibles=productos_disponibles,
         ventas_hoy=ventas_hoy,
+        ventas_online_hoy=ventas_online_hoy,
         form_error=form_error,
     )
 
@@ -330,6 +365,20 @@ def registrar_venta():
                 )
                 db.session.add(dp)
 
+            # ── NUEVO: Descontar materias primas al crear la orden ──
+            # (igual que en órdenes manuales, para apartar el stock)
+            for f in faltantes:
+                db.session.execute(
+                    text("""
+                        UPDATE materiasPrimas mp
+                        JOIN detalleReceta dr ON dr.idMateriaP = mp.idMateriaP
+                        JOIN recetas r ON r.idReceta = dr.idReceta
+                        SET mp.stock = mp.stock - (dr.cantidad * :cant)
+                        WHERE r.idProducto = :id_producto
+                    """),
+                    {"cant": f["cantidad"], "id_producto": f["idProducto"]},
+                )
+
             # Vincular la orden a las reservas de esta venta
             db.session.execute(
                 text("UPDATE ventaStockReservado SET idOrdenProduccion = :oid WHERE idVenta = :vid"),
@@ -428,29 +477,6 @@ def confirmar_venta(id_venta):
 @ventas.route("/ventas/cancelar/<int:id_venta>", methods=["POST"])
 @rol_requerido("Administrador", "Ventas")
 def cancelar_venta(id_venta):
-    """
-    Cancela una venta activa.
-
-    Estado 'En proceso'  → la orden de producción aún no terminó.
-        · Cancela la orden de producción vinculada (si sigue en proceso).
-        · Devuelve al stock solo cantidadReservada (lo que se tomó del inventario).
-        · Los productos que iban a producirse nunca se fabricaron → no hay nada que sumar.
-
-    Estado 'Lista para entregar' → cocina ya terminó la orden.
-        · cantidadFaltante ya es 0 (cocina la movió a cantidadReservada al terminar).
-        · cantidadReservada ahora contiene el total pedido (los del stock + los producidos).
-        · Se devuelven al stock TODOS esos productos (cantidadReservada completa).
-        · Además, los que se produjeron en cocina también se suman al stock de producto
-          (porque ya fueron fabricados y no van a ser entregados al cliente).
-
-    Para distinguir cuánto vino de producción vs del stock original, leemos
-    la columna cantidadFaltante_original que guardamos antes de que cocina la zeroed.
-    Como no la tenemos directamente, la calculamos como:
-        producido = cantidadReservada_actual - cantidadReservada_original
-    Pero como solo tenemos el valor actual, simplificamos:
-        · Todo lo de cantidadReservada vuelve al stock (ya fusiona ambas fuentes).
-        · No se necesita sumar nada extra: devolverla íntegra es correcto.
-    """
     try:
         from models import VentaStockReservado, OrdenesProduccion
 
@@ -464,32 +490,23 @@ def cancelar_venta(id_venta):
         reservas = VentaStockReservado.query.filter_by(idVenta=id_venta).all()
 
         if estado_previo == "En proceso":
-            # ── Orden de producción aún activa ──────────────────────────
-            # Cancelar la orden vinculada si sigue en proceso
             for r in reservas:
                 if r.idOrdenProduccion:
                     orden = OrdenesProduccion.query.get(r.idOrdenProduccion)
                     if orden and orden.estado == "En proceso":
                         orden.estado = "Cancelada"
 
-            # Devolver al stock solo lo que se había tomado del inventario
             for r in reservas:
                 prod = Productos.query.get(r.idProducto)
                 if prod and r.cantidadReservada > 0:
                     prod.stock = float(prod.stock or 0) + r.cantidadReservada
 
         elif estado_previo == "Lista para entregar":
-            # ── Cocina ya terminó; cantidadFaltante == 0 ────────────────
-            # cantidadReservada ahora contiene el total (stock original + producidos).
-            # Devolver todo al stock del producto.
             for r in reservas:
                 prod = Productos.query.get(r.idProducto)
                 if prod:
-                    # cantidadReservada ya incluye lo producido (cocina lo movió aquí)
-                    # cantidadFaltante es 0 en este punto
                     prod.stock = float(prod.stock or 0) + r.cantidadReservada + r.cantidadFaltante
 
-        # Limpiar reservas
         db.session.execute(
             text("DELETE FROM ventaStockReservado WHERE idVenta = :vid"),
             {"vid": id_venta},
@@ -510,6 +527,128 @@ def cancelar_venta(id_venta):
 
         db.session.commit()
         flash(f"Venta #{id_venta} cancelada correctamente.", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        flash(str(e), "danger")
+
+    return redirect(url_for("ventas.punto_venta"))
+
+
+# ── Nueva ruta: confirmar venta en línea ──────────────────────────────
+
+@ventas.route("/ventas/online/confirmar/<int:id_venta>", methods=["POST"])
+@rol_requerido("Administrador", "Ventas")
+def confirmar_venta_online(id_venta):
+    try:
+        from models import VentaStockReservado, CajaMovimientos
+
+        venta = Ventas.query.get_or_404(id_venta)
+
+        if venta.tipo != "En línea":
+            flash("Esta acción solo aplica a ventas en línea.", "danger")
+            return redirect(url_for("ventas.punto_venta"))
+
+        if venta.estado != "Lista para entregar":
+            flash("Solo se pueden confirmar ventas en estado 'Lista para entregar'.", "danger")
+            return redirect(url_for("ventas.punto_venta"))
+
+        venta.estado = "Confirmada"
+
+        total = sum(float(d.cantidad) * float(d.precio) for d in venta.detalle_ventas)
+
+        mov = CajaMovimientos(
+            idUsuario=session["usuario_id"],
+            tipo="Ingreso",
+            monto=Decimal(str(total)),
+            descripcion=f"Venta en línea #{id_venta} - {venta.nombreCliente} ({venta.metodoPago})",
+        )
+        db.session.add(mov)
+
+        db.session.execute(
+            text("DELETE FROM ventaStockReservado WHERE idVenta = :vid"),
+            {"vid": id_venta},
+        )
+
+        db.session.execute(
+            text("""
+                INSERT INTO bitacora_eventos
+                    (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+                SELECT :uid, u.nombre, 'VentasOnline', 'CONFIRMAR',
+                       'venta', CONCAT('ID:', :vid), NOW(), :ip
+                FROM usuarios u WHERE u.idUsuario = :uid
+            """),
+            {"uid": session["usuario_id"], "vid": id_venta, "ip": request.remote_addr},
+        )
+
+        db.session.commit()
+        flash(f"Venta en línea #{id_venta} confirmada correctamente.", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        flash(str(e), "danger")
+
+    return redirect(url_for("ventas.punto_venta"))
+
+
+# ── Nueva ruta: cancelar venta en línea ──────────────────────────────
+
+@ventas.route("/ventas/online/cancelar/<int:id_venta>", methods=["POST"])
+@rol_requerido("Administrador", "Ventas")
+def cancelar_venta_online(id_venta):
+    try:
+        from models import VentaStockReservado, OrdenesProduccion
+
+        venta = Ventas.query.get_or_404(id_venta)
+
+        if venta.tipo != "En línea":
+            flash("Esta acción solo aplica a ventas en línea.", "danger")
+            return redirect(url_for("ventas.punto_venta"))
+
+        if venta.estado not in ("En proceso", "Lista para entregar"):
+            flash("Solo se pueden cancelar ventas en estado 'En proceso' o 'Lista para entregar'.", "danger")
+            return redirect(url_for("ventas.punto_venta"))
+
+        estado_previo = venta.estado
+        reservas = VentaStockReservado.query.filter_by(idVenta=id_venta).all()
+
+        if estado_previo == "En proceso":
+            for r in reservas:
+                if r.idOrdenProduccion:
+                    orden = OrdenesProduccion.query.get(r.idOrdenProduccion)
+                    if orden and orden.estado == "En proceso":
+                        orden.estado = "Cancelada"
+            for r in reservas:
+                prod = Productos.query.get(r.idProducto)
+                if prod and r.cantidadReservada > 0:
+                    prod.stock = float(prod.stock or 0) + r.cantidadReservada
+
+        elif estado_previo == "Lista para entregar":
+            for r in reservas:
+                prod = Productos.query.get(r.idProducto)
+                if prod:
+                    prod.stock = float(prod.stock or 0) + r.cantidadReservada + r.cantidadFaltante
+
+        db.session.execute(
+            text("DELETE FROM ventaStockReservado WHERE idVenta = :vid"),
+            {"vid": id_venta},
+        )
+
+        venta.estado = "Cancelada"
+
+        db.session.execute(
+            text("""
+                INSERT INTO bitacora_eventos
+                    (usuarioId, nombreUsuario, modulo, accion, referencial, referencia, fecha, ip)
+                SELECT :uid, u.nombre, 'VentasOnline', 'CANCELAR',
+                       'venta', CONCAT('ID:', :vid), NOW(), :ip
+                FROM usuarios u WHERE u.idUsuario = :uid
+            """),
+            {"uid": session["usuario_id"], "vid": id_venta, "ip": request.remote_addr},
+        )
+
+        db.session.commit()
+        flash(f"Venta en línea #{id_venta} cancelada correctamente.", "success")
 
     except Exception as e:
         db.session.rollback()
@@ -576,15 +715,41 @@ def historial_ventas():
     fecha_fin_f = request.args.get("fecha_fin",   "").strip() or None
     cliente_f   = request.args.get("cliente",     "").strip() or None
     metodo_f    = request.args.get("metodo_pago", "").strip() or None
+    tipo_f      = request.args.get("tipo",        "").strip() or None
 
+    # Query unificada que incluye Punto venta y En línea (excluye Reservado_temp)
     ventas_lista = db.session.execute(
-        text("CALL sp_listar_ventas_historial(:estado,:fecha_ini,:fecha_fin,:cliente,:metodo)"),
+        text("""
+            SELECT
+                v.idVenta,
+                v.nombreCliente,
+                v.fecha,
+                v.tipo,
+                v.metodoPago,
+                v.estado,
+                u.nombre AS nombre_usuario,
+                SUM(dv.cantidad * dv.precio) AS total
+            FROM ventas v
+            JOIN usuarios u ON u.idUsuario = v.idUsuario
+            JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+            WHERE v.tipo IN ('Punto venta', 'En línea')
+              AND v.estado != 'Reservado_temp'
+              AND (:estado    IS NULL OR v.estado      = :estado)
+              AND (:fecha_ini IS NULL OR DATE(v.fecha) >= :fecha_ini)
+              AND (:fecha_fin IS NULL OR DATE(v.fecha) <= :fecha_fin)
+              AND (:cliente   IS NULL OR v.nombreCliente LIKE CONCAT('%', :cliente, '%'))
+              AND (:metodo    IS NULL OR v.metodoPago   = :metodo)
+              AND (:tipo      IS NULL OR v.tipo         = :tipo)
+            GROUP BY v.idVenta, v.nombreCliente, v.fecha, v.tipo, v.metodoPago, v.estado, u.nombre
+            ORDER BY v.fecha DESC
+        """),
         {
             "estado":    estado_f,
             "fecha_ini": fecha_ini_f,
             "fecha_fin": fecha_fin_f,
             "cliente":   cliente_f,
             "metodo":    metodo_f,
+            "tipo":      tipo_f,
         },
     ).mappings().all()
 
@@ -594,6 +759,7 @@ def historial_ventas():
         "fecha_fin":   fecha_fin_f or "",
         "cliente":     cliente_f   or "",
         "metodo_pago": metodo_f    or "",
+        "tipo":        tipo_f      or "",
     }
 
     return render_template(
@@ -628,7 +794,7 @@ def ver_venta_historial(id_venta):
         return f"<p class='text-red-500 text-sm p-4'>Error: {e}</p>", 500
 
 
-# ── Cierre de día manual (para administradores) ────────────────────────
+# ── Cierre de día manual ───────────────────────────────────────────────
 
 @ventas.route("/ventas/cierre-dia", methods=["POST"])
 @rol_requerido("Administrador")
@@ -655,7 +821,6 @@ def cierre_dia():
                         prod.stock = float(prod.stock or 0) + r.cantidadReservada
 
             elif v.estado == "Lista para entregar":
-                # cantidadReservada ya contiene el total (incluye lo producido)
                 for r in reservas:
                     prod = Productos.query.get(r.idProducto)
                     if prod:

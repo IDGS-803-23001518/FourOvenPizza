@@ -1,7 +1,9 @@
+from autentificacion.routes import rol_requerido
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from models import db, Mermas, DetalleMerma, MateriasPrimas, Productos, Recetas, DetalleReceta
 from mermas import mermas          # el Blueprint ya importado
 from sqlalchemy import text
+from autentificacion import autentificacion
 import json
 
 
@@ -26,6 +28,7 @@ def get_productos_con_receta():
 
 # ── LISTAR ───────────────────────────────────────────────────────────────
 @mermas.route('/mermas')
+@rol_requerido("Administrador", "Cocinero")  # ← AGREGADO Cocinero
 def index():
     registros           = Mermas.query.order_by(Mermas.fecha.desc()).all()
     materias            = MateriasPrimas.query.filter_by(estatus=True).all()
@@ -44,6 +47,7 @@ def index():
 
 # ── CREAR ────────────────────────────────────────────────────────────────
 @mermas.route('/crear', methods=['POST'])
+@rol_requerido("Administrador", "Cocinero")
 def crear():
     descripcion   = request.form.get('descripcion', '').strip()
     insumos_json  = request.form.get('insumos_json', '[]')
@@ -106,6 +110,7 @@ def crear():
 
 # ── ELIMINAR (permanente, devuelve stock) ────────────────────────────────
 @mermas.route('/eliminar/<int:id>')
+@rol_requerido("Administrador", "Cocinero")
 def eliminar(id):
     """
     Elimina la merma de forma permanente y devuelve el stock a cada

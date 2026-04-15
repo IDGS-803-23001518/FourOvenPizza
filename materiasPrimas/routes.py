@@ -6,7 +6,7 @@ from sqlalchemy import extract, func, text
 
 import forms
 from autentificacion.routes import rol_requerido
-from models import Categorias, MateriasPrimas, Productos, Recetas, DetalleReceta, UnidadesMedida, db
+from models import Categorias, MateriasPrimas, Productos, Recetas, DetalleReceta, UnidadesMedida,MiniRecetas, DetalleMiniReceta, db
 
 from . import materiasPrimas
 
@@ -337,116 +337,98 @@ def editar_materia_prima(id):
 def cambiar_estatus_materia_prima(id, estatus):
     try:
         nuevo_estatus = 0 if estatus == 1 else 1
-
-        # ── NUEVA LÓGICA: Si se va a DESACTIVAR, verificar productos afectados ──
+ 
         if nuevo_estatus == 0:
-            # Obtener el nombre de la materia prima para el mensaje
             materia = MateriasPrimas.query.get(id)
             nombre_materia = materia.nombre if materia else str(id)
-
-            # Desactivar la materia prima primero
+ 
+            # Desactivar la materia prima
             db.session.execute(
-                text(
-                    """
+                text("""
                     CALL sp_gestion_materiasprimas(
-                        :accion,
-                        :idMateriaP,
-                        :nombre,
-                        :tipo,
-                        :idCategoria,
-                        :stock,
-                        :stockMinimo,
-                        :estatus,
-                        :ip,
-                        :usuario,
-                        @p_resultado,
-                        @p_idGenerado
+                        :accion,:idMateriaP,:nombre,:tipo,:idCategoria,
+                        :stock,:stockMinimo,:estatus,:ip,:usuario,
+                        @p_resultado,@p_idGenerado
                     )
-                """
-                ),
+                """),
                 {
-                    "accion": "CHANGE_STATUS",
-                    "idMateriaP": id,
-                    "nombre": None,
-                    "tipo": None,
-                    "idCategoria": None,
-                    "stock": None,
-                    "stockMinimo": None,
+                    "accion": "CHANGE_STATUS", "idMateriaP": id,
+                    "nombre": None, "tipo": None, "idCategoria": None,
+                    "stock": None, "stockMinimo": None,
                     "estatus": nuevo_estatus,
-                    "ip": request.remote_addr,
-                    "usuario": session["usuario_id"],
+                    "ip": request.remote_addr, "usuario": session["usuario_id"],
                 },
             )
-
             resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
             mensaje, categoria = _texto_resultado(resultado)
-
+ 
             if categoria == "success":
-                # Desactivar productos afectados en cascada
+                # ── Desactivar mini recetas en cascada ──
+                mini_recetas_afectadas_nombres = []
+                mini_recetas_afectadas = (
+                    MiniRecetas.query
+                    .join(DetalleMiniReceta, DetalleMiniReceta.idMiniReceta == MiniRecetas.idMiniReceta)
+                    .filter(DetalleMiniReceta.idMateriaP == id, MiniRecetas.estatus == True)
+                    .all()
+                )
+                for mr in mini_recetas_afectadas:
+                    mr.estatus = False
+                    mini_recetas_afectadas_nombres.append(mr.nombre)
+ 
+                # ── Desactivar productos en cascada ──
                 productos_desactivados = _desactivar_productos_por_materia_prima(
-                    id,
-                    request.remote_addr,
-                    session["usuario_id"],
+                    id, request.remote_addr, session["usuario_id"],
                 )
                 db.session.commit()
-
+ 
                 flash(mensaje, "success")
-
-                if productos_desactivados:
-                    nombres = ", ".join(productos_desactivados)
+ 
+                if mini_recetas_afectadas_nombres:
+                    nombres_mr = ", ".join(mini_recetas_afectadas_nombres)
                     flash(
-                        f"Los siguientes productos fueron desactivados automáticamente porque "
-                        f"su receta contiene la materia prima «{nombre_materia}»: {nombres}.",
+                        f"Las siguientes mini recetas fueron desactivadas automáticamente porque "
+                        f"contienen «{nombre_materia}»: {nombres_mr}.",
+                        "warning",
+                    )
+ 
+                if productos_desactivados:
+                    nombres_p = ", ".join(productos_desactivados)
+                    flash(
+                        f"Los siguientes productos fueron desactivados porque su receta contiene "
+                        f"«{nombre_materia}»: {nombres_p}.",
                         "danger",
                     )
             else:
                 db.session.rollback()
                 flash(mensaje, "danger")
-
+ 
         else:
-            # Activar normalmente
+            # Activar normalmente (mini recetas NO se reactivan en automático)
             db.session.execute(
-                text(
-                    """
+                text("""
                     CALL sp_gestion_materiasprimas(
-                        :accion,
-                        :idMateriaP,
-                        :nombre,
-                        :tipo,
-                        :idCategoria,
-                        :stock,
-                        :stockMinimo,
-                        :estatus,
-                        :ip,
-                        :usuario,
-                        @p_resultado,
-                        @p_idGenerado
+                        :accion,:idMateriaP,:nombre,:tipo,:idCategoria,
+                        :stock,:stockMinimo,:estatus,:ip,:usuario,
+                        @p_resultado,@p_idGenerado
                     )
-                """
-                ),
+                """),
                 {
-                    "accion": "CHANGE_STATUS",
-                    "idMateriaP": id,
-                    "nombre": None,
-                    "tipo": None,
-                    "idCategoria": None,
-                    "stock": None,
-                    "stockMinimo": None,
+                    "accion": "CHANGE_STATUS", "idMateriaP": id,
+                    "nombre": None, "tipo": None, "idCategoria": None,
+                    "stock": None, "stockMinimo": None,
                     "estatus": nuevo_estatus,
-                    "ip": request.remote_addr,
-                    "usuario": session["usuario_id"],
+                    "ip": request.remote_addr, "usuario": session["usuario_id"],
                 },
             )
-
             resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
             db.session.commit()
             mensaje, categoria = _texto_resultado(resultado)
             flash(mensaje, categoria)
-
+ 
     except Exception as e:
         db.session.rollback()
         flash(str(e), "danger")
-
+ 
     return redirect(url_for("materiasPrimas.listadoMaterias"))
 
 

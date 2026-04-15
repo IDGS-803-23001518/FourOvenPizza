@@ -29,6 +29,7 @@ class Usuarios(db.Model):
     caja_movimientos = db.relationship('CajaMovimientos', back_populates='usuario')
     ordenes_produccion = db.relationship('OrdenesProduccion', back_populates='usuario')
     resets = db.relationship('ResetContrasenia', back_populates='usuario')
+    bitacora_respaldos = db.relationship('BitacoraRespaldos', back_populates='usuario')
 
 
 class ResetContrasenia(db.Model):
@@ -366,3 +367,55 @@ class CajaMovimientos(db.Model):
     fecha = db.Column(db.DateTime, default=datetime.datetime.now)
 
     usuario = db.relationship('Usuarios', back_populates='caja_movimientos')
+
+class MiniRecetas(db.Model):
+    __tablename__ = "miniRecetas"
+    idMiniReceta  = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nombre        = db.Column(db.String(100), nullable=False, unique=True)
+    descripcion   = db.Column(db.String(200), nullable=True)
+    estatus       = db.Column(db.Boolean, nullable=False, default=True)
+    fechaCreacion = db.Column(db.DateTime, default=datetime.datetime.now)
+
+    detalles = db.relationship(
+        'DetalleMiniReceta',
+        back_populates='mini_receta',
+        cascade='all, delete-orphan',
+        lazy='select',
+    )
+
+
+class DetalleMiniReceta(db.Model):
+    __tablename__ = "detalleMiniReceta"
+    idDetalleMR  = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    idMiniReceta = db.Column(db.Integer, db.ForeignKey('miniRecetas.idMiniReceta'), nullable=False)
+    idMateriaP   = db.Column(db.Integer, db.ForeignKey('materiasPrimas.idMateriaP'), nullable=False)
+    cantidad     = db.Column(db.Numeric(10, 2), nullable=False)
+
+    mini_receta  = db.relationship('MiniRecetas', back_populates='detalles')
+    materia_prima = db.relationship('MateriasPrimas', backref='detalles_mini_receta')
+
+    __table_args__ = (
+        db.UniqueConstraint('idMiniReceta', 'idMateriaP', name='uk_mini_receta_materia'),
+    )
+
+class BitacoraRespaldos(db.Model):
+    __tablename__ = "bitacora_respaldos"
+    
+    idRespaldo = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    tipo = db.Column(db.String(30), nullable=False)          # 'Completo' | 'Incremental' | 'Restauracion' | 'Parcial'
+    subtipo = db.Column(db.String(30), nullable=False, default='Estructura+Datos')  # 'Solo datos' | 'Solo estructura' | 'Estructura+Datos'
+    tablas = db.Column(db.Text, nullable=True)                # NULL = todas, o lista separada por coma
+    archivo = db.Column(db.String(500), nullable=False)       # ruta/nombre del archivo generado
+    tamano_bytes = db.Column(db.BigInteger, nullable=False, default=0)
+    estado = db.Column(db.String(20), nullable=False, default='Exitoso')  # 'Exitoso' | 'Fallido' | 'En proceso'
+    detalle_error = db.Column(db.Text, nullable=True)
+    fecha_referencia = db.Column(db.DateTime, nullable=True)  # Para incrementales: fecha del último respaldo
+    fecha_inicio = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now)
+    fecha_fin = db.Column(db.DateTime, nullable=True)
+    duracion_seg = db.Column(db.Integer, nullable=False, default=0)
+    usuarioId = db.Column(db.Integer, db.ForeignKey('usuarios.idUsuario'), nullable=False)
+    ip = db.Column(db.String(45), nullable=False, default='127.0.0.1')
+    observaciones = db.Column(db.Text, nullable=True)
+
+    # Relaciones
+    usuario = db.relationship('Usuarios', back_populates='bitacora_respaldos')

@@ -1,4 +1,4 @@
-{%extends "layoutAdmin.html"%}
+{% extends layout %}
 {%block container%}
 
 <!-- ── Estilos de paginación ──────────────────────────────────────── -->
@@ -420,10 +420,20 @@
                                 {% endif %}
                         </td>
                         <td class="px-5 py-3 text-gray-700">{{ mp.tipo }}</td>
-                        <td class="px-5 py-3 text-gray-700 tabular-nums">{{ "{:,.0f}".format(mp.stock) }} {{ 'g' if
-                            mp.tipo == 'Solido' else 'ml' }}</td>
-                        <td class="px-5 py-3 text-gray-700 tabular-nums">{{ "{:,.0f}".format(mp.stockMinimo) }} {{ 'g'
-                            if mp.tipo == 'Solido' else 'ml' }}</td>
+                        <td class="px-5 py-3 text-gray-700 tabular-nums">
+                            {% if mp.tipo == 'Solido' %}
+                            {{ "{:,.2f}".format(mp.stock / 1000) }} kg
+                            {% else %}
+                            {{ "{:,.2f}".format(mp.stock / 1000) }} L
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3 text-gray-700 tabular-nums">
+                            {% if mp.tipo == 'Solido' %}
+                            {{ "{:,.2f}".format(mp.stockMinimo / 1000) }} kg
+                            {% else %}
+                            {{ "{:,.2f}".format(mp.stockMinimo / 1000) }} L
+                            {% endif %}
+                        </td>
                         <td class="px-5 py-3 text-gray-700">{{ mp.categoria.nombre if mp.categoria else '—' }}</td>
                         <td class="px-5 py-3">
                             {% if mp.estatus %}
@@ -531,14 +541,16 @@
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-xs font-medium text-gray-600">Stock:</span>
-                                <span class="text-xs text-gray-800 font-semibold tabular-nums">{{
-                                    "{:,.0f}".format(mp.stock) }} {{ 'g' if mp.tipo == 'Solido' else 'ml' }}</span>
+                                <span class="text-xs text-gray-800 font-semibold tabular-nums">
+                                    {{ "{:,.2f}".format(mp.stock / 1000) }} {{ 'kg' if mp.tipo == 'Solido' else 'L' }}
+                                </span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-xs font-medium text-gray-600">Stock mínimo:</span>
-                                <span class="text-xs text-gray-800 font-semibold tabular-nums">{{
-                                    "{:,.0f}".format(mp.stockMinimo) }} {{ 'g' if mp.tipo == 'Solido' else 'ml'
-                                    }}</span>
+                                <span class="text-xs text-gray-800 font-semibold tabular-nums">
+                                    {{ "{:,.2f}".format(mp.stockMinimo / 1000) }} {{ 'kg' if mp.tipo == 'Solido' else
+                                    'L' }}
+                                </span>
                             </div>
                         </div>
 
@@ -1030,12 +1042,14 @@
     function abrirModalVer(id) {
         const card = document.querySelector(`.materia-row[data-id="${id}"], .materia-card[data-id="${id}"]`);
         if (!card) return;
-        const unidad = card.dataset.tipo === 'Solido' ? 'g' : 'ml';
         document.getElementById('ver-nombre').textContent = card.dataset.nombre;
         document.getElementById('ver-tipo').textContent = card.dataset.tipo;
         document.getElementById('ver-categoria').textContent = card.dataset.categoria || '—';
-        document.getElementById('ver-stock').textContent = formatNum(card.dataset.stock) + ' ' + unidad;
-        document.getElementById('ver-stock-minimo').textContent = formatNum(card.dataset.stockMinimo) + ' ' + unidad;
+        const unidadConvertida = card.dataset.tipo === 'Solido' ? 'kg' : 'L';
+        const stockKg = (parseFloat(card.dataset.stock) / 1000).toFixed(3);
+        const stockMinKg = (parseFloat(card.dataset.stockMinimo) / 1000).toFixed(3);
+        document.getElementById('ver-stock').textContent = formatNum(stockKg) + ' ' + unidadConvertida;
+        document.getElementById('ver-stock-minimo').textContent = formatNum(stockMinKg) + ' ' + unidadConvertida;
         const estatusEl = document.getElementById('ver-estatus');
         estatusEl.textContent = card.dataset.estatus;
         estatusEl.className = card.dataset.estatus === 'Activo' ? 'font-semibold text-green-600' : 'font-semibold text-red-500';

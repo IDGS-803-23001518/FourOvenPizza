@@ -1,9 +1,8 @@
-{% extends "layoutAdmin.html" %}
+{% extends layout %} 
 {% block title %}Detalle Receta{% endblock %}
 
 {% block container %}
 
-<!-- ══ NAV HEADER (idéntico a productos/materias) ══ -->
 <nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
   style="border-bottom: 3px solid #f29f05;">
   <div class="container flex flex-wrap items-center justify-between mx-auto">
@@ -47,10 +46,7 @@
   {% if ingredientes_desactivados %}
   <div class="mb-4 p-4 rounded-xl border border-red-300 bg-red-50 text-red-800 text-sm">
     <p class="font-bold mb-1">⛔ Materias primas desactivadas en esta receta</p>
-    <p class="mb-1">
-      Esta receta contiene las siguientes materias primas que están desactivadas.
-      El producto <strong>no podrá ser activado</strong> hasta que se reactiven o eliminen de la receta:
-    </p>
+    <p class="mb-1">Esta receta contiene materias primas desactivadas. El producto <strong>no podrá ser activado</strong> hasta que se reactiven o eliminen:</p>
     <ul class="list-disc list-inside space-y-0.5 mt-1">
       {% for nombre_mp in ingredientes_desactivados %}
       <li>{{ nombre_mp }}</li>
@@ -59,14 +55,14 @@
   </div>
   {% endif %}
 
-  <!-- ══ ALERTA: Receta corta ══ -->
+  <!-- ══ ALERTA: Receta incompleta ══ -->
   {% if receta_corta %}
-  <div class="mb-4 p-4 rounded-xl border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm">
-    <p class="font-bold mb-1">⚠ Receta incompleta</p>
+  <div class="mb-4 p-4 rounded-xl border border-orange-300 bg-orange-50 text-orange-800 text-sm">
+    <p class="font-bold mb-1">⚠ Receta incompleta — El producto no podrá activarse</p>
     <p>
-      Esta receta tiene solo <strong>{{ detalles_receta|length }}</strong> insumo(s).
-      Se recomienda incluir al menos <strong>{{ minimo_insumos }}</strong> insumos para una receta completa.
-      Esto es solo un aviso y no afecta el funcionamiento del sistema.
+      Esta receta solo tiene <strong>{{ detalles_receta|length }}</strong> insumo(s).
+      Se requieren <strong>al menos {{ minimo_insumos }}</strong> insumos para que el producto pueda ser activado y vendido.
+      Agrega más ingredientes ya sea uno por uno o usando una <strong>mini receta</strong>.
     </p>
   </div>
   {% endif %}
@@ -81,6 +77,14 @@
       </svg>
       Volver a productos
     </a>
+    <a href="{{ url_for('miniRecetas.listado') }}"
+      class="inline-flex items-center gap-1.5 text-white font-semibold px-4 py-2 rounded-full shadow transition-all duration-300 hover:brightness-110 text-sm"
+      style="background-color: #6b46c1;">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M5.75 2A2.75 2.75 0 0 0 3 4.75v10.5A2.75 2.75 0 0 0 5.75 18h8.5A2.75 2.75 0 0 0 17 15.25V6.56a2.75 2.75 0 0 0-.805-1.945l-1.81-1.81A2.75 2.75 0 0 0 12.44 2H5.75Z"/>
+      </svg>
+      Gestionar Mini Recetas
+    </a>
     <span class="text-xs font-bold px-3 py-1.5 rounded-full" style="background-color: #f5e6d3; color: #38230f;">
       Tamaño: {{ tamano_producto or 'Sin definir' }}
     </span>
@@ -88,9 +92,9 @@
       Precio: ${{ producto.precio }}
     </span>
     <span class="text-xs font-bold px-3 py-1.5 rounded-full
-      {% if detalles_receta|length < minimo_insumos and receta %}bg-yellow-100 text-yellow-800{% else %}{% endif %}"
+      {% if detalles_receta|length < minimo_insumos and receta %}bg-orange-100 text-orange-800{% endif %}"
       style="{% if not (detalles_receta|length < minimo_insumos and receta) %}background-color: #f5e6d3; color: #38230f;{% endif %}">
-      Ingredientes: {{ detalles_receta|length }}
+      Ingredientes: {{ detalles_receta|length }} / {{ minimo_insumos }} mín.
       {% if receta_corta %} ⚠{% endif %}
     </span>
   </div>
@@ -116,10 +120,10 @@
   <!-- ══ GRID PRINCIPAL ══ -->
   <div class="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-5 mb-6">
 
-    <!-- ── Columna izquierda: Receta base ── -->
+    <!-- ── Columna izquierda ── -->
     <div class="space-y-5">
 
-      <!-- Card: Guardar receta -->
+      <!-- Card: Guardar receta base -->
       <div class="bg-white rounded-2xl shadow-md overflow-hidden">
         <div class="px-4 sm:px-5 py-3" style="background-color: #38230f;">
           <h2 class="text-sm font-bold text-white tracking-wide uppercase">Receta Base</h2>
@@ -143,7 +147,59 @@
         </div>
       </div>
 
-      <!-- Card: Eliminar receta (solo si existe) -->
+      <!-- Card: Agregar mini receta -->
+      {% if mini_recetas_activas %}
+      <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+        <div class="px-4 sm:px-5 py-3" style="background-color: #6b46c1;">
+          <h2 class="text-sm font-bold text-white tracking-wide uppercase">Agregar Mini Receta</h2>
+        </div>
+        <div class="p-5">
+          <p class="text-xs text-gray-500 mb-3">
+            Selecciona una mini receta para agregar automáticamente todos sus insumos a esta receta.
+            Los insumos que ya existen en la receta no se duplicarán.
+          </p>
+          <form method="POST" action="{{ url_for('recetas.aplicar_mini_receta', id_producto=producto.idProducto) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Mini receta <span class="text-red-500">*</span></label>
+              <select name="idMiniReceta" id="sel-mini-receta" required
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] focus:border-transparent transition"
+                onchange="previsualizarMiniReceta(this.value)">
+                <option value="">Selecciona una mini receta...</option>
+                {% for mr in mini_recetas_activas %}
+                <option value="{{ mr.idMiniReceta }}">{{ mr.nombre }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <!-- Preview de insumos -->
+            <div id="mini-preview" class="hidden mb-3 p-3 rounded-lg bg-purple-50 border border-purple-200 text-xs text-purple-800">
+              <p class="font-semibold mb-1">Insumos que se agregarán:</p>
+              <div id="mini-preview-lista" class="space-y-0.5"></div>
+            </div>
+            <button type="submit"
+              class="w-full text-white font-semibold px-4 py-2 rounded-lg shadow transition-all duration-300 hover:brightness-110 text-sm"
+              style="background-color: #6b46c1;">
+              Aplicar mini receta
+            </button>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+        <div class="px-4 sm:px-5 py-3" style="background-color: #6b46c1;">
+          <h2 class="text-sm font-bold text-white tracking-wide uppercase">Mini Recetas</h2>
+        </div>
+        <div class="p-5 text-center text-sm text-gray-400">
+          <p>No hay mini recetas activas disponibles.</p>
+          <a href="{{ url_for('miniRecetas.listado') }}"
+            class="inline-block mt-2 text-purple-600 font-semibold hover:underline text-xs">
+            Crear mini recetas →
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Card: Zona de peligro -->
       {% if receta %}
       <div class="bg-white rounded-2xl shadow-md overflow-hidden">
         <div class="px-4 sm:px-5 py-3 bg-red-600">
@@ -169,7 +225,7 @@
       </div>
       <div class="p-5">
 
-        <!-- Form agregar insumo -->
+        <!-- Form agregar insumo individual -->
         <form method="POST" action="{{ url_for('recetas.agregar_detalle_receta', id_producto=producto.idProducto) }}"
           class="mb-5 pb-5 border-b border-gray-100">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -180,6 +236,7 @@
           </div>
           {% endif %}
 
+          <p class="text-xs text-gray-500 mb-2 font-semibold">Agregar insumo individual:</p>
           <div class="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-3 items-end">
             <div>
               <label class="block text-xs font-semibold text-gray-700 mb-1">Materia prima <span class="text-red-500">*</span></label>
@@ -218,7 +275,7 @@
               <tr style="background-color: #38230f;">
                 <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Materia prima</th>
                 <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Cantidad</th>
-                <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Actualizar</th>
+                <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Guardar</th>
                 <th class="px-4 py-3 text-white font-bold uppercase tracking-wide text-xs">Eliminar</th>
               </tr>
             </thead>
@@ -231,9 +288,7 @@
                 <td class="px-4 py-3 font-semibold {% if mp_desactivada %}text-red-700{% else %}text-gray-800{% endif %}">
                   {{ detalle.materia_prima.nombre }}
                   {% if mp_desactivada %}
-                  <span class="ml-1 text-xs font-semibold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">
-                    Desactivada
-                  </span>
+                  <span class="ml-1 text-xs font-semibold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">Desactivada</span>
                   {% endif %}
                 </td>
                 <td class="px-4 py-3">
@@ -285,8 +340,8 @@
 <!-- ══ MODAL CONFIRMAR ELIMINAR INSUMO ══ -->
 <div id="modalEliminarInsumo" tabindex="-1"
   class="hidden fixed inset-0 z-50 flex items-center justify-center"
-  style="background-color: rgba(0,0,0,0.3);">
-  <div class="bg-white rounded-2xl shadow-xl p-5 w-80 text-center">
+  style="background-color: rgba(0,0,0,0.45);">
+  <div class="bg-white rounded-2xl shadow-xl p-5 w-80 text-center" onclick="event.stopPropagation()">
     <div class="flex justify-center mb-3">
       <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
         <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -317,8 +372,8 @@
 <!-- ══ MODAL CONFIRMAR ELIMINAR RECETA COMPLETA ══ -->
 <div id="modalEliminarReceta" tabindex="-1"
   class="hidden fixed inset-0 z-50 flex items-center justify-center"
-  style="background-color: rgba(0,0,0,0.3);">
-  <div class="bg-white rounded-2xl shadow-xl p-5 w-80 text-center">
+  style="background-color: rgba(0,0,0,0.45);">
+  <div class="bg-white rounded-2xl shadow-xl p-5 w-80 text-center" onclick="event.stopPropagation()">
     <div class="flex justify-center mb-3">
       <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
         <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -352,40 +407,57 @@
 
 
 <script>
-  /* ── Modales (mismo patrón que productos) ── */
-  function abrirModal(id) {
-    document.getElementById(id).classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-  }
+/* ── Datos de mini recetas para previsualizar ── */
+const MINI_RECETAS_DATA = {{ mini_recetas_data_json | safe }};
 
-  function cerrarModal(id) {
-    document.getElementById(id).classList.add('hidden');
+function previsualizarMiniReceta(idMR) {
+  const preview = document.getElementById('mini-preview');
+  const lista = document.getElementById('mini-preview-lista');
+  if (!idMR) { preview.classList.add('hidden'); return; }
+  const data = MINI_RECETAS_DATA[idMR];
+  if (!data || !data.detalles || data.detalles.length === 0) {
+    preview.classList.add('hidden'); return;
+  }
+  lista.innerHTML = data.detalles.map(d =>
+    `<div class="flex justify-between">
+       <span>${d.nombre}</span>
+       <span class="font-semibold">${d.cantidad} ${d.unidad}</span>
+     </div>`
+  ).join('');
+  preview.classList.remove('hidden');
+}
+
+/* ── Modales ── */
+function abrirModal(id) {
+  document.getElementById(id).classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function cerrarModal(id) {
+  document.getElementById(id).classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+/* ── Cerrar al click en el backdrop ── */
+['modalEliminarInsumo', 'modalEliminarReceta'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) cerrarModal(id);
+  });
+});
+
+/* ── Escape ── */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    ['modalEliminarInsumo', 'modalEliminarReceta'].forEach(cerrarModal);
     document.body.style.overflow = '';
   }
+});
 
-  /* ── Cerrar al click fuera ── */
-  ['modalEliminarInsumo', 'modalEliminarReceta'].forEach(id => {
-    document.getElementById(id).addEventListener('click', function (e) {
-      if (e.target === this) cerrarModal(id);
-    });
-  });
-
-  /* ── Escape ── */
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') {
-      ['modalEliminarInsumo', 'modalEliminarReceta'].forEach(cerrarModal);
-      document.body.style.overflow = '';
-    }
-  });
-
-  /* ── Confirmar eliminar insumo ── */
-  function abrirConfirmEliminar(idDetalle, nombreMp) {
-    document.getElementById('msgEliminarInsumo').textContent =
-      `¿Eliminar "${nombreMp}" de esta receta?`;
-    document.getElementById('formEliminarInsumo').action =
-      `/recetas/detalle/${idDetalle}/eliminar`;
-    abrirModal('modalEliminarInsumo');
-  }
+/* ── Confirmar eliminar insumo ── */
+function abrirConfirmEliminar(idDetalle, nombreMp) {
+  document.getElementById('msgEliminarInsumo').textContent = `¿Eliminar "${nombreMp}" de esta receta?`;
+  document.getElementById('formEliminarInsumo').action = `/recetas/detalle/${idDetalle}/eliminar`;
+  abrirModal('modalEliminarInsumo');
+}
 </script>
 
 {% endblock %}

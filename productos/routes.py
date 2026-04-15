@@ -241,11 +241,48 @@ def _validar_activacion_producto(id_producto):
 
     return True, None
 
+def _capacidad_produccion(id_producto):
+    """
+    Calcula cuántas unidades del producto se pueden fabricar
+    con el stock actual de materias primas en su receta.
+    Devuelve un entero (0 si no tiene receta o faltan insumos).
+    """
+    from sqlalchemy import text
+    filas = db.session.execute(
+        text("""
+            SELECT
+                mp.nombre,
+                mp.stock         AS stock_mp,
+                dr.cantidad      AS cantidad_receta
+            FROM recetas r
+            JOIN detalleReceta dr ON dr.idReceta   = r.idReceta
+            JOIN materiasPrimas mp ON mp.idMateriaP = dr.idMateriaP
+            WHERE r.idProducto = :id
+              AND mp.estatus    = 1
+        """),
+        {"id": id_producto},
+    ).fetchall()
+
+    if not filas:
+        return 0
+
+    minimo = None
+    for fila in filas:
+        stock_mp       = float(fila[1] or 0)
+        cantidad_receta = float(fila[2] or 0)
+        if cantidad_receta <= 0:
+            continue
+        posibles = int(stock_mp // cantidad_receta)
+        if minimo is None or posibles < minimo:
+            minimo = posibles
+
+    return minimo if minimo is not None else 0
+
 
 # ── Rutas ──────────────────────────────────────────────────────────────────────
 
 @productos.route("/productos")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def listado_productos():
     nombre = request.args.get("nombre", "").strip()
     precio_inicio = request.args.get("precio_inicio", "").strip()
@@ -305,7 +342,13 @@ def listado_productos():
                 if clave in nombre_p:
                     imagen_fallback = ruta
                     break
-        productos_final.append({**p, "imagen_b64": imagen_b64, "imagen_fallback": imagen_fallback})
+        capacidad = _capacidad_produccion(p["idProducto"])
+        productos_final.append({
+            **p,
+            "imagen_b64": imagen_b64,
+            "imagen_fallback": imagen_fallback,
+            "capacidad_produccion": capacidad,
+        })
 
     filtros = {
         "nombre": nombre,
@@ -327,7 +370,7 @@ def listado_productos():
 
 
 @productos.route("/registrar-producto", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def registrar_producto():
     datos_formulario = {}
     try:
@@ -403,7 +446,7 @@ def registrar_producto():
 
 
 @productos.route("/editar-producto/<int:id>", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def editar_producto(id):
     datos_formulario = {"id": id}
     try:
@@ -482,7 +525,7 @@ def editar_producto(id):
 
 
 @productos.route("/cambiar-estatus-producto/<int:id>/<int:estatus>")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Cocinero")
 def cambiar_estatus_producto(id, estatus):
     """
     Igual que materias primas: recibe el estatus actual en la URL y lo invierte.
@@ -523,7 +566,7 @@ def cambiar_estatus_producto(id, estatus):
 
 
 @productos.route("/productosTerminados")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador", "Cocinero", "Ventas")
 def listado_productos_terminados():
     """
     Lista solo productos ACTIVOS con receta activa.
@@ -594,7 +637,13 @@ def listado_productos_terminados():
         if stock_filtro == "sin_stock" and stock_actual > 0:
             continue
 
-        productos_final.append({**p, "imagen_b64": imagen_b64, "imagen_fallback": imagen_fallback})
+        capacidad = _capacidad_produccion(p["idProducto"])
+        productos_final.append({
+            **p,
+            "imagen_b64": imagen_b64,
+            "imagen_fallback": imagen_fallback,
+            "capacidad_produccion": capacidad,
+        })
 
     filtros = {
         "nombre":       nombre,
@@ -613,7 +662,7 @@ def listado_productos_terminados():
 
 
 @productos.route("/productos-terminados/actualizar-stock/<int:id>", methods=["POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador","Ventas","Cocinero")
 def actualizar_stock_producto_terminado(id):
     """
     Recibe el nuevo stock desde el formulario (campo 'nuevo_stock')

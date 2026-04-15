@@ -45,7 +45,7 @@ def _alertas_stock():
 
 @dashboard.route("/")
 @dashboard.route("/dashboard")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador", "Ventas")
 def index():
     hoy      = date.today()
     hoy_str  = hoy.isoformat()
@@ -57,19 +57,22 @@ def index():
         {"uid": session["usuario_id"]}
     ).scalar() or "Administrador"
 
-    # ── Resumen ventas HOY ──────────────────────────────────────────
+    # ── Resumen ventas HOY (punto venta + online) ───────────────────
     resumen_hoy = _q1("""
         SELECT
             COALESCE(SUM(dv.cantidad * dv.precio), 0) AS total_ventas,
-            COUNT(DISTINCT v.idVenta)                  AS num_ventas
+            COUNT(DISTINCT v.idVenta)                  AS num_ventas,
+            COALESCE(SUM(CASE WHEN v.tipo = 'Punto venta' THEN dv.cantidad * dv.precio ELSE 0 END), 0) AS ventas_pv,
+            COALESCE(SUM(CASE WHEN v.tipo = 'En linea'    THEN dv.cantidad * dv.precio ELSE 0 END), 0) AS ventas_ol,
+            COUNT(DISTINCT CASE WHEN v.tipo = 'Punto venta' THEN v.idVenta END) AS num_pv,
+            COUNT(DISTINCT CASE WHEN v.tipo = 'En linea'    THEN v.idVenta END) AS num_ol
         FROM ventas v
         JOIN detalleVenta dv ON dv.idVenta = v.idVenta
         WHERE v.estado = 'Confirmada'
-          AND v.tipo   = 'Punto venta'
           AND DATE(v.fecha) = :hoy
     """, {"hoy": hoy_str})
 
-    # ── Resumen ventas MES ──────────────────────────────────────────
+    # ── Resumen ventas MES (punto venta + online) ───────────────────
     resumen_mes = _q1("""
         SELECT
             COALESCE(SUM(dv.cantidad * dv.precio), 0) AS total_ventas,
@@ -81,12 +84,14 @@ def index():
           AND DATE(v.fecha) BETWEEN :ini AND :fin
     """, {"ini": ini_mes, "fin": hoy_str})
 
-    # ── Ventas ultimos 7 dias ───────────────────────────────────────
+    # ── Ventas ultimos 7 dias (ambos canales) ───────────────────────
     ventas_7d = _q("""
         SELECT
-            DATE(v.fecha)                                   AS dia,
-            COUNT(DISTINCT v.idVenta)                       AS num_ventas,
-            COALESCE(SUM(dv.cantidad * dv.precio), 0)       AS total_ingresos
+            DATE(v.fecha)                                                           AS dia,
+            COUNT(DISTINCT v.idVenta)                                               AS num_ventas,
+            COALESCE(SUM(dv.cantidad * dv.precio), 0)                               AS total_ingresos,
+            COALESCE(SUM(CASE WHEN v.tipo='Punto venta' THEN dv.cantidad*dv.precio ELSE 0 END),0) AS ingresos_pv,
+            COALESCE(SUM(CASE WHEN v.tipo='En linea'    THEN dv.cantidad*dv.precio ELSE 0 END),0) AS ingresos_ol
         FROM ventas v
         JOIN detalleVenta dv ON dv.idVenta = v.idVenta
         WHERE v.estado = 'Confirmada'
@@ -100,21 +105,7 @@ def index():
         if isinstance(row["dia"], str):
             row["dia"] = datetime.strptime(row["dia"], "%Y-%m-%d").date()
 
-    # ── Metodo de pago HOY ──────────────────────────────────────────
-    pago_hoy = _q("""
-        SELECT
-            v.metodoPago,
-            COUNT(DISTINCT v.idVenta)                  AS num_ventas,
-            COALESCE(SUM(dv.cantidad * dv.precio), 0)  AS total_ingresos
-        FROM ventas v
-        JOIN detalleVenta dv ON dv.idVenta = v.idVenta
-        WHERE v.estado = 'Confirmada'
-          AND DATE(v.fecha) = :hoy
-        GROUP BY v.metodoPago
-        ORDER BY total_ingresos DESC
-    """, {"hoy": hoy_str})
-
-    # ── Top 5 productos del mes ─────────────────────────────────────
+    # ── Top 5 productos del mes (ambos canales) ─────────────────────
     top_productos = _q("""
         SELECT
             p.nombre                                        AS nombre_producto,
@@ -131,20 +122,6 @@ def index():
         ORDER BY unidades_vendidas DESC
         LIMIT 5
     """, {"ini": ini_mes, "fin": hoy_str})
-
-    # ── Ventas por hora HOY ─────────────────────────────────────────
-    ventas_por_hora = _q("""
-        SELECT
-            HOUR(v.fecha)                                   AS hora,
-            COUNT(DISTINCT v.idVenta)                       AS num_ventas,
-            COALESCE(SUM(dv.cantidad * dv.precio), 0)       AS total_ingresos
-        FROM ventas v
-        JOIN detalleVenta dv ON dv.idVenta = v.idVenta
-        WHERE v.estado = 'Confirmada'
-          AND DATE(v.fecha) = :hoy
-        GROUP BY HOUR(v.fecha)
-        ORDER BY hora ASC
-    """, {"hoy": hoy_str})
 
     # ── Ordenes de produccion activas y recientes ───────────────────
     ordenes_activas = _q("""
@@ -163,8 +140,26 @@ def index():
         LIMIT 7
     """)
 
-    # ── Ventas individuales HOY (lista de actividad) ────────────────
+    # ── Ventas individuales HOY — ambos canales ─────────────────────
     ventas_hoy = _q("""
+        SELECT
+            v.idVenta,
+            v.nombreCliente,
+            v.metodoPago,
+            v.estado,
+            v.tipo,
+            v.fecha,
+            COALESCE(SUM(dv.cantidad * dv.precio), 0) AS total
+        FROM ventas v
+        JOIN detalleVenta dv ON dv.idVenta = v.idVenta
+        WHERE DATE(v.fecha) = :hoy
+        GROUP BY v.idVenta, v.nombreCliente, v.metodoPago, v.estado, v.tipo, v.fecha
+        ORDER BY v.fecha DESC
+        LIMIT 20
+    """, {"hoy": hoy_str})
+
+    # ── Ventas online HOY — detalle ─────────────────────────────────
+    ventas_online_hoy = _q("""
         SELECT
             v.idVenta,
             v.nombreCliente,
@@ -175,6 +170,7 @@ def index():
         FROM ventas v
         JOIN detalleVenta dv ON dv.idVenta = v.idVenta
         WHERE DATE(v.fecha) = :hoy
+          AND v.tipo = 'En linea'
         GROUP BY v.idVenta, v.nombreCliente, v.metodoPago, v.estado, v.fecha
         ORDER BY v.fecha DESC
         LIMIT 15
@@ -201,31 +197,6 @@ def index():
         ORDER BY valor_perdida DESC
     """, {"hoy": hoy_str})
 
-    # ── Compras recientes ───────────────────────────────────────────
-    compras_recientes = _q("""
-        SELECT
-            c.idCompra,
-            c.fecha,
-            c.estatus,
-            p.nombre  AS nombre_proveedor,
-            u.nombre  AS nombre_usuario
-        FROM compras c
-        JOIN proveedores p ON p.idProveedor = c.idProveedor
-        JOIN usuarios u    ON u.idUsuario   = c.idUsuario
-        ORDER BY c.fecha DESC
-        LIMIT 6
-    """)
-
-    # ── Cortes de caja recientes ────────────────────────────────────
-    cortes_recientes = _q("""
-        SELECT cc.fecha, cc.turno, cc.totalVentas, cc.diferencia,
-               u.nombre AS nombre_usuario
-        FROM corteCaja cc
-        JOIN usuarios u ON u.idUsuario = cc.idUsuario
-        ORDER BY cc.fecha DESC, cc.fechaCreacion DESC
-        LIMIT 5
-    """)
-
     # ── Alertas de stock ────────────────────────────────────────────
     alertas_stock = _alertas_stock()
 
@@ -234,20 +205,17 @@ def index():
 
     return render_template(
         "dashboard.html",
-        nombre_usuario   = nombre_usuario,
-        fecha_hoy        = hoy.strftime("%d de %B de %Y"),
-        resumen_hoy      = resumen_hoy,
-        resumen_mes      = resumen_mes,
-        ventas_7d        = ventas_7d,
-        pago_hoy         = pago_hoy,
-        top_productos    = top_productos,
-        ventas_por_hora  = ventas_por_hora,
-        ordenes_activas  = ordenes_activas,
-        ordenes_recientes= ordenes_recientes,
-        ventas_hoy       = ventas_hoy,
-        mermas_hoy       = mermas_hoy,
-        compras_recientes= compras_recientes,
-        cortes_recientes = cortes_recientes,
-        alertas_stock    = alertas_stock,
-        meta_diaria      = META_DIARIA,
+        nombre_usuario    = nombre_usuario,
+        fecha_hoy         = hoy.strftime("%d de %B de %Y"),
+        resumen_hoy       = resumen_hoy,
+        resumen_mes       = resumen_mes,
+        ventas_7d         = ventas_7d,
+        top_productos     = top_productos,
+        ordenes_activas   = ordenes_activas,
+        ordenes_recientes = ordenes_recientes,
+        ventas_hoy        = ventas_hoy,
+        ventas_online_hoy = ventas_online_hoy,
+        mermas_hoy        = mermas_hoy,
+        alertas_stock     = alertas_stock,
+        meta_diaria       = META_DIARIA,
     )
