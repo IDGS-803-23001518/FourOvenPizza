@@ -20,6 +20,7 @@ from miniRecetas.routes import miniRecetas
 from respaldos.routes import respaldos
 from models import db
 from autentificacion.routes import registrar_acceso
+from db_session import init_role_switching
 
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -44,15 +45,14 @@ app.register_blueprint(miniRecetas)
 app.register_blueprint(respaldos)
 
 db.init_app(app)
+init_role_switching(app, db)
 
 
-# Rutas públicas que no deben disparar la verificación de sesión
 RUTAS_PUBLICAS = {'autentificacion.login', 'autentificacion.logout', 'autentificacion.reset_contrasenia', 'static'}
 
 
 @app.before_request
 def verificar_sesion():
-    # No verificar en rutas públicas para evitar bucles y doble registro
     if request.endpoint in RUTAS_PUBLICAS:
         return
 
@@ -67,14 +67,11 @@ def verificar_sesion():
             ultima = datetime.fromisoformat(ultima)
 
         if (ahora - ultima) > timedelta(minutes=10):
-            # Guardar datos antes de limpiar la sesión
             usuario_id = session.get('usuario_id')
             usuario_nombre = session.get('usuario_nombre')
 
-            # Limpiar primero para que el redirect no vuelva a entrar aquí
             session.clear()
 
-            # Registrar UNA SOLA VEZ después de limpiar
             registrar_acceso(
                 usuario_id,
                 usuario_nombre,
@@ -132,7 +129,6 @@ def inject_layout():
 
 @app.errorhandler(CSRFError)
 def manejar_csrf_error(e):
-    # Token expirado (típicamente por sesión expirada): redirigir al login limpiamente
     flash('Tu sesión ha expirado. Por favor inicia sesión de nuevo.', 'warning')
     return redirect(url_for('autentificacion.login'))
 

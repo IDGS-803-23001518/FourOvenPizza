@@ -264,11 +264,18 @@ def login():
                 return render_template("autentificacion/login.html", form=form)
 
             session.clear()
-            session['usuario_id'] = usuario.idUsuario
+            session['usuario_id']     = usuario.idUsuario
             session['usuario_nombre'] = usuario.nombre
-            session['usuario_user'] = usuario.usuario
+            session['usuario_user']   = usuario.usuario
             session['usuario_rol_id'] = usuario.idRol
-            session['usuario_rol'] = usuario.rol.nombre
+            session['usuario_rol']    = usuario.rol.nombre
+
+            _db_user_map = {
+                'Administrador': 'administrador',
+                'Ventas':        'ventas',
+                'Cocinero':      'cocina',
+            }
+            session['db_user'] = _db_user_map.get(usuario.rol.nombre, 'ventas')
             session.permanent = True
 
             registrar_acceso(usuario.idUsuario, usuario.nombre, 'LOGIN', 'EXITOSO')

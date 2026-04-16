@@ -51,8 +51,8 @@ COLUMNAS_TIMESTAMP = [
     'fecha_hora', 'fecha', 'fechaRegistro',
 ]
 
-BACKUP_DB_USER = 'backup_agent'
-BACKUP_DB_PASS = 'Bk@g3nt_F0urOv3n#2024!'
+BACKUP_DB_USER = 'root'
+BACKUP_DB_PASS = '5522'
 BACKUP_DB_HOST = '127.0.0.1'
 BACKUP_DB_NAME = 'fourovenpizzadb'
 BACKUP_DB_PORT = '3306'
@@ -348,21 +348,6 @@ def _generar_incremental(ruta_salida: str,
                           tablas_objetivo: list | None,
                           solo_datos: bool,
                           solo_estructura: bool) -> tuple[bool, str]:
-    """
-    Genera un archivo SQL con SOLO los datos nuevos/modificados desde fecha_ref.
-
-    Estrategia:
-    1. Para cada tabla con columna de timestamp, extrae filas donde
-       columna_ts >= fecha_ref usando SELECT ... INTO OUTFILE emulado con
-       mysqldump --where.
-    2. Si la tabla no tiene columna de timestamp, se omite con una nota
-       en el encabezado del archivo (no se puede determinar qué es nuevo).
-    3. Si solo_estructura=True, se genera solo el DDL incremental (sin datos),
-       que en la práctica equivale a un diff de estructura — incluimos un
-       comentario explicativo.
-
-    Retorna (éxito: bool, mensaje_error: str)
-    """
     exe_dump = _buscar_ejecutable('mysqldump')
     tablas_a_procesar = tablas_objetivo or _obtener_todas_tablas()
     fecha_str = fecha_ref.strftime('%Y-%m-%d %H:%M:%S')
@@ -382,11 +367,10 @@ def _generar_incremental(ruta_salida: str,
         "START TRANSACTION;\n\n",
     ]
 
-    tablas_sin_ts   = []
-    tablas_con_ts   = []
-    tablas_vacias   = []
+    tablas_sin_ts = []
+    tablas_con_ts = []
+    tablas_vacias = []
 
-    # Clasificar tablas
     for tabla in tablas_a_procesar:
         col_ts = _columna_timestamp_de_tabla(tabla)
         if col_ts:
@@ -406,9 +390,6 @@ def _generar_incremental(ruta_salida: str,
                 f.write("\n")
 
             if solo_estructura:
-                # El incremental de estructura no tiene sentido real porque
-                # mysqldump no detecta DDL-diff. Incluimos el DDL actual de
-                # cada tabla seleccionada como referencia.
                 f.write("-- NOTA: El respaldo incremental de Solo Estructura incluye\n")
                 f.write("-- el DDL actual de las tablas con columna de timestamp.\n\n")
                 for tabla, _ in tablas_con_ts:
@@ -428,16 +409,13 @@ def _generar_incremental(ruta_salida: str,
                         f.write(f"-- ERROR al volcar estructura de {tabla}: {err}\n\n")
 
             else:
-                # Datos nuevos/modificados por tabla
                 for tabla, col_ts in tablas_con_ts:
-                    clausula_where = (
-                        f"`{col_ts}` >= '{fecha_str}'"
-                    )
+                    clausula_where = f"`{col_ts}` >= '{fecha_str}'"
                     cmd = [
                         exe_dump, *_args_conexion(),
-                        '--no-create-info',       # Solo INSERT, sin CREATE TABLE
+                        '--no-create-info',
                         '--skip-triggers',
-                        '--complete-insert',      # INSERT con nombres de columnas
+                        '--complete-insert',
                         '--single-transaction',
                         '--skip-lock-tables',
                         '--set-gtid-purged=OFF',
@@ -454,14 +432,10 @@ def _generar_incremental(ruta_salida: str,
                         f.write(f"-- ERROR volcando {tabla}: {err}\n\n")
                         continue
 
-                    # Detectar si hay datos reales (más que solo comentarios/cabeceras)
-                    tiene_inserts = 'INSERT INTO' in salida
-                    if tiene_inserts:
-                        tablas_vacias_flag = False
+                    if 'INSERT INTO' in salida:
                         f.write(f"-- Tabla: {tabla}  |  filtro: {col_ts} >= '{fecha_str}'\n")
                         f.write(salida)
                         f.write("\n")
-                        tablas_con_ts_con_datos = True
                     else:
                         tablas_vacias.append(tabla)
 
@@ -699,6 +673,24 @@ def restaurar():
         if re.search(p, contenido_str, re.IGNORECASE):
             return jsonify({'success': False,
                             'message': 'El archivo contiene instrucciones no permitidas'})
+
+    # ── Limpiar sentencias que requieren SYSTEM_USER o SUPER ──────────────
+    # Elimina SET @@SESSION.SQL_LOG_BIN y similares (línea completa)
+    contenido_str = re.sub(
+        r'^SET\s+@@(SESSION\.|GLOBAL\.)?SQL_LOG_BIN\s*=.*?;\s*$',
+        '',
+        contenido_str,
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
+    # Elimina el DEFINER de CREATE PROCEDURE/FUNCTION/VIEW/TRIGGER/EVENT
+    contenido_str = re.sub(
+        r'\bDEFINER\s*=\s*`[^`]+`\s*@\s*`[^`]+`',
+        '',
+        contenido_str,
+        flags=re.IGNORECASE,
+    )
+    contenido = contenido_str.encode('utf-8')
+    # ─────────────────────────────────────────────────────────────────────
 
     try:
         _buscar_ejecutable('mysql')
