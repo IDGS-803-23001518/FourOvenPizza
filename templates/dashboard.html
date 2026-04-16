@@ -138,27 +138,27 @@
     </div>
 
     <!-- Accesos rápidos -->
-    <div class="flex flex-col gap-3 anim-up-2">
-      <p class="text-xs font-bold uppercase tracking-widest" style="color:#38230f;">Accesos rápidos</p>
+    <div class="flex flex-col gap-3 anim-up-2 rounded-2xl p-4 shadow-lg" style="background-color: #38230f;">
+      <p class="text-xs font-bold uppercase tracking-widest text-white">Accesos rápidos</p>
       <a href="{{ url_for('caja.utilidades') }}"
-         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
-        <span>&#9783;</span> Reporte utilidades
+         class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background: #4a3a2a; color: white; border: 1px solid rgba(242,159,5,0.3);">
+        <span style="color: #f29f05;">&#9783;</span> Reporte utilidades
       </a>
       <a href="{{ url_for('caja.corte_caja') }}"
-         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
-        <span>&#9635;</span> Corte de caja
+         class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background: #4a3a2a; color: white; border: 1px solid rgba(242,159,5,0.3);">
+        <span style="color: #f29f05;">&#9635;</span> Corte de caja
       </a>
       <a href="{{ url_for('ventas.punto_venta') }}"
-         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
-        <span>&#9786;</span> Nueva venta
+         class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background: #4a3a2a; color: white; border: 1px solid rgba(242,159,5,0.3);">
+        <span style="color: #f29f05;">&#9786;</span> Nueva venta
       </a>
       <a href="{{ url_for('produccion.listado_ordenes') }}"
-         class="flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-         style="background:#fdf6ec; border-color:rgba(56,35,15,0.10); color:#38230f;">
-        <span>&#9776;</span> Producción
+         class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+         style="background: #4a3a2a; color: white; border: 1px solid rgba(242,159,5,0.3);">
+        <span style="color: #f29f05;">&#9776;</span> Producción
       </a>
     </div>
 

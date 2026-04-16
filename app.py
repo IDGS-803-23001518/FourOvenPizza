@@ -100,15 +100,11 @@ def inicio():
         return redirect(url_for('autentificacion.login'))
 
     rol = session.get('usuario_rol')
-
+    
     if rol == 'Administrador':
         return redirect(url_for('dashboard.index'))
-    elif rol == 'Ventas':
-        return render_template("inicio.html")
-    elif rol == 'Cocinero':
-        return render_template("inicio.html")
-    else:
-        return render_template("inicio.html")
+    
+    return render_template("inicio.html")
 
 
 @app.route("/dashboard-redirect")
