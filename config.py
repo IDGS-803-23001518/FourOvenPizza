@@ -20,7 +20,7 @@ class Config(object):
         'Cocinero':      'mysql+pymysql://cocina:CocineroPass2024!@127.0.0.1/fourovenpizzadb',
     }
     # URI de arranque (solo para db.init_app y create_all — usa root)
-    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://administrador:AdminPass2024!@127.0.0.1/fourovenpizzadb'
+    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:5522@127.0.0.1/fourovenpizzadb'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 class DevelopmentConfig(Config):
