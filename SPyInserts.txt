@@ -3882,6 +3882,26 @@ BEGIN
 END$$
 DELIMITER ;
 
+CREATE TABLE IF NOT EXISTS bitacora_respaldos (
+    idRespaldo      INT AUTO_INCREMENT PRIMARY KEY,
+    tipo            VARCHAR(30)  NOT NULL,          -- 'Completo' | 'Incremental' | 'Restauracion' | 'Parcial'
+    subtipo         VARCHAR(30)  NOT NULL DEFAULT 'Estructura+Datos', -- 'Solo datos' | 'Solo estructura' | 'Estructura+Datos'
+    tablas          TEXT         NULL,               -- NULL = todas, o lista separada por coma
+    archivo         VARCHAR(500) NOT NULL,           -- ruta/nombre del archivo generado
+    tamano_bytes    BIGINT       NOT NULL DEFAULT 0,
+    estado          VARCHAR(20)  NOT NULL DEFAULT 'Exitoso', -- 'Exitoso' | 'Fallido' | 'En proceso'
+    detalle_error   TEXT         NULL,
+    fecha_referencia DATETIME    NULL,               -- Para incrementales: fecha del último respaldo
+    fecha_inicio    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_fin       DATETIME     NULL,
+    duracion_seg    INT          NOT NULL DEFAULT 0,
+    usuarioId       INT          NOT NULL,
+    ip              VARCHAR(45)  NOT NULL DEFAULT '127.0.0.1',
+    observaciones   TEXT         NULL,
+
+    FOREIGN KEY (usuarioId) REFERENCES usuarios(idUsuario)
+) ENGINE=InnoDB;
+
 -- Índices para consultas frecuentes
 CREATE INDEX idx_br_tipo  ON bitacora_respaldos(tipo);
 CREATE INDEX idx_br_fecha ON bitacora_respaldos(fecha_inicio);
@@ -3995,3 +4015,4 @@ BEGIN
     LIMIT v_limite;
 END$$
 DELIMITER ;
+

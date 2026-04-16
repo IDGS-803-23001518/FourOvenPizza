@@ -62,7 +62,7 @@ BACKUP_DB_PORT = '3306'
 # ──────────────────────────────────────────────────────────────
 
 _RUTAS_WINDOWS = [
-    r"C:\Program Files\MySQL\MySQL Server 8.0\bin",
+    r"C:\Program Files\MySQL\MySQL Server 9.0\bin",
     r"C:\Program Files\MySQL\MySQL Server 8.4\bin",
     r"C:\Program Files\MySQL\MySQL Server 5.7\bin",
     r"C:\Program Files (x86)\MySQL\MySQL Server 8.0\bin",
