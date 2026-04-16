@@ -258,7 +258,7 @@
   <!-- ── TABLA DESKTOP ── -->
   <div class="rounded-2xl overflow-hidden shadow-md mb-2" id="tabla-ordenes-desktop">
     <div class="overflow-x-auto">
-      <table class="w-full text-sm text-left">
+      <table class="w-full text-sm text-left border-collapse">
         <thead>
           <tr style="background-color:#38230f;">
             <th class="px-5 py-3 text-white font-bold uppercase tracking-wide"># Orden</th>
@@ -338,13 +338,14 @@
               </div>
             </td>
           </tr>
+          {% endfor %}
           {% else %}
           <tr id="fila-vacia-desktop">
             <td colspan="7" class="text-center py-12 text-gray-400 text-sm font-semibold bg-white">
               No se encontraron órdenes con los filtros seleccionados.
             </td>
           </tr>
-          {% endfor %}
+          {% endif %}
         </tbody>
       </table>
     </div>

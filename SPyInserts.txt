@@ -1911,6 +1911,56 @@ END$$
 DELIMITER ;
 
 
+--  SP: sp_listar_ordenes_produccion_paginado
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_listar_ordenes_produccion_paginado$$
+CREATE PROCEDURE sp_listar_ordenes_produccion_paginado(
+    IN p_estado     VARCHAR(50),
+    IN p_fecha_ini  DATE,
+    IN p_fecha_fin  DATE,
+    IN p_limite     INT,
+    IN p_offset     INT
+)
+BEGIN
+    SELECT
+        o.idOrden,
+        o.estado,
+        o.fecha,
+        u.nombre  AS nombre_usuario,
+        COUNT(dp.idDetalleP)                            AS total_productos,
+        SUM(dp.cantidad)                                AS total_unidades,
+        TIMESTAMPDIFF(SECOND, o.fecha, NOW())           AS segundos_desde_creacion
+    FROM ordenesProduccion o
+    JOIN usuarios u  ON u.idUsuario  = o.idUsuario
+    JOIN detalleProduccion dp ON dp.idOrden = o.idOrden
+    WHERE (p_estado    IS NULL OR o.estado  = p_estado)
+      AND (p_fecha_ini IS NULL OR DATE(o.fecha) >= p_fecha_ini)
+      AND (p_fecha_fin IS NULL OR DATE(o.fecha) <= p_fecha_fin)
+    GROUP BY o.idOrden, o.estado, o.fecha, u.nombre
+    ORDER BY o.fecha DESC
+    LIMIT p_limite OFFSET p_offset;
+END$$
+DELIMITER ;
+
+
+--  SP: sp_listar_ordenes_produccion_count
+DELIMITER $$
+DROP PROCEDURE IF EXISTS sp_listar_ordenes_produccion_count$$
+CREATE PROCEDURE sp_listar_ordenes_produccion_count(
+    IN p_estado     VARCHAR(50),
+    IN p_fecha_ini  DATE,
+    IN p_fecha_fin  DATE
+)
+BEGIN
+    SELECT COUNT(DISTINCT o.idOrden) AS total
+    FROM ordenesProduccion o
+    WHERE (p_estado    IS NULL OR o.estado  = p_estado)
+      AND (p_fecha_ini IS NULL OR DATE(o.fecha) >= p_fecha_ini)
+      AND (p_fecha_fin IS NULL OR DATE(o.fecha) <= p_fecha_fin);
+END$$
+DELIMITER ;
+
+
 --  SP: sp_detalle_orden_produccion  (detalle completo de una orden)
 DELIMITER $$
 DROP PROCEDURE IF EXISTS sp_detalle_orden_produccion$$
