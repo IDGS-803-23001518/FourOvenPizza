@@ -1,0 +1,112 @@
+-- ============================================================
+-- FourOvenPizza - Control de Acceso
+-- ============================================================
+
+-- ============================================================
+-- ROL: administradorFour (acceso total)
+-- ============================================================
+CREATE USER IF NOT EXISTS 'administrador'@'localhost' IDENTIFIED BY 'AdminPass2024!';
+GRANT ALL PRIVILEGES ON fourovenpizzadb.* TO 'administrador'@'localhost';
+
+-- ============================================================
+-- ROL: cocinaFour (producción, productos, recetas, mermas)
+-- ============================================================
+CREATE USER IF NOT EXISTS 'cocina'@'localhost' IDENTIFIED BY 'CocineroPass2024!';
+
+-- Tablas
+GRANT SELECT ON fourovenpizzadb.usuarios TO 'cocina'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.ordenesProduccion TO 'cocina'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.detalleProduccion TO 'cocina'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON fourovenpizzadb.productos TO 'cocina'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON fourovenpizzadb.recetas TO 'cocina'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON fourovenpizzadb.detalleReceta TO 'cocina'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON fourovenpizzadb.miniRecetas TO 'cocina'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON fourovenpizzadb.detalleMiniReceta TO 'cocina'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON fourovenpizzadb.mermas TO 'cocina'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON fourovenpizzadb.detalleMerma TO 'cocina'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.materiasPrimas TO 'cocina'@'localhost';
+GRANT SELECT ON fourovenpizzadb.categorias TO 'cocina'@'localhost';
+GRANT SELECT ON fourovenpizzadb.proveedores TO 'cocina'@'localhost';
+GRANT SELECT ON fourovenpizzadb.unidadesMedida TO 'cocina'@'localhost';
+GRANT INSERT ON fourovenpizzadb.bitacora_accesos TO 'cocina'@'localhost';
+GRANT INSERT ON fourovenpizzadb.bitacora_eventos TO 'cocina'@'localhost';
+GRANT INSERT ON fourovenpizzadb.bitacora_sistema TO 'cocina'@'localhost';
+
+-- Stored Procedures
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_gestion_ordenes_produccion TO 'cocina'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_listar_productos TO 'cocina'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_listar_ordenes_produccion TO 'cocina'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_ordenes_cocina TO 'cocina'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_detalle_orden_produccion TO 'cocina'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_obtener_alertas_stock_mp TO 'cocina'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_obtener_alertas_stock_receta TO 'cocina'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_gestion_productos TO 'cocina'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_cambiar_estatus_producto TO 'cocina'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_gestion_mermas TO 'cocina'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_gestion_recetas TO 'cocina'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_gestion_detalle_receta TO 'cocina'@'localhost';
+
+-- ============================================================
+-- ROL: ventasFour (ventas, caja, productos terminados)
+-- ============================================================
+CREATE USER IF NOT EXISTS 'ventas'@'localhost' IDENTIFIED BY 'VentasPass2024!';
+
+-- Tablas
+GRANT SELECT ON fourovenpizzadb.usuarios TO 'ventas'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.ventas TO 'ventas'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.detalleVenta TO 'ventas'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.ticket_venta TO 'ventas'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.detalle_ticket_venta TO 'ventas'@'localhost';
+GRANT SELECT, UPDATE ON fourovenpizzadb.productos TO 'ventas'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON fourovenpizzadb.ventaStockReservado TO 'ventas'@'localhost';
+GRANT SELECT, INSERT ON fourovenpizzadb.ordenesProduccion TO 'ventas'@'localhost';
+GRANT SELECT ON fourovenpizzadb.detalleProduccion TO 'ventas'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.cajaMovimientos TO 'ventas'@'localhost';
+GRANT SELECT, INSERT ON fourovenpizzadb.corteCaja TO 'ventas'@'localhost';
+GRANT SELECT, UPDATE ON fourovenpizzadb.materiasPrimas TO 'ventas'@'localhost';
+GRANT SELECT ON fourovenpizzadb.recetas TO 'ventas'@'localhost';
+GRANT SELECT ON fourovenpizzadb.detalleReceta TO 'ventas'@'localhost';
+GRANT SELECT ON fourovenpizzadb.mermas TO 'ventas'@'localhost';
+GRANT SELECT ON fourovenpizzadb.proveedores TO 'ventas'@'localhost';
+GRANT SELECT ON fourovenpizzadb.categorias TO 'ventas'@'localhost';
+GRANT SELECT ON fourovenpizzadb.roles TO 'ventas'@'localhost';
+GRANT INSERT ON fourovenpizzadb.bitacora_accesos TO 'ventas'@'localhost';
+GRANT INSERT ON fourovenpizzadb.bitacora_eventos TO 'ventas'@'localhost';
+GRANT INSERT ON fourovenpizzadb.bitacora_sistema TO 'ventas'@'localhost';
+
+-- Stored Procedures
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_gestion_ordenes_produccion TO 'ventas'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_listar_productos TO 'ventas'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_detalle_venta TO 'ventas'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_listar_ventas_hoy TO 'ventas'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_gestion_productos TO 'ventas'@'localhost';
+
+-- ============================================================
+-- ROL: clienteFour
+-- ============================================================
+CREATE USER IF NOT EXISTS 'cliente'@'localhost' IDENTIFIED BY 'ClientePass2024!';
+
+-- Tablas
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.ventas TO 'cliente'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.detalleVenta TO 'cliente'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.ticket_venta TO 'cliente'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.detalle_ticket_venta TO 'cliente'@'localhost';
+GRANT SELECT ON fourovenpizzadb.productos TO 'cliente'@'localhost';
+GRANT SELECT, INSERT ON fourovenpizzadb.ordenesProduccion TO 'cliente'@'localhost';
+GRANT SELECT ON fourovenpizzadb.detalleProduccion TO 'cliente'@'localhost';
+GRANT SELECT ON fourovenpizzadb.recetas TO 'cliente'@'localhost';
+GRANT SELECT ON fourovenpizzadb.detalleReceta TO 'cliente'@'localhost';
+GRANT INSERT ON fourovenpizzadb.bitacora_accesos TO 'cliente'@'localhost';
+GRANT INSERT ON fourovenpizzadb.bitacora_eventos TO 'cliente'@'localhost';
+GRANT INSERT ON fourovenpizzadb.bitacora_sistema TO 'cliente'@'localhost';
+
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_listar_productos TO 'cliente'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_detalle_venta TO 'cliente'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_gestion_ordenes_produccion TO 'cliente'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_listar_ventas_hoy TO 'cliente'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_gestion_productos TO 'cliente'@'localhost';
+
+-- ============================================================
+-- APLICAR PRIVILEGIOS
+-- ============================================================
+FLUSH PRIVILEGES;

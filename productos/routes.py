@@ -1,3 +1,4 @@
+import base64
 import glob
 import base64
 import os
@@ -93,13 +94,15 @@ def _validar_tamano_producto(tamano):
     return catalogo[tamano_limpio]
 
 
-def _parsear_decimal_positivo(valor, etiqueta):
+def _parsear_decimal_positivo(valor, etiqueta, maximo=None):
     try:
         numero = Decimal(str(valor))
     except (InvalidOperation, TypeError, ValueError):
         raise ValueError(f"{etiqueta} debe ser un numero valido.")
     if numero <= 0:
         raise ValueError(f"{etiqueta} debe ser mayor a 0.")
+    if maximo is not None and numero > Decimal(str(maximo)):
+        raise ValueError(f"{etiqueta} no puede ser mayor a {maximo}.")
     return numero
 
 
@@ -117,6 +120,75 @@ def _parsear_entero_no_negativo(valor, etiqueta):
 
 def _asegurar_directorio_imagenes():
     os.makedirs(PRODUCTOS_IMG_DIR, exist_ok=True)
+
+
+def _guardar_imagen_producto(archivo, id_producto):
+    if not archivo or not archivo.filename:
+        return None
+    _, extension = os.path.splitext(secure_filename(archivo.filename))
+    extension = extension.lower()
+    if extension not in ALLOWED_IMAGE_EXTENSIONS:
+        raise ValueError("Formato de imagen no permitido. Usa png, jpg, jpeg, webp o gif.")
+    _asegurar_directorio_imagenes()
+    for ruta in glob.glob(os.path.join(PRODUCTOS_IMG_DIR, f"producto_{id_producto}.*")):
+        if os.path.isfile(ruta):
+            os.remove(ruta)
+    nombre_archivo = f"producto_{id_producto}{extension}"
+    archivo.save(os.path.join(PRODUCTOS_IMG_DIR, nombre_archivo))
+    return nombre_archivo
+
+def _leer_bytes_imagen(archivo):
+    if not archivo or not archivo.filename:
+        return None
+    try:
+        contenido = archivo.read()
+        archivo.seek(0)
+        extension = os.path.splitext(secure_filename(archivo.filename))[1].lower()
+        if extension not in ALLOWED_IMAGE_EXTENSIONS:
+            return None
+        mime_types = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.webp': 'image/webp',
+            '.gif': 'image/gif'
+        }
+        mime_type = mime_types.get(extension, 'image/jpeg')
+        base64_str = f"data:{mime_type};base64,{base64.b64encode(contenido).decode('utf-8')}"
+        return base64_str.encode('utf-8')
+    except Exception:
+        return None
+
+
+def _convertir_imagen_a_base64(archivo):
+    if not archivo or not archivo.filename:
+        return None
+    try:
+        contenido = archivo.read()
+        archivo.seek(0)
+        extension = os.path.splitext(secure_filename(archivo.filename))[1].lower()
+        if extension not in ALLOWED_IMAGE_EXTENSIONS:
+            raise ValueError("Formato de imagen no permitido.")
+        mime_types = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.webp': 'image/webp',
+            '.gif': 'image/gif'
+        }
+        mime_type = mime_types.get(extension, 'image/jpeg')
+        base64_str = base64.b64encode(contenido).decode('utf-8')
+        if len(base64_str) > 500000:
+            return None
+        return f"data:{mime_type};base64,{base64_str}"
+    except Exception:
+        return None
+
+
+def _obtener_imagen_producto(id_producto, nombre_producto):
+    for ruta in glob.glob(os.path.join(PRODUCTOS_IMG_DIR, f"producto_{id_producto}.*")):
+        if os.path.isfile(ruta):
+            return f"img/productos/{os.path.basename(ruta)}"
 
 
 def _existe_producto_duplicado(nombre, tamano, id_producto=None):
@@ -261,10 +333,10 @@ def listado_productos():
     productos_final = []
     for p in productos_view:
         nombre_p = (p["nombre"] or "").lower()
-        producto_obj = Productos.query.get(p["idProducto"])
+        producto = Productos.query.get(p["idProducto"])
         imagen_b64 = None
-        if producto_obj and producto_obj.imagen:
-            imagen_b64 = producto_obj.imagen.decode('utf-8') if isinstance(producto_obj.imagen, bytes) else producto_obj.imagen
+        if producto and producto.imagen:
+            imagen_b64 = producto.imagen.decode('utf-8') if isinstance(producto.imagen, bytes) else producto.imagen
         imagen_fallback = _obtener_imagen_producto(p["idProducto"], nombre_p)
         if not imagen_fallback:
             imagen_fallback = "img/Pizzas/PizzaPepperoni.png"
@@ -306,7 +378,7 @@ def registrar_producto():
     try:
         nombre = _validar_nombre_catalogo(request.form["nombre"], "El nombre del producto")
         tamano = _validar_tamano_producto(request.form["tamano"])
-        precio = _parsear_decimal_positivo(request.form["precio"], "El precio")
+        precio = _parsear_decimal_positivo(request.form["precio"], "El precio", maximo=500)
         stock = _parsear_entero_no_negativo(request.form["stock"], "El stock")
         datos_formulario = {
             "nombre": nombre,
@@ -337,10 +409,21 @@ def registrar_producto():
                 "usuario": session["usuario_id"],
             },
         )
-        resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
-        id_generado = db.session.execute(text("SELECT @p_idGenerado")).fetchone()[0]
+        resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()
+        id_generado = db.session.execute(text("SELECT @p_idGenerado")).fetchone()
+        resultado = resultado[0] if resultado else None
+        id_generado = id_generado[0] if id_generado else None
         archivo_imagen = request.files.get("imagen")
         if resultado and resultado.startswith("SUCCESS") and id_generado:
+            try:
+                imagen_base64 = _leer_bytes_imagen(archivo_imagen)
+                if imagen_base64:
+                    producto = Productos.query.get(id_generado)
+                    if producto:
+                        producto.imagen = imagen_base64
+                        db.session.commit()
+            except Exception:
+                pass
             try:
                 imagen_base64 = _leer_bytes_imagen(archivo_imagen)
                 if imagen_base64:
@@ -371,7 +454,7 @@ def editar_producto(id):
     try:
         nombre = _validar_nombre_catalogo(request.form["nombre"], "El nombre del producto")
         tamano = _validar_tamano_producto(request.form["tamano"])
-        precio = _parsear_decimal_positivo(request.form["precio"], "El precio")
+        precio = _parsear_decimal_positivo(request.form["precio"], "El precio", maximo=500)
         stock = _parsear_entero_no_negativo(request.form["stock"], "El stock")
         datos_formulario = {
             "id": id,
@@ -407,9 +490,19 @@ def editar_producto(id):
                 "usuario": session["usuario_id"],
             },
         )
-        resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()[0]
+        resultado = db.session.execute(text("SELECT @p_resultado")).fetchone()
+        resultado = resultado[0] if resultado else None
         archivo_imagen = request.files.get("imagen")
         if resultado and resultado.startswith("SUCCESS") and archivo_imagen and archivo_imagen.filename:
+            try:
+                imagen_base64 = _leer_bytes_imagen(archivo_imagen)
+                if imagen_base64:
+                    producto = Productos.query.get(id)
+                    if producto:
+                        producto.imagen = imagen_base64
+                        db.session.commit()
+            except Exception:
+                pass
             try:
                 imagen_base64 = _leer_bytes_imagen(archivo_imagen)
                 if imagen_base64:

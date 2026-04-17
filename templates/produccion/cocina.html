@@ -1,13 +1,15 @@
-{% extends layout %} 
+{% extends layout %}
 {% block container %}
 
-<nav class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
+<nav
+  class="bg-gradient-to-r from-[#38230f] to-[#4a3a2a] px-4 sm:px-6 py-0 mb-6 relative shadow-lg h-16 flex items-center"
   style="border-bottom: 3px solid #f29f05;">
   <div class="container flex flex-wrap items-center justify-between mx-auto">
     <div class="flex-1 flex justify-center">
       <div class="flex items-center space-x-2 sm:space-x-3 bg-opacity-20 px-3 sm:px-6 py-2 rounded-full">
         <span class="text-base sm:text-2xl font-bold text-white tracking-wider">Vista</span>
-        <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap" style="color:#f29f05;">Cocina</span>
+        <span class="text-base sm:text-2xl font-bold tracking-wider whitespace-nowrap"
+          style="color:#f29f05;">Cocina</span>
       </div>
     </div>
   </div>
@@ -17,26 +19,25 @@
 
   <!-- Flash (solo al cargar la página después de una acción POST) -->
   {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <div class="mb-4 space-y-2" id="flashZona">
-        {% for category, message in messages %}
-          <div class="px-4 py-3 rounded-xl text-sm font-semibold shadow-md
+  {% if messages %}
+  <div class="mb-4 space-y-2" id="flashZona">
+    {% for category, message in messages %}
+    <div class="px-4 py-3 rounded-xl text-sm font-semibold shadow-md
             {% if category == 'success' %}bg-green-100 text-green-700 border border-green-300
             {% else %}bg-red-100 text-red-700 border border-red-300{% endif %}">
-            {{ message }}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% endwith %}
 
   <!-- Barra de estado del polling -->
   <div class="flex items-center gap-3 mb-6">
-    <div id="contadorBadge"
-      class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold shadow-sm"
+    <div id="contadorBadge" class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold shadow-sm"
       style="background-color:#38230f; color:#f29f05;">
-      <span class="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse inline-block"></span>
-      <span id="contadorTexto">{{ ordenes | length }} orden(es) en proceso</span>
+      <span id="pollingDot" class="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse inline-block"></span>
+      <span id="pollingTexto">En vivo</span>
     </div>
   </div>
 
@@ -46,22 +47,21 @@
     {% set mins = o.minutos_espera %}
     <div class="orden-card bg-white rounded-2xl shadow-md overflow-hidden border-l-4
       {% if mins >= 30 %}border-red-400{% elif mins >= 15 %}border-yellow-400{% else %}border-blue-400{% endif %}"
-      data-orden="{{ o.idOrden }}"
-      style="animation: fadeUp .3s ease both; animation-delay: {{ loop.index0 * 0.07 }}s">
+      data-orden="{{ o.idOrden }}" style="animation: fadeUp .3s ease both; animation-delay: {{ loop.index0 * 0.07 }}s">
 
-      <div class="flex flex-wrap items-center justify-between px-5 py-3 gap-2"
-           style="background-color:#38230f;">
+      <div class="flex flex-wrap items-center justify-between px-5 py-3 gap-2" style="background-color:#38230f;">
         <div class="flex items-center gap-3">
           <span class="text-lg font-black text-white">#{{ o.idOrden }}</span>
           <span class="text-xs font-semibold text-amber-300">
             {{ o.fecha.strftime('%H:%M') if o.fecha else '' }}
           </span>
           {% if mins >= 30 %}
-            <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-500 text-white animate-pulse">⏰ {{ mins }}min — ¡Urgente!</span>
+          <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-500 text-white animate-pulse">⏰ {{ mins }}min —
+            ¡Urgente!</span>
           {% elif mins >= 15 %}
-            <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-400 text-gray-800">⏰ {{ mins }}min</span>
+          <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-400 text-gray-800">⏰ {{ mins }}min</span>
           {% else %}
-            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-600 text-white">{{ mins }}min</span>
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-600 text-white">{{ mins }}min</span>
           {% endif %}
         </div>
         <span class="text-xs text-gray-400">por {{ o.nombre_usuario }}</span>
@@ -84,8 +84,9 @@
                 <td class="px-4 py-3 font-semibold text-gray-800">{{ d.nombre_producto }}</td>
                 <td class="px-4 py-3 text-gray-600">{{ d.tamano }}</td>
                 <td class="px-4 py-3 text-center">
-                  <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-black"
-                        style="background-color:#f29f05;">{{ d.cantidad | int }}</span>
+                  <span
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-black"
+                    style="background-color:#f29f05;">{{ d.cantidad | int }}</span>
                 </td>
                 <td class="px-4 py-3 text-center">
                   {% if d.idReceta %}
@@ -94,7 +95,8 @@
                     class="inline-flex items-center gap-1 text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg transition hover:brightness-110"
                     style="background-color:#38230f;">
                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M5.75 2A2.75 2.75 0 0 0 3 4.75v10.5A2.75 2.75 0 0 0 5.75 18h8.5A2.75 2.75 0 0 0 17 15.25V6.56a2.75 2.75 0 0 0-.805-1.945l-1.81-1.81A2.75 2.75 0 0 0 12.44 2H5.75Z"/>
+                      <path
+                        d="M5.75 2A2.75 2.75 0 0 0 3 4.75v10.5A2.75 2.75 0 0 0 5.75 18h8.5A2.75 2.75 0 0 0 17 15.25V6.56a2.75 2.75 0 0 0-.805-1.945l-1.81-1.81A2.75 2.75 0 0 0 12.44 2H5.75Z" />
                     </svg>
                     Ver receta
                   </button>
@@ -113,7 +115,7 @@
             class="flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-sm transition hover:brightness-110 hover:shadow-md"
             style="background-color:#e53e3e;">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
             Cancelar
           </button>
@@ -121,7 +123,7 @@
             class="flex items-center gap-2 px-4 py-2 rounded-xl text-white font-bold text-sm transition hover:brightness-110 hover:shadow-md"
             style="background-color:#38230f;">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
             </svg>
             Marcar terminada
           </button>
@@ -129,7 +131,8 @@
       </div>
     </div>
     {% else %}
-    <div id="sinOrdenes" class="text-center py-20 bg-white rounded-2xl shadow-md border-2 border-dashed border-amber-200">
+    <div id="sinOrdenes"
+      class="text-center py-20 bg-white rounded-2xl shadow-md border-2 border-dashed border-amber-200">
       <div class="text-5xl mb-4">🍕</div>
       <p class="text-gray-400 text-sm font-semibold">No hay órdenes en proceso en este momento.</p>
       <p class="text-gray-300 text-xs mt-1">Las nuevas órdenes aparecerán aquí automáticamente.</p>
@@ -147,7 +150,7 @@
     <div class="flex justify-center mb-3">
       <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
         <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </div>
     </div>
@@ -179,7 +182,7 @@
     <div class="flex justify-center mb-3">
       <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
         <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </div>
     </div>
@@ -213,7 +216,7 @@
       </div>
       <button onclick="cerrarModalCocina('modalReceta')" class="text-white hover:text-gray-300 transition">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
@@ -226,99 +229,109 @@
 
 <style>
   @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  .orden-card { animation: fadeUp .3s ease both; }
+
+  .orden-card {
+    animation: fadeUp .3s ease both;
+  }
 </style>
 
 <script>
-/* ════════════════════════════════════════════════
-   GESTIÓN DE MODALES ABIERTOS
-   - _modalesAccion: modales de confirmación que SÍ bloquean el polling
-   - _modalRecetaAbierto: solo lectura, NO bloquea el polling
-════════════════════════════════════════════════ */
-const _modalesAccion = new Set();  // 'modalTerminar' | 'modalCancelarCocina'
-let   _modalRecetaAbierto = false;
+  /* ════════════════════════════════════════════════
+     GESTIÓN DE MODALES ABIERTOS
+     - _modalesAccion: modales de confirmación que SÍ bloquean el polling
+     - _modalRecetaAbierto: solo lectura, NO bloquea el polling
+  ════════════════════════════════════════════════ */
+  const _modalesAccion = new Set();  // 'modalTerminar' | 'modalCancelarCocina'
+  let _modalRecetaAbierto = false;
 
-function abrirModalCocina(id) {
-  document.getElementById(id).classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-  if (id !== 'modalReceta') _modalesAccion.add(id);
-  else _modalRecetaAbierto = true;
-}
-
-function cerrarModalCocina(id) {
-  document.getElementById(id).classList.add('hidden');
-  document.body.style.overflow = '';
-  _modalesAccion.delete(id);
-  if (id === 'modalReceta') _modalRecetaAbierto = false;
-}
-
-['modalTerminar','modalCancelarCocina','modalReceta'].forEach(id => {
-  document.getElementById(id).addEventListener('click', function(e) {
-    if (e.target === this) cerrarModalCocina(id);
-  });
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    ['modalTerminar','modalCancelarCocina','modalReceta'].forEach(cerrarModalCocina);
+  function abrirModalCocina(id) {
+    document.getElementById(id).classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    if (id !== 'modalReceta') _modalesAccion.add(id);
+    else _modalRecetaAbierto = true;
   }
-});
 
-/* ════════════════════════════════════════════════
-   ACCIONES DE MODALES
-════════════════════════════════════════════════ */
-function abrirTerminar(idOrden) {
-  document.getElementById('terminarMensaje').textContent =
-    `¿Confirmas marcar la orden #${idOrden} como terminada?`;
-  document.getElementById('formTerminar').action = `/produccion/terminar/${idOrden}`;
-  abrirModalCocina('modalTerminar');
-}
+  function cerrarModalCocina(id) {
+    document.getElementById(id).classList.add('hidden');
+    document.body.style.overflow = '';
+    _modalesAccion.delete(id);
+    if (id === 'modalReceta') _modalRecetaAbierto = false;
+  }
 
-function abrirCancelarCocina(idOrden) {
-  document.getElementById('cancelarCocinaMensaje').textContent =
-    `¿Confirmas cancelar la orden #${idOrden}? Esta acción no se puede deshacer.`;
-  document.getElementById('formCancelarCocina').action = `/produccion/cocina/cancelar/${idOrden}`;
-  abrirModalCocina('modalCancelarCocina');
-}
-
-function abrirReceta(idProducto, nombreProducto) {
-  /* El modal de receta es solo lectura:
-     - NO bloquea el polling (las órdenes siguen actualizándose atrás)
-     - Solo carga la receta una vez por apertura (no se recarga con el polling) */
-  document.getElementById('recetaTitulo').textContent = nombreProducto;
-  document.getElementById('recetaContenido').innerHTML =
-    '<p class="text-center text-gray-400 py-6 text-sm">Cargando receta...</p>';
-  abrirModalCocina('modalReceta');
-
-  fetch(`/produccion/receta/${idProducto}`)
-    .then(r => r.text())
-    .then(html => { document.getElementById('recetaContenido').innerHTML = html; })
-    .catch(() => {
-      document.getElementById('recetaContenido').innerHTML =
-        '<p class="text-red-500 text-sm text-center py-6">Error al cargar la receta.</p>';
+  ['modalTerminar', 'modalCancelarCocina', 'modalReceta'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function (e) {
+      if (e.target === this) cerrarModalCocina(id);
     });
-}
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      ['modalTerminar', 'modalCancelarCocina', 'modalReceta'].forEach(cerrarModalCocina);
+    }
+  });
 
-/* ════════════════════════════════════════════════
-   RENDER DE ÓRDENES DESDE JSON
-   Construye el HTML de las cards con JS puro.
-   Solo actualiza el DOM si NO hay modales de acción abiertos.
-   Si el modal de receta está abierto, el fondo se actualiza igual.
-════════════════════════════════════════════════ */
-function buildOrdenCard(o, idx) {
-  const ahora = Math.floor(Date.now() / 1000);
-  const mins  = Math.floor((ahora - o.ts_unix) / 60);
+  /* ════════════════════════════════════════════════
+     ACCIONES DE MODALES
+  ════════════════════════════════════════════════ */
+  function abrirTerminar(idOrden) {
+    document.getElementById('terminarMensaje').textContent =
+      `¿Confirmas marcar la orden #${idOrden} como terminada?`;
+    document.getElementById('formTerminar').action = `/produccion/terminar/${idOrden}`;
+    abrirModalCocina('modalTerminar');
+  }
 
-  const borde   = mins >= 30 ? 'border-red-400' : mins >= 15 ? 'border-yellow-400' : 'border-blue-400';
-  const badgeMin = mins >= 30
-    ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-500 text-white animate-pulse">⏰ ${mins}min — ¡Urgente!</span>`
-    : mins >= 15
-      ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-400 text-gray-800">⏰ ${mins}min</span>`
-      : `<span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-600 text-white">${mins}min</span>`;
+  function abrirCancelarCocina(idOrden) {
+    document.getElementById('cancelarCocinaMensaje').textContent =
+      `¿Confirmas cancelar la orden #${idOrden}? Esta acción no se puede deshacer.`;
+    document.getElementById('formCancelarCocina').action = `/produccion/cocina/cancelar/${idOrden}`;
+    abrirModalCocina('modalCancelarCocina');
+  }
 
-  const filasDet = o.detalle.map(d => `
+  function abrirReceta(idProducto, nombreProducto) {
+    /* El modal de receta es solo lectura:
+       - NO bloquea el polling (las órdenes siguen actualizándose atrás)
+       - Solo carga la receta una vez por apertura (no se recarga con el polling) */
+    document.getElementById('recetaTitulo').textContent = nombreProducto;
+    document.getElementById('recetaContenido').innerHTML =
+      '<p class="text-center text-gray-400 py-6 text-sm">Cargando receta...</p>';
+    abrirModalCocina('modalReceta');
+
+    fetch(`/produccion/receta/${idProducto}`)
+      .then(r => r.text())
+      .then(html => { document.getElementById('recetaContenido').innerHTML = html; })
+      .catch(() => {
+        document.getElementById('recetaContenido').innerHTML =
+          '<p class="text-red-500 text-sm text-center py-6">Error al cargar la receta.</p>';
+      });
+  }
+
+  /* ════════════════════════════════════════════════
+     RENDER DE ÓRDENES DESDE JSON
+     Construye el HTML de las cards con JS puro.
+     Solo actualiza el DOM si NO hay modales de acción abiertos.
+     Si el modal de receta está abierto, el fondo se actualiza igual.
+  ════════════════════════════════════════════════ */
+  function buildOrdenCard(o, idx) {
+    const ahora = Math.floor(Date.now() / 1000);
+    const mins = Math.floor((ahora - o.ts_unix) / 60);
+
+    const borde = mins >= 30 ? 'border-red-400' : mins >= 15 ? 'border-yellow-400' : 'border-blue-400';
+    const badgeMin = mins >= 30
+      ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-500 text-white animate-pulse">⏰ ${mins}min — ¡Urgente!</span>`
+      : mins >= 15
+        ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-400 text-gray-800">⏰ ${mins}min</span>`
+        : `<span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-600 text-white">${mins}min</span>`;
+
+    const filasDet = o.detalle.map(d => `
     <tr class="border-b border-gray-50 hover:bg-amber-50 transition">
       <td class="px-4 py-3 font-semibold text-gray-800">${d.nombre_producto}</td>
       <td class="px-4 py-3 text-gray-600">${d.tamano}</td>
@@ -328,8 +341,8 @@ function buildOrdenCard(o, idx) {
       </td>
       <td class="px-4 py-3 text-center">
         ${d.idReceta
-          ? `<button type="button"
-               onclick="abrirReceta(${d.idProducto}, '${(d.nombre_producto + ' — ' + d.tamano).replace(/'/g,"\\'")}')"
+        ? `<button type="button"
+               onclick="abrirReceta(${d.idProducto}, '${(d.nombre_producto + ' — ' + d.tamano).replace(/'/g, "\\'")}')"
                class="inline-flex items-center gap-1 text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg transition hover:brightness-110"
                style="background-color:#38230f;">
                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -337,11 +350,11 @@ function buildOrdenCard(o, idx) {
                </svg>
                Ver receta
              </button>`
-          : '<span class="text-xs text-gray-400">Sin receta</span>'}
+        : '<span class="text-xs text-gray-400">Sin receta</span>'}
       </td>
     </tr>`).join('');
 
-  return `
+    return `
     <div class="orden-card bg-white rounded-2xl shadow-md overflow-hidden border-l-4 ${borde}"
          data-orden="${o.idOrden}"
          style="animation: fadeUp .3s ease both; animation-delay:${idx * 0.06}s">
@@ -387,53 +400,50 @@ function buildOrdenCard(o, idx) {
         </div>
       </div>
     </div>`;
-}
+  }
 
-function renderOrdenes(ordenes) {
-  const zona = document.getElementById('ordenesZona');
-  document.getElementById('contadorTexto').textContent = ordenes.length + ' orden(es) en proceso';
+  function renderOrdenes(ordenes) {
+    const zona = document.getElementById('ordenesZona');
+    document.getElementById('contadorTexto').textContent = ordenes.length + ' orden(es) en proceso';
 
-  if (ordenes.length === 0) {
-    zona.innerHTML = `
+    if (ordenes.length === 0) {
+      zona.innerHTML = `
       <div class="text-center py-20 bg-white rounded-2xl shadow-md border-2 border-dashed border-amber-200">
         <div class="text-5xl mb-4">🍕</div>
         <p class="text-gray-400 text-sm font-semibold">No hay órdenes en proceso en este momento.</p>
         <p class="text-gray-300 text-xs mt-1">Las nuevas órdenes aparecerán aquí automáticamente.</p>
       </div>`;
-    return;
+      return;
+    }
+
+    zona.innerHTML = ordenes.map(buildOrdenCard).join('');
   }
 
-  zona.innerHTML = ordenes.map(buildOrdenCard).join('');
-}
+  /* ════════════════════════════════════════════════
+     POLLING CADA 3 SEGUNDOS
+     Reglas:
+     · Si hay un modal de ACCIÓN abierto (terminar/cancelar) → NO actualizar
+       (el cocinero está a punto de enviar un form, no interrumpir)
+     · Si solo está el modal de RECETA abierto → SÍ actualizar el fondo
+       (el modal de receta es solo lectura y permanece abierto)
+  ════════════════════════════════════════════════ */
+  function pollingCocina() {
+    // Bloqueo solo si hay modal de acción activo
+    if (_modalesAccion.size > 0) return;
 
-/* ════════════════════════════════════════════════
-   POLLING CADA 3 SEGUNDOS
-   Reglas:
-   · Si hay un modal de ACCIÓN abierto (terminar/cancelar) → NO actualizar
-     (el cocinero está a punto de enviar un form, no interrumpir)
-   · Si solo está el modal de RECETA abierto → SÍ actualizar el fondo
-     (el modal de receta es solo lectura y permanece abierto)
-════════════════════════════════════════════════ */
-function pollingCocina() {
-  // Bloqueo solo si hay modal de acción activo
-  if (_modalesAccion.size > 0) return;
+    fetch('/produccion/cocina/json')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) renderOrdenes(data.ordenes);
+      })
+      .catch(() => {
+        console.warn('Polling: sin conexión');
+      });
+  }
 
-  fetch('/produccion/cocina/json')
-    .then(r => r.json())
-    .then(data => {
-      document.getElementById('pollingDot').style.backgroundColor  = '#4ade80';
-      document.getElementById('pollingTexto').textContent           = 'En vivo';
-      if (data.ok) renderOrdenes(data.ordenes);
-    })
-    .catch(() => {
-      document.getElementById('pollingDot').style.backgroundColor  = '#f87171';
-      document.getElementById('pollingTexto').textContent           = 'Sin conexión';
-    });
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-  setInterval(pollingCocina, 20000);
-});
+  document.addEventListener('DOMContentLoaded', function () {
+    setInterval(pollingCocina, 30000);
+  });
 </script>
 
 {% endblock %}

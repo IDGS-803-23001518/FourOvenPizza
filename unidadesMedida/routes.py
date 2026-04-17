@@ -85,7 +85,7 @@ def _existe_unidad_duplicada(nombre, id_unidad=None):
 
 
 @unidadesMedida.route("/unidades-medida")
-@rol_requerido("Administrador")
+@rol_requerido("Administrador", "Cocinero")
 def listado_unidades():
 
     unidades = UnidadesMedida.query.all()

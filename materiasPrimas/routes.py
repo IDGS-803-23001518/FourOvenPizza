@@ -172,7 +172,7 @@ def _desactivar_productos_por_materia_prima(id_materia_prima, ip, usuario_id):
 
 
 @materiasPrimas.route("/materiasPrimas", methods=["GET", "POST"])
-@rol_requerido("Administrador")
+@rol_requerido("Administrador", "Cocinero")
 def listadoMaterias():
     create_form = forms.MateriaPrimaForm(request.form)
     lista_materias = MateriasPrimas.query.order_by(MateriasPrimas.nombre.asc()).all()
@@ -433,7 +433,7 @@ def cambiar_estatus_materia_prima(id, estatus):
 
 
 @materiasPrimas.route('/ver-materia-prima/<int:id>')
-@rol_requerido('Administrador')
+@rol_requerido('Administrador', 'Cocinero')
 def ver_materia_prima(id):
     mp = MateriasPrimas.query.get_or_404(id)
     return render_template('materiasPrimas/verMateriaPrima.html', mp=mp)

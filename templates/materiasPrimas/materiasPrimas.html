@@ -316,11 +316,13 @@
     {% endif %}
 
     <div class="flex justify-end mb-4">
+        {% if session.get('usuario_rol') == 'Administrador' %}
         <button onclick="abrirModalRegistro()"
             class="text-white font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-md transition-all duration-300 hover:brightness-110 hover:shadow-lg text-sm sm:text-base"
             style="background-color: #f29f05;">
             Registrar Materia Prima
         </button>
+        {% endif %}
     </div>
 
     <!-- Filtros -->
@@ -405,7 +407,7 @@
                 </thead>
                 <tbody id="tabla-materias">
                     {% for mp in materias %}
-                    <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150 materia-row {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %}border-l-4 border-l-yellow-400{% endif %}"
+                    <tr class="bg-white border-b border-gray-100 hover:bg-amber-50 transition-colors duration-150 materia-row {% if mp.stockMinimo and mp.stock <= mp.stockMinimo %}border-l-4 border-l-yellow-400{% endif %}"
                         data-id="{{ mp.idMateriaP }}" data-nombre="{{ mp.nombre }}" data-tipo="{{ mp.tipo }}"
                         data-stock="{{ mp.stock }}" data-stock-minimo="{{ mp.stockMinimo }}"
                         data-id-categoria="{{ mp.idCategoria }}"
@@ -414,7 +416,7 @@
                         data-estatus-valor="{{ 1 if mp.estatus else 0 }}">
                         <td class="px-5 py-3 font-semibold text-gray-800">
                             {{ mp.nombre }}
-                            {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %} <span
+                            {% if mp.stockMinimo and mp.stock <= mp.stockMinimo %} <span
                                 class="ml-2 text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">
                                 Bajo stock</span>
                                 {% endif %}
@@ -450,6 +452,7 @@
                         </td>
                         <td class="px-5 py-3">
                             <div class="flex gap-2">
+                                {% if session.get('usuario_rol') == 'Administrador' %}
                                 <button onclick="abrirModalEdicion({{ mp.idMateriaP }})"
                                     class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
                                     style="background-color: #f29f05;" title="Editar">
@@ -459,6 +462,7 @@
                                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
                                     </svg>
                                 </button>
+                                {% endif %}
                                 <button onclick="abrirModalVer({{ mp.idMateriaP }})"
                                     class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
                                     style="background-color: #2563eb;" title="Ver detalle">
@@ -469,6 +473,7 @@
                                             clip-rule="evenodd" />
                                     </svg>
                                 </button>
+                                {% if session.get('usuario_rol') == 'Administrador' %}
                                 <a href="#"
                                     onclick="confirmarCambioEstatus(event, {{ mp.idMateriaP }}, '{{ mp.nombre }}', {{ 1 if mp.estatus else 0 }})"
                                     class="flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
@@ -486,6 +491,7 @@
                                     </svg>
                                     {% endif %}
                                 </a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -497,7 +503,7 @@
         <!-- Cards Móvil -->
         <div id="cards-materias" class="md:hidden space-y-3 p-3">
             {% for mp in materias %}
-            <div class="materia-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %}border-l-4 border-l-yellow-400{% endif %}"
+            <div class="materia-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg {% if mp.stockMinimo and mp.stock <= mp.stockMinimo %}border-l-4 border-l-yellow-400{% endif %}"
                 data-id="{{ mp.idMateriaP }}" data-nombre="{{ mp.nombre }}" data-tipo="{{ mp.tipo }}"
                 data-stock="{{ mp.stock }}" data-stock-minimo="{{ mp.stockMinimo }}"
                 data-id-categoria="{{ mp.idCategoria }}"
@@ -526,7 +532,7 @@
                         {% endif %}
                     </div>
 
-                    {% if mp.stockMinimo and mp.stock <= mp.stockMinimo and mp.estatus %} <span
+                        {% if mp.stockMinimo and mp.stock <= mp.stockMinimo %} <span
                         class="inline-flex items-center text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full mb-2">
                         ⚠ Bajo stock</span>
                         {% endif %}
@@ -555,6 +561,7 @@
                         </div>
 
                         <div class="flex gap-2 mt-3">
+                            {% if session.get('usuario_rol') == 'Administrador' %}
                             <button onclick="abrirModalEdicion({{ mp.idMateriaP }})"
                                 class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white transition-all duration-200 hover:scale-105 text-sm"
                                 style="background-color: #f29f05;">
@@ -565,6 +572,7 @@
                                 </svg>
                                 <span>Editar</span>
                             </button>
+                            {% endif %}
                             <button onclick="abrirModalVer({{ mp.idMateriaP }})"
                                 class="flex items-center justify-center w-10 h-10 rounded-lg text-white transition-all duration-200 hover:scale-110 hover:shadow-md"
                                 style="background-color: #2563eb;" title="Ver detalle">
@@ -575,6 +583,7 @@
                                         clip-rule="evenodd" />
                                 </svg>
                             </button>
+                            {% if session.get('usuario_rol') == 'Administrador' %}
                             <a href="#"
                                 onclick="confirmarCambioEstatus(event, {{ mp.idMateriaP }}, '{{ mp.nombre }}', {{ 1 if mp.estatus else 0 }})"
                                 class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white transition-all duration-200 hover:scale-105 text-sm"
@@ -593,6 +602,7 @@
                                 <span>Activar</span>
                                 {% endif %}
                             </a>
+                            {% endif %}
                         </div>
                 </div>
             </div>
@@ -1114,7 +1124,7 @@
             const c = el.dataset.categoria;
             const s = el.dataset.estatus;
 
-            // Calcular si es stock bajo
+            // Calcular si es stock bajo (sin importar el estatus)
             const stock = parseFloat(el.dataset.stock);
             const stockMinimo = parseFloat(el.dataset.stockMinimo);
             const esStockBajo = (stockMinimo && stock <= stockMinimo);
