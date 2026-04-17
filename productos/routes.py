@@ -94,13 +94,15 @@ def _validar_tamano_producto(tamano):
     return catalogo[tamano_limpio]
 
 
-def _parsear_decimal_positivo(valor, etiqueta):
+def _parsear_decimal_positivo(valor, etiqueta, maximo=None):
     try:
         numero = Decimal(str(valor))
     except (InvalidOperation, TypeError, ValueError):
         raise ValueError(f"{etiqueta} debe ser un numero valido.")
     if numero <= 0:
         raise ValueError(f"{etiqueta} debe ser mayor a 0.")
+    if maximo is not None and numero > Decimal(str(maximo)):
+        raise ValueError(f"{etiqueta} no puede ser mayor a {maximo}.")
     return numero
 
 
@@ -376,7 +378,7 @@ def registrar_producto():
     try:
         nombre = _validar_nombre_catalogo(request.form["nombre"], "El nombre del producto")
         tamano = _validar_tamano_producto(request.form["tamano"])
-        precio = _parsear_decimal_positivo(request.form["precio"], "El precio")
+        precio = _parsear_decimal_positivo(request.form["precio"], "El precio", maximo=500)
         stock = _parsear_entero_no_negativo(request.form["stock"], "El stock")
         datos_formulario = {
             "nombre": nombre,
@@ -452,7 +454,7 @@ def editar_producto(id):
     try:
         nombre = _validar_nombre_catalogo(request.form["nombre"], "El nombre del producto")
         tamano = _validar_tamano_producto(request.form["tamano"])
-        precio = _parsear_decimal_positivo(request.form["precio"], "El precio")
+        precio = _parsear_decimal_positivo(request.form["precio"], "El precio", maximo=500)
         stock = _parsear_entero_no_negativo(request.form["stock"], "El stock")
         datos_formulario = {
             "id": id,
