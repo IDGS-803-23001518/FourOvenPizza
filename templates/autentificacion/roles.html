@@ -18,6 +18,21 @@
 
 <div class="container mx-auto px-4 sm:px-6 max-w-6xl">
 
+    <!-- Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="mb-4 space-y-2" id="flashZona">
+        {% for category, message in messages %}
+        <div class="px-4 py-3 rounded-xl text-sm font-semibold shadow-md
+            {% if category == 'success' %}bg-green-100 text-green-700 border border-green-300
+            {% else %}bg-red-100 text-red-700 border border-red-300{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
     <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-6">
         <div class="px-4 sm:px-5 py-3 rounded-t-2xl" style="background-color: #38230f;">
             <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">FILTROS DE BÚSQUEDA</h2>
@@ -58,8 +73,7 @@
     <div id="grid-roles" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {% for rol in roles %}
         <div class="rol-card bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100
-                    transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
-            data-nombre="{{ rol.nombre }}"
+                    transition-all duration-300 hover:shadow-xl hover:-translate-y-1" data-nombre="{{ rol.nombre }}"
             data-estatus="{% if rol.estatus == 1 %}Activo{% else %}Inactivo{% endif %}">
 
             <div class="px-5 py-3 text-center" style="background-color: #38230f;">
@@ -69,8 +83,8 @@
             <div class="px-5 py-6 flex flex-col items-center gap-3">
                 <div class="w-14 h-14 rounded-full flex items-center justify-center mb-1"
                     style="background-color: #fef3c7;">
-                    <svg class="w-7 h-7" style="color: #f29f05;" fill="none" stroke="currentColor"
-                        stroke-width="2" viewBox="0 0 24 24">
+                    <svg class="w-7 h-7" style="color: #f29f05;" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -92,13 +106,13 @@
 
                 <span class="text-xs text-gray-400 font-medium">
                     {{ rol.usuarios | selectattr('estatus', 'equalto', 1) | list | length }}
-                    usuario{% if rol.usuarios | selectattr('estatus', 'equalto', 1) | list | length != 1 %}s{% endif %} activo{% if rol.usuarios | selectattr('estatus', 'equalto', 1) | list | length != 1 %}s{% endif %}
+                    usuario{% if rol.usuarios | selectattr('estatus', 'equalto', 1) | list | length != 1 %}s{% endif %}
+                    activo{% if rol.usuarios | selectattr('estatus', 'equalto', 1) | list | length != 1 %}s{% endif %}
                 </span>
 
                 <!-- Solo mostrar el botón si el rol NO es "Administrador" -->
                 {% if rol.nombre != "Administrador" %}
-                <a href="#"
-                    onclick="confirmarCambioEstatus(event,
+                <a href="#" onclick="confirmarCambioEstatus(event,
                         '/cambiar-estatus-rol/{{ rol.idRol }}/{% if rol.estatus == 1 %}0{% else %}1{% endif %}',
                         {% if rol.estatus == 1 %}false{% else %}true{% endif %},
                         '{{ rol.nombre }}')"
@@ -128,10 +142,9 @@
     </div>
 
     <div id="sin-resultados" class="hidden text-center py-16 text-gray-400 text-sm font-medium">
-        <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor"
-            stroke-width="1.5" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5"
+            viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         No se encontraron roles con los filtros seleccionados.
     </div>
@@ -143,8 +156,8 @@
     <div class="bg-white rounded-2xl shadow-xl p-5 w-72 text-center">
         <div class="flex justify-center mb-3">
             <div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
-                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor"
-                    stroke-width="2" viewBox="0 0 24 24">
+                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2"
+                    viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
@@ -168,16 +181,16 @@
 
 <script>
     function filtrarRoles() {
-        const nombre  = document.getElementById('filtro-nombre').value.toLowerCase();
+        const nombre = document.getElementById('filtro-nombre').value.toLowerCase();
         const estatus = document.getElementById('filtro-estatus').value;
-        const cards   = document.querySelectorAll('.rol-card');
-        let visibles  = 0;
+        const cards = document.querySelectorAll('.rol-card');
+        let visibles = 0;
 
         cards.forEach(card => {
-            const cnombre  = card.dataset.nombre.toLowerCase();
+            const cnombre = card.dataset.nombre.toLowerCase();
             const cestatus = card.dataset.estatus;
 
-            const coincideNombre  = !nombre  || cnombre.includes(nombre);
+            const coincideNombre = !nombre || cnombre.includes(nombre);
             const coincideEstatus = !estatus || cestatus === estatus;
 
             if (coincideNombre && coincideEstatus) {
@@ -192,7 +205,7 @@
     }
 
     function limpiarFiltros() {
-        document.getElementById('filtro-nombre').value  = '';
+        document.getElementById('filtro-nombre').value = '';
         document.getElementById('filtro-estatus').value = '';
         filtrarRoles();
     }
