@@ -477,7 +477,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Fecha *</label>
-                    <input type="date" id="reg-fecha"
+                    <input type="date" id="reg-fecha" max="{{ today_iso }}"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
                 </div>
             </div>
@@ -548,7 +548,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Fecha *</label>
-                    <input type="date" id="edit-fecha"
+                    <input type="date" id="edit-fecha" max="{{ today_iso }}"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f29f05] transition">
                 </div>
             </div>
@@ -1255,6 +1255,21 @@
     }
     function cerrarModalRegistro() { document.getElementById('modal-registro').classList.add('hidden'); insumosRegistro = []; desbloquearScroll(); }
 
+    // Función auxiliar para validar fecha no futura
+    function validarFechaNoFutura(fecha, tipoError) {
+        if (!fecha) return true;
+        const fechaSeleccionada = new Date(fecha + 'T00:00:00');
+        const fechaActual = new Date();
+        fechaActual.setHours(0, 0, 0, 0);
+        if (fechaSeleccionada > fechaActual) {
+            const errDiv = document.getElementById(`error-${tipoError}`);
+            errDiv.textContent = 'No se permite seleccionar una fecha futura.';
+            errDiv.classList.remove('hidden');
+            return false;
+        }
+        return true;
+    }
+
     function guardarCompra() {
         const errDiv = document.getElementById('error-registro');
         const prov   = document.getElementById('reg-proveedor').value;
@@ -1262,6 +1277,8 @@
         errDiv.classList.add('hidden');
         if (!prov)                { errDiv.textContent = 'Selecciona un proveedor'; errDiv.classList.remove('hidden'); return; }
         if (!fecha)               { errDiv.textContent = 'Selecciona una fecha'; errDiv.classList.remove('hidden'); return; }
+        // Validar fecha no futura
+        if (!validarFechaNoFutura(fecha, 'registro')) return;
         if (!insumosRegistro.length) { errDiv.textContent = 'Agrega al menos un insumo'; errDiv.classList.remove('hidden'); return; }
         submitCompra('/compras/registrar', { csrf_token: getCSRF(), idProveedor: prov, fecha, detalles: JSON.stringify(insumosRegistro.map(mapDetalle)) });
     }
@@ -1288,6 +1305,8 @@
         errDiv.classList.add('hidden');
         if (!prov)              { errDiv.textContent = 'Selecciona un proveedor'; errDiv.classList.remove('hidden'); return; }
         if (!fecha)             { errDiv.textContent = 'Selecciona una fecha'; errDiv.classList.remove('hidden'); return; }
+        // Validar fecha no futura
+        if (!validarFechaNoFutura(fecha, 'edicion')) return;
         if (!insumosEdicion.length) { errDiv.textContent = 'Agrega al menos un insumo'; errDiv.classList.remove('hidden'); return; }
         submitCompra(`/compras/editar/${id}`, { csrf_token: getCSRF(), idProveedor: prov, fecha, detalles: JSON.stringify(insumosEdicion.map(mapDetalle)) });
     }

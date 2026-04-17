@@ -110,3 +110,38 @@ GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_gestion_productos TO 'cliente'@'lo
 -- APLICAR PRIVILEGIOS
 -- ============================================================
 FLUSH PRIVILEGES;
+
+-- Permisos faltantes para el usuario 'cliente'
+GRANT SELECT ON fourovenpizzadb.materiasPrimas TO 'cliente'@'localhost';
+GRANT SELECT ON fourovenpizzadb.categorias TO 'cliente'@'localhost';
+GRANT SELECT ON fourovenpizzadb.unidadesMedida TO 'cliente'@'localhost';
+GRANT SELECT ON fourovenpizzadb.proveedores TO 'cliente'@'localhost';
+GRANT SELECT ON fourovenpizzadb.roles TO 'cliente'@'localhost';
+GRANT SELECT ON fourovenpizzadb.detalleReceta TO 'cliente'@'localhost';
+
+-- Stored Procedures adicionales que probablemente necesite
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_obtener_alertas_stock_receta TO 'cliente'@'localhost';
+GRANT EXECUTE ON PROCEDURE fourovenpizzadb.sp_obtener_alertas_stock_mp TO 'cliente'@'localhost';
+
+FLUSH PRIVILEGES;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON fourovenpizzadb.ventaStockReservado TO 'cliente'@'localhost';
+FLUSH PRIVILEGES;
+
+GRANT SELECT, UPDATE ON fourovenpizzadb.materiasPrimas TO 'cliente'@'localhost';
+FLUSH PRIVILEGES;
+
+GRANT SELECT, INSERT ON fourovenpizzadb.detalleProduccion TO 'cliente'@'localhost';
+FLUSH PRIVILEGES;
+
+GRANT SELECT, UPDATE ON fourovenpizzadb.productos TO 'cliente'@'localhost';
+FLUSH PRIVILEGES;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON fourovenpizzadb.ventaStockReservado TO 'cliente'@'localhost';
+GRANT SELECT, UPDATE ON fourovenpizzadb.materiasPrimas TO 'cliente'@'localhost';
+GRANT SELECT, UPDATE ON fourovenpizzadb.productos TO 'cliente'@'localhost';
+GRANT SELECT, INSERT ON fourovenpizzadb.detalleProduccion TO 'cliente'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.ordenesProduccion TO 'cliente'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.ventas TO 'cliente'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON fourovenpizzadb.detalleVenta TO 'cliente'@'localhost';
+FLUSH PRIVILEGES;
