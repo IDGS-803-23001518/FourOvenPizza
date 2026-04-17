@@ -203,11 +203,6 @@ class DetalleVenta(db.Model):
     venta = db.relationship('Ventas', back_populates='detalle_ventas')
     producto = db.relationship('Productos', back_populates='detalle_ventas')
 
-
-# ===================================================================
-# NUEVA TABLA: Stock reservado temporalmente por ventas activas
-# (Esto reemplaza el CREATE TABLE del SP)
-# ===================================================================
 class VentaStockReservado(db.Model):
     __tablename__ = "ventaStockReservado"
     idReserva = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -217,12 +212,10 @@ class VentaStockReservado(db.Model):
     cantidadFaltante = db.Column(db.Integer, nullable=False, default=0)   # enviado a producción
     idOrdenProduccion = db.Column(db.Integer, db.ForeignKey('ordenesProduccion.idOrden'), nullable=True)
 
-    # Relaciones
     venta = db.relationship('Ventas', back_populates='stock_reservado')
     producto = db.relationship('Productos', back_populates='ventas_stock_reservado')
     orden_produccion = db.relationship('OrdenesProduccion', back_populates='ventas_reservadas')
 
-    # Restricción única por venta+producto (evita duplicados)
     __table_args__ = (
         db.UniqueConstraint('idVenta', 'idProducto', name='uk_venta_producto'),
     )

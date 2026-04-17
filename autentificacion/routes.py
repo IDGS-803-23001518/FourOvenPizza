@@ -642,4 +642,4 @@ def logout_beacon():
             'EXITOSO'
         )
         session.clear()
-    return '', 204  # Sin contenido
+    return '', 204

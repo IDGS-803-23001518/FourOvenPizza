@@ -12,7 +12,6 @@ _DB_CREDENTIALS = {
 }
 
 def init_role_switching(app, db):
-    # Crea un engine y session factory por cada rol
     for rol, uri in _DB_CREDENTIALS.items():
         engine = create_engine(
             uri,
