@@ -29,6 +29,7 @@ class Usuarios(db.Model):
     caja_movimientos = db.relationship('CajaMovimientos', back_populates='usuario')
     ordenes_produccion = db.relationship('OrdenesProduccion', back_populates='usuario')
     resets = db.relationship('ResetContrasenia', back_populates='usuario')
+    bitacora_respaldos = db.relationship('BitacoraRespaldos', back_populates='usuario')
 
 
 class ResetContrasenia(db.Model):
@@ -396,3 +397,24 @@ class DetalleMiniReceta(db.Model):
     __table_args__ = (
         db.UniqueConstraint('idMiniReceta', 'idMateriaP', name='uk_mini_receta_materia'),
     )
+
+class BitacoraRespaldos(db.Model):
+    __tablename__ = "bitacora_respaldos"
+    
+    idRespaldo = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    tipo = db.Column(db.String(30), nullable=False)
+    subtipo = db.Column(db.String(30), nullable=False, default='Estructura+Datos') 
+    tablas = db.Column(db.Text, nullable=True)
+    archivo = db.Column(db.String(500), nullable=False)
+    tamano_bytes = db.Column(db.BigInteger, nullable=False, default=0)
+    estado = db.Column(db.String(20), nullable=False, default='Exitoso')
+    detalle_error = db.Column(db.Text, nullable=True)
+    fecha_referencia = db.Column(db.DateTime, nullable=True)
+    fecha_inicio = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now)
+    fecha_fin = db.Column(db.DateTime, nullable=True)
+    duracion_seg = db.Column(db.Integer, nullable=False, default=0)
+    usuarioId = db.Column(db.Integer, db.ForeignKey('usuarios.idUsuario'), nullable=False)
+    ip = db.Column(db.String(45), nullable=False, default='127.0.0.1')
+    observaciones = db.Column(db.Text, nullable=True)
+
+    usuario = db.relationship('Usuarios', back_populates='bitacora_respaldos')

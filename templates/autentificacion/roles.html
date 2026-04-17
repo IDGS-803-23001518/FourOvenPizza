@@ -95,6 +95,8 @@
                     usuario{% if rol.usuarios | selectattr('estatus', 'equalto', 1) | list | length != 1 %}s{% endif %} activo{% if rol.usuarios | selectattr('estatus', 'equalto', 1) | list | length != 1 %}s{% endif %}
                 </span>
 
+                <!-- Solo mostrar el botón si el rol NO es "Administrador" -->
+                {% if rol.nombre != "Administrador" %}
                 <a href="#"
                     onclick="confirmarCambioEstatus(event,
                         '/cambiar-estatus-rol/{{ rol.idRol }}/{% if rol.estatus == 1 %}0{% else %}1{% endif %}',
@@ -114,6 +116,12 @@
                     Activar
                     {% endif %}
                 </a>
+                {% else %}
+                <!-- Mensaje opcional para indicar que no se puede modificar -->
+                <div class="mt-1 w-full py-2 rounded-xl text-center text-xs text-gray-400 font-medium bg-gray-50">
+                    Rol protegido
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}

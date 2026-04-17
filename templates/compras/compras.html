@@ -158,6 +158,17 @@
         .pag-btn { min-width: 2.2rem; height: 2.2rem; font-size: 0.85rem; }
         .pag-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     }
+
+    /* Cards en móvil */
+    #cards-compras { display: none; }
+    @media (max-width: 767px) {
+        #tabla-compras-desktop { display: none; }
+        #tabla-compras-desktop + .pag-wrapper { display: none; }
+        #cards-compras { display: block; }
+    }
+    @media (min-width: 768px) {
+        #cards-compras + .pag-wrapper { display: none; }
+    }
 </style>
 
 <!-- NAV -->
@@ -1232,7 +1243,11 @@
     function abrirModalRegistro() {
         insumosRegistro = [];
         document.getElementById('reg-proveedor').value = '';
-        document.getElementById('reg-fecha').value = new Date().toISOString().split('T')[0];
+        const hoy = new Date();
+        const anio = hoy.getFullYear();
+        const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoy.getDate()).padStart(2, '0');
+        document.getElementById('reg-fecha').value = `${anio}-${mes}-${dia}`;
         renderTablaInsumos('registro');
         document.getElementById('error-registro').classList.add('hidden');
         document.getElementById('modal-registro').classList.remove('hidden');
@@ -1387,6 +1402,15 @@
                 contenedorItems: cardsContenedor,
                 itemsSelector:   '.compra-card',
                 contenedorPagId: 'pag-compras-cards',
+            });
+        }
+        const cardsContainer = document.getElementById('cards-compras');
+        if (cardsContainer) {
+            window.pagComprasCards = crearPaginacion({
+                contenedorItems: cardsContainer,
+                itemsSelector: '.compra-card',
+                contenedorId: 'cards-compras',
+                selectorId: 'pag-compras-cards',
             });
         }
         filtrarCompras();
