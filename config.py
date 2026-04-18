@@ -8,7 +8,7 @@ class Config(object):
     MAIL_PORT     = 587
     MAIL_USE_TLS  = True
     MAIL_USERNAME = 'fourovenpizzas@gmail.com'
-    MAIL_PASSWORD = 'jzxj dcnv ncqy notp'
+    MAIL_PASSWORD = 'dmrv iuau toqn ohcv'
     MAIL_DEFAULT_SENDER = 'fourovenpizzas@gmail.com'
 
     DB_HOST = '127.0.0.1'

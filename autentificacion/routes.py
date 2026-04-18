@@ -186,7 +186,7 @@ def enviar_correo_reset(email_destino, nombre_usuario, link):
         mail.send(msg)
         return True
     except Exception as e:
-        print(f"Error enviando correo: {e}")
+        print(f"Error enviando correo: {type(e).__name__}: {e}")
         return False
 
 
